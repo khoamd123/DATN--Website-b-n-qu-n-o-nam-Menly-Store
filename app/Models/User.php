@@ -48,5 +48,22 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_admin' => 'boolean',
     ];
+
+    /**
+     * Get the clubs owned by the user
+     */
+    public function ownedClubs()
+    {
+        return $this->hasMany(Club::class, 'owner_id');
+    }
+
+    /**
+     * Get the clubs where user is a member
+     */
+    public function clubs()
+    {
+        return $this->belongsToMany(Club::class, 'club_members');
+    }
 }

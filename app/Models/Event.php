@@ -19,6 +19,21 @@ class Event extends Model
         'mode',
         'max_participants',
         'status',
-
     ];
+
+    /**
+     * Get the club that owns the event
+     */
+    public function club()
+    {
+        return $this->belongsTo(Club::class);
+    }
+
+    /**
+     * Get the user who created the event
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

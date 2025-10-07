@@ -16,6 +16,29 @@ class Post extends Model
         'content',
         'type',
         'status',
-
     ];
+
+    /**
+     * Get the club that owns the post
+     */
+    public function club()
+    {
+        return $this->belongsTo(Club::class);
+    }
+
+    /**
+     * Get the user who created the post
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the comments for the post
+     */
+    public function comments()
+    {
+        return $this->hasMany(\App\Models\PostComment::class);
+    }
 }

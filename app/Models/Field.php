@@ -14,5 +14,12 @@ class Field extends Model
         'description',
         'slug',
     ];
-   
+
+    /**
+     * Get the clubs for the field
+     */
+    public function clubs()
+    {
+        return $this->hasMany(Club::class);
+    }
 }

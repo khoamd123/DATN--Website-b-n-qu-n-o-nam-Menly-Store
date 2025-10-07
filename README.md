@@ -1,70 +1,180 @@
+# 🎯 DATN_Uniclubs - Hệ thống quản lý câu lạc bộ sinh viên
 
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## 📋 Mô tả dự án
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Hệ thống quản lý câu lạc bộ sinh viên được xây dựng bằng Laravel 10, cung cấp đầy đủ chức năng quản lý cho các câu lạc bộ trong trường đại học.
 
-## About Laravel
+## ✨ Tính năng chính
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 🎮 Admin Panel
+- **Dashboard** - Thống kê tổng quan hệ thống
+- **Quản lý người dùng** - Xem, tìm kiếm, phân quyền
+- **Quản lý câu lạc bộ** - Duyệt, từ chối, thay đổi trạng thái
+- **Tài liệu học tập** - Quản lý documents
+- **Quản lý quỹ** - Thống kê tài chính, quản lý giao dịch
+- **Kế hoạch** - Quản lý sự kiện, lịch trình
+- **Bài viết** - Quản lý posts và thông báo
+- **Bình luận** - Xem, xóa bình luận
+- **Phân quyền** - Cấp quyền admin, quản lý permissions
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 👥 Chức năng người dùng
+- Đăng ký/đăng nhập
+- Tham gia câu lạc bộ
+- Đăng bài viết
+- Bình luận
+- Tham gia sự kiện
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🛠️ Công nghệ sử dụng
 
-## Learning Laravel
+- **Backend:** Laravel 10, PHP 8.1+
+- **Frontend:** Bootstrap 5, Font Awesome
+- **Database:** MySQL
+- **Authentication:** Laravel Sanctum
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 📁 Cấu trúc dự án
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```
+DATN_Uniclubs/
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── AdminController.php      # Controller admin panel
+│   │   └── AuthController.php       # Controller authentication
+│   ├── Http/Middleware/
+│   │   └── AdminMiddleware.php      # Middleware kiểm tra admin
+│   └── Models/                      # Các model chính
+├── resources/views/
+│   ├── admin/                       # Views admin panel
+│   │   ├── layouts/app.blade.php    # Layout chính
+│   │   ├── dashboard.blade.php      # Dashboard
+│   │   ├── users/index.blade.php    # Quản lý users
+│   │   ├── clubs/index.blade.php    # Quản lý clubs
+│   │   └── ...                      # Các trang khác
+│   └── auth/
+│       └── login.blade.php          # Trang đăng nhập
+├── routes/
+│   └── web.php                      # Routes web
+└── database/
+    ├── migrations/                  # Database migrations
+    └── seeders/                     # Database seeders
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🚀 Hướng dẫn cài đặt
 
-## Laravel Sponsors
+### Yêu cầu hệ thống
+- PHP 8.1 hoặc cao hơn
+- Composer
+- MySQL
+- XAMPP/Laravel Herd
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Cài đặt
 
-### Premium Partners
+1. **Clone repository:**
+```bash
+git clone <repository-url>
+cd DATN_Uniclubs
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+2. **Cài đặt dependencies:**
+```bash
+composer install
+```
 
-## Contributing
+3. **Cấu hình environment:**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. **Cấu hình database trong `.env`:**
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=uniclubs
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## Code of Conduct
+5. **Chạy migrations và seeders:**
+```bash
+php artisan migrate:fresh --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+6. **Khởi động server:**
+```bash
+php artisan serve
+```
 
-## Security Vulnerabilities
+## 🔑 Thông tin đăng nhập
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Admin
+- **Email:** nguyenvana@example.com
+- **Password:** password
 
-## License
+### User thường
+- **Email:** tranthib@example.com
+- **Password:** password
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📱 Truy cập ứng dụng
 
-# DATN--Website-b-n-qu-n-o-nam-Menly-Store
+- **Trang chủ:** http://localhost:8000
+- **Admin Panel:** http://localhost:8000/admin
+- **Đăng nhập:** http://localhost:8000/login
 
+## 👥 Thành viên nhóm
+
+- [Tên thành viên 1] - [Vai trò]
+- [Tên thành viên 2] - [Vai trò]
+- [Tên thành viên 3] - [Vai trò]
+
+## 📋 Danh sách công việc
+
+### ✅ Đã hoàn thành
+- [x] Tạo cấu trúc dự án Laravel
+- [x] Thiết kế database schema
+- [x] Xây dựng Admin Panel hoàn chỉnh
+- [x] Tạo hệ thống authentication
+- [x] Implement các chức năng quản lý
+
+### 🔄 Đang thực hiện
+- [ ] Frontend cho người dùng
+- [ ] API endpoints
+- [ ] Testing
+
+### 📝 Cần làm
+- [ ] Giao diện người dùng
+- [ ] Chức năng đăng ký câu lạc bộ
+- [ ] Hệ thống thông báo
+- [ ] Upload file
+- [ ] Tối ưu hóa performance
+
+## 🎯 Hướng dẫn cho thành viên
+
+### Để bắt đầu làm việc:
+
+1. **Clone project về máy**
+2. **Cài đặt theo hướng dẫn trên**
+3. **Tạo branch mới:** `git checkout -b feature/ten-chuc-nang`
+4. **Làm việc trên branch đó**
+5. **Commit và push:** `git push origin feature/ten-chuc-nang`
+6. **Tạo Pull Request**
+
+### Quy tắc làm việc:
+- Sử dụng tiếng Việt trong commit message
+- Code phải tuân thủ PSR-12
+- Test trước khi commit
+- Không commit file `.env` hoặc `vendor/`
+
+## 📞 Liên hệ
+
+- **Project Manager:** [Tên PM]
+- **Email:** [email@example.com]
+- **GitHub:** [github-username]
+
+## 📄 License
+
+Dự án này được phát triển cho mục đích học tập và nghiên cứu.
+
+---
+
+**🎉 Chúc các bạn làm việc hiệu quả!**
