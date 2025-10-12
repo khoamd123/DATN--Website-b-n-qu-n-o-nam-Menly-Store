@@ -1,64 +1,181 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# 🎓 DATN UniClubs - Hệ thống quản lý câu lạc bộ sinh viên
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 📖 Mô tả dự án
+DATN UniClubs là hệ thống quản lý câu lạc bộ sinh viên được phát triển bằng Laravel 8, cung cấp giao diện quản trị cho admin và giao diện thân thiện cho sinh viên.
 
-## About Laravel
+## ✨ Tính năng chính
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 🔐 Hệ thống phân quyền
+- **Admin**: Quản lý toàn hệ thống
+- **Trưởng CLB**: Quản lý câu lạc bộ
+- **Phó CLB**: Hỗ trợ quản lý
+- **Cán sự**: Thực hiện các nhiệm vụ
+- **Thành viên**: Tham gia hoạt động
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 🏛️ Giao diện Admin
+- Dashboard tổng quan
+- Quản lý người dùng
+- Phân quyền chi tiết
+- Quản lý câu lạc bộ
+- Thống kê và báo cáo
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🎓 Giao diện Sinh viên
+- Dashboard cá nhân
+- Tham gia câu lạc bộ
+- Đăng ký sự kiện
+- Quản lý hồ sơ
+- Thông báo
 
-## Learning Laravel
+## 🛠️ Công nghệ sử dụng
+- **Backend**: Laravel 8, PHP 8.0+
+- **Frontend**: Blade Templates, Bootstrap 5, Chart.js
+- **Database**: MySQL
+- **Authentication**: Session-based
+- **UI/UX**: Responsive Design, Modern UI
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🚀 Cài đặt
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Yêu cầu hệ thống
+- PHP >= 8.0
+- Composer
+- MySQL
+- XAMPP/WAMP (khuyến nghị)
 
-## Laravel Sponsors
+### Bước 1: Clone repository
+```bash
+git clone https://github.com/username/DATN_Uniclubs.git
+cd DATN_Uniclubs
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+### Bước 2: Cài đặt dependencies
+```bash
+composer install
+```
 
-### Premium Partners
+### Bước 3: Cấu hình environment
+```bash
+copy .env.example .env
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+Chỉnh sửa file `.env`:
+```env
+APP_NAME="DATN UniClubs"
+APP_URL=http://localhost/DATN_Uniclubs/public
 
-## Contributing
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=datn_uniclubs
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Bước 4: Tạo database và chạy migration
+```bash
+php artisan migrate:fresh --seed
+```
 
-## Code of Conduct
+### Bước 5: Tạo storage link
+```bash
+php artisan storage:link
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🎯 Sử dụng
 
-## Security Vulnerabilities
+### Truy cập Admin Panel
+```
+http://localhost/DATN_Uniclubs/public/admin
+```
+- **Login**: admin / admin123
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Truy cập Student Interface
+```
+http://localhost/DATN_Uniclubs/public/quick-login-student
+```
+- **Tự động login**: khoamdph31863@fpt.edu.vn
 
-## License
+### Đăng ký sinh viên mới
+```
+http://localhost/DATN_Uniclubs/public/register
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📊 Database Schema
+
+### Bảng chính
+- `users` - Thông tin người dùng
+- `clubs` - Thông tin câu lạc bộ
+- `club_members` - Thành viên câu lạc bộ
+- `permissions` - Quyền hạn
+- `user_permissions_club` - Phân quyền theo CLB
+- `events` - Sự kiện
+- `posts` - Bài viết
+- `notifications` - Thông báo
+
+## 🔧 Tính năng nổi bật
+
+### 🎨 Giao diện hiện đại
+- Responsive design
+- Dark/Light theme
+- Smooth animations
+- User-friendly interface
+
+### 🔐 Bảo mật
+- Session-based authentication
+- Role-based access control
+- CSRF protection
+- Input validation
+
+### 📱 Responsive
+- Mobile-friendly
+- Tablet optimized
+- Desktop experience
+
+## 📝 API Endpoints
+
+### Authentication
+- `POST /login` - Đăng nhập
+- `POST /register` - Đăng ký
+- `POST /logout` - Đăng xuất
+
+### Admin
+- `GET /admin/dashboard` - Dashboard admin
+- `GET /admin/users` - Quản lý người dùng
+- `GET /admin/permissions` - Phân quyền
+
+### Student
+- `GET /student/dashboard` - Dashboard sinh viên
+- `GET /student/clubs` - Danh sách CLB
+- `GET /student/events` - Sự kiện
+
+## 🤝 Đóng góp
+
+1. Fork repository
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 👨‍💻 Tác giả
+
+**DATN Student** - *Laravel Developer*
+
+## 📞 Liên hệ
+
+- **Email**: your-email@example.com
+- **Project Link**: [https://github.com/username/DATN_Uniclubs](https://github.com/username/DATN_Uniclubs)
+
+## 🙏 Acknowledgments
+
+- Laravel Framework
+- Bootstrap
+- Font Awesome
+- Chart.js
+- FPT University
+
+---
+
+⭐ **Nếu dự án hữu ích, hãy cho một star!** ⭐
