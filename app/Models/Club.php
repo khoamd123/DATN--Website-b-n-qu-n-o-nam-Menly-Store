@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Club extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'name',
         'slug',
@@ -15,7 +16,6 @@ class Club extends Model
         'logo',
         'field_id',
         'owner_id',
-        'leader_id',
         'max_members',
         'status'
     ];
@@ -37,76 +37,11 @@ class Club extends Model
     }
 
     /**
-     * Get the leader of the club
-     */
-    public function leader()
-    {
-        return $this->belongsTo(User::class, 'leader_id');
-    }
-
-    /**
      * Get the members of the club
      */
     public function members()
     {
-        return $this->belongsToMany(User::class, 'club_members')
-            ->withPivot('position', 'status', 'joined_at');
-    }
-
-    /**
-     * Get the club memberships
-     */
-    public function clubMembers()
-    {
-        return $this->hasMany(ClubMember::class);
-    }
-
-    /**
-     * Get active members
-     */
-    public function activeMembers()
-    {
-        return $this->clubMembers()->active();
-    }
-
-    /**
-     * Get leaders of the club
-     */
-    public function leaders()
-    {
-        return $this->clubMembers()->leaders();
-    }
-
-    /**
-     * Get officers of the club
-     */
-    public function officers()
-    {
-        return $this->clubMembers()->officers();
-    }
-
-    /**
-     * Get regular members of the club
-     */
-    public function regularMembers()
-    {
-        return $this->clubMembers()->members();
-    }
-
-    /**
-     * Get join requests for the club
-     */
-    public function joinRequests()
-    {
-        return $this->hasMany(ClubJoinRequest::class);
-    }
-
-    /**
-     * Get pending join requests
-     */
-    public function pendingJoinRequests()
-    {
-        return $this->joinRequests()->pending();
+        return $this->belongsToMany(User::class, 'club_members');
     }
 
     /**
@@ -123,5 +58,30 @@ class Club extends Model
     public function posts()
     {
         return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Get the leader of the club (alias for owner)
+     */
+    public function leader()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * Get active members of the club
+     */
+    public function activeMembers()
+    {
+        return $this->belongsToMany(User::class, 'club_members')
+                    ->wherePivot('status', 'active');
+    }
+
+    /**
+     * Get all club members
+     */
+    public function clubMembers()
+    {
+        return $this->hasMany(ClubMember::class);
     }
 }

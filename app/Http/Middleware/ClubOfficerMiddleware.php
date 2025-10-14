@@ -43,4 +43,3 @@ class ClubOfficerMiddleware
         return $next($request);
     }
 }
-

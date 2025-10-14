@@ -176,25 +176,52 @@ Route::prefix('admin')->group(function () {
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/users-simple', [AdminController::class, 'usersSimple'])->name('admin.users.simple');
     Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
+    Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     
-        // Phân quyền
-        Route::get('/permissions', [AdminController::class, 'permissionsSimple'])->name('admin.permissions');
-        Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');
-        Route::post('/permissions/update', [App\Http\Controllers\PermissionController::class, 'updateUserPermissions'])->name('admin.permissions.update');
-        Route::get('/permissions/user-permissions', [App\Http\Controllers\PermissionController::class, 'getUserPermissions'])->name('admin.permissions.user-permissions');
+    // Phân quyền
+    Route::get('/permissions', [AdminController::class, 'permissionsSimple'])->name('admin.permissions');
+    Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');
+    Route::post('/permissions-detailed/add-to-club', [App\Http\Controllers\PermissionController::class, 'addToClub'])->name('admin.permissions.add-to-club');
+    Route::post('/permissions/update', [App\Http\Controllers\PermissionController::class, 'updateUserPermissions'])->name('admin.permissions.update');
+    Route::get('/permissions/user-permissions', [App\Http\Controllers\PermissionController::class, 'getUserPermissions'])->name('admin.permissions.user-permissions');
+    
+    // Quản lý thùng rác
+    Route::get('/trash', [App\Http\Controllers\TrashController::class, 'index'])->name('admin.trash');
+    Route::post('/trash/restore', [App\Http\Controllers\TrashController::class, 'restore'])->name('admin.trash.restore');
+    Route::post('/trash/force-delete', [App\Http\Controllers\TrashController::class, 'forceDelete'])->name('admin.trash.force-delete');
+    Route::post('/trash/restore-all', [App\Http\Controllers\TrashController::class, 'restoreAll'])->name('admin.trash.restore-all');
+    Route::post('/trash/force-delete-all', [App\Http\Controllers\TrashController::class, 'forceDeleteAll'])->name('admin.trash.force-delete-all');
+    
+    // Tìm kiếm
+    Route::get('/search', [AdminController::class, 'search'])->name('admin.search');
+    
+    // Thông báo
+    Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+    
+    // Tin nhắn
+    Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
+    
+    // Hồ sơ và cài đặt
+    Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
+    Route::get('/settings', [AdminController::class, 'settings'])->name('admin.settings');
     
     // Quản lý câu lạc bộ
     Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
     Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+    Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
     
     // Tài liệu học tập
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
     
     // Quản lý quỹ
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
+    Route::post('/fund-management', [AdminController::class, 'fundManagementStore'])->name('admin.fund-management.store');
     
     // Kế hoạch
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');
+    
+    // Events (sự kiện)
+    Route::get('/events', [AdminController::class, 'plansSchedule'])->name('admin.events.index');
     
     // Bài viết
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
@@ -207,12 +234,46 @@ Route::prefix('admin')->group(function () {
     // Phân quyền
     Route::get('/permissions', [AdminController::class, 'permissionsManagement'])->name('admin.permissions');
     Route::get('/permissions-simple', [AdminController::class, 'permissionsSimple'])->name('admin.permissions.simple');
+    Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');
     Route::patch('/permissions/{id}/user', [AdminController::class, 'updateUserPermissions'])->name('admin.permissions.user');
+    
+    // Test Links
+    Route::get('/test-links', function() {
+        return view('admin.test-links');
+    })->name('admin.test-links');
+    
+    // Data Test
+    Route::get('/data-test', function() {
+        try {
+            $usersCount = \App\Models\User::count();
+            $clubsCount = \App\Models\Club::count();
+            $postsCount = \App\Models\Post::count();
+            $eventsCount = \App\Models\Event::count();
+            
+            $recentPosts = \App\Models\Post::orderBy('created_at', 'desc')->limit(5)->get();
+            $activeClubs = \App\Models\Club::where('status', 'active')->limit(5)->get();
+            $recentComments = \App\Models\PostComment::orderBy('created_at', 'desc')->limit(5)->get();
+            
+            return view('admin.data-test', compact('usersCount', 'clubsCount', 'postsCount', 'eventsCount', 'recentPosts', 'activeClubs', 'recentComments'));
+        } catch (Exception $e) {
+            return view('admin.data-test', [
+                'usersCount' => 0,
+                'clubsCount' => 0,
+                'postsCount' => 0,
+                'eventsCount' => 0,
+                'recentPosts' => collect(),
+                'activeClubs' => collect(),
+                'recentComments' => collect(),
+                'error' => $e->getMessage()
+            ]);
+        }
+    })->name('admin.data-test');
     
     
     // Quản lý CLB cho Admin
     Route::get('/clubs-management', [App\Http\Controllers\ClubManagementController::class, 'index'])->name('admin.clubs.management');
     Route::get('/clubs/create', [App\Http\Controllers\ClubManagementController::class, 'create'])->name('admin.clubs.create');
+    Route::get('/clubs/{club}/members', [AdminController::class, 'clubMembers'])->name('admin.clubs.members');
     Route::post('/clubs', [App\Http\Controllers\ClubManagementController::class, 'store'])->name('admin.clubs.store');
     Route::post('/clubs/create-student', [App\Http\Controllers\ClubManagementController::class, 'createStudentAccount'])->name('admin.create.student');
 });

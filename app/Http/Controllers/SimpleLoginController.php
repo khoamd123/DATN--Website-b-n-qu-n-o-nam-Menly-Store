@@ -31,7 +31,7 @@ class SimpleLoginController extends Controller
         if ($user && Hash::check($request->password, $user->password)) {
             // Lấy club roles của user
             $clubRoles = [];
-            $clubMemberships = $user->clubMembers()->active()->get();
+            $clubMemberships = $user->clubMembers()->where('status', 'active')->get();
             
             foreach ($clubMemberships as $membership) {
                 $clubRoles[$membership->club_id] = $membership->position;
@@ -49,9 +49,9 @@ class SimpleLoginController extends Controller
             ]);
 
             if ($user->is_admin) {
-                return redirect()->route('admin.dashboard')->with('success', 'Đăng nhập thành công!');
+                return redirect('/admin')->with('success', 'Đăng nhập thành công!');
             } else {
-                return redirect()->route('home')->with('success', 'Đăng nhập thành công!');
+                return redirect('/')->with('success', 'Đăng nhập thành công!');
             }
         }
 

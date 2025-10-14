@@ -43,4 +43,3 @@ class ClubMemberMiddleware
         return $next($request);
     }
 }
-

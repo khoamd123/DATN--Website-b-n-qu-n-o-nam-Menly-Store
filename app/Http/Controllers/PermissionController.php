@@ -28,6 +28,53 @@ class PermissionController extends Controller
     }
 
     /**
+     * Thêm user vào CLB
+     */
+    public function addToClub(Request $request)
+    {
+        // Kiểm tra đăng nhập đơn giản
+        if (!session('logged_in') || !session('is_admin')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $userId = $request->input('user_id');
+        $clubId = $request->input('club_id');
+
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User not found']);
+        }
+
+        $club = Club::find($clubId);
+        if (!$club) {
+            return response()->json(['success' => false, 'message' => 'Club not found']);
+        }
+
+        // Kiểm tra xem user đã là thành viên chưa
+        $existingMember = ClubMember::where('user_id', $userId)
+                                   ->where('club_id', $clubId)
+                                   ->first();
+
+        if ($existingMember) {
+            return response()->json(['success' => false, 'message' => 'User đã là thành viên của CLB này']);
+        }
+
+        // Thêm user vào CLB với vai trò mặc định là 'member'
+        ClubMember::create([
+            'user_id' => $userId,
+            'club_id' => $clubId,
+            'position' => 'member',
+            'status' => 'active',
+            'joined_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'message' => "Đã thêm {$user->name} vào CLB {$club->name} thành công!"
+        ]);
+    }
+
+    /**
      * Cập nhật quyền của user trong CLB
      */
     public function updateUserPermissions(Request $request)
@@ -157,6 +204,21 @@ class PermissionController extends Controller
         \Log::info("User {$userId} trong CLB {$clubId}: {$oldPosition} -> {$newPosition}");
     }
 
+    /**
+     * Hiển thị trang demo tự động thay đổi vai trò
+     */
+    public function demo(Request $request)
+    {
+        // Kiểm tra đăng nhập đơn giản
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $users = User::with('clubMembers.club')->get();
+        $permissions = Permission::all();
+
+        return view('admin.demo-auto-role', compact('users', 'permissions'));
+    }
 
     /**
      * Lấy thông tin quyền của user trong CLB

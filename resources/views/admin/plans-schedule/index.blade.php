@@ -23,8 +23,8 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-play"></i>
             </div>
-            <p class="stats-number">{{ $events->where('status', 'active')->count() }}</p>
-            <p class="stats-label">Đang hoạt động</p>
+            <p class="stats-number">{{ $events->where('status', 'ongoing')->count() }}</p>
+            <p class="stats-label">Đang diễn ra</p>
         </div>
     </div>
     <div class="col-md-3">
@@ -41,7 +41,7 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-ban"></i>
             </div>
-            <p class="stats-number">{{ $events->where('status', 'canceled')->count() }}</p>
+            <p class="stats-number">{{ $events->where('status', 'cancelled')->count() }}</p>
             <p class="stats-label">Đã hủy</p>
         </div>
     </div>
@@ -71,11 +71,12 @@
             <div class="col-md-2">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
+                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
                     <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang hoạt động</option>
-                    <option value="canceled" {{ request('status') == 'canceled' ? 'selected' : '' }}>Đã hủy</option>
+                    <option value="ongoing" {{ request('status') == 'ongoing' ? 'selected' : '' }}>Đang diễn ra</option>
                     <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -84,8 +85,11 @@
                 </button>
             </div>
             <div class="col-md-3 text-end">
-                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
+                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary me-2">
                     <i class="fas fa-refresh"></i> Làm mới
+                </a>
+                <a href="{{ route('admin.events.index') }}" class="btn btn-success" target="_blank">
+                    <i class="fas fa-plus"></i> Tạo lịch trình sự kiện
                 </a>
             </div>
         </form>
@@ -121,27 +125,44 @@
                             <td>
                                 <strong>Bắt đầu:</strong> {{ \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') }}
                                 <br><strong>Kết thúc:</strong> {{ \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') }}
+                                @if($event->location)
+                                    <br><strong>Địa điểm:</strong> {{ $event->location }}
+                                @endif
                             </td>
                             <td>
-                                <span class="badge bg-{{ $event->mode === 'public' ? 'success' : 'warning' }}">
-                                    {{ $event->mode === 'public' ? 'Công khai' : 'Riêng tư' }}
+                                @php
+                                    $modeColors = [
+                                        'offline' => 'primary',
+                                        'online' => 'success',
+                                        'hybrid' => 'info'
+                                    ];
+                                    $modeLabels = [
+                                        'offline' => 'Trực tiếp',
+                                        'online' => 'Trực tuyến',
+                                        'hybrid' => 'Kết hợp'
+                                    ];
+                                @endphp
+                                <span class="badge bg-{{ $modeColors[$event->mode] ?? 'secondary' }}">
+                                    {{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}
                                 </span>
                             </td>
                             <td>
                                 @php
                                     $statusColors = [
+                                        'draft' => 'secondary',
                                         'pending' => 'warning',
                                         'approved' => 'info',
-                                        'active' => 'success',
-                                        'canceled' => 'danger',
-                                        'completed' => 'secondary'
+                                        'ongoing' => 'success',
+                                        'completed' => 'primary',
+                                        'cancelled' => 'danger'
                                     ];
                                     $statusLabels = [
+                                        'draft' => 'Bản nháp',
                                         'pending' => 'Chờ duyệt',
                                         'approved' => 'Đã duyệt',
-                                        'active' => 'Đang hoạt động',
-                                        'canceled' => 'Đã hủy',
-                                        'completed' => 'Hoàn thành'
+                                        'ongoing' => 'Đang diễn ra',
+                                        'completed' => 'Hoàn thành',
+                                        'cancelled' => 'Đã hủy'
                                     ];
                                 @endphp
                                 <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
@@ -152,50 +173,24 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($event->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $event->id) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
                                             @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="approved">
-                                            <button type="submit" class="btn btn-sm btn-success">
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
                                                 <i class="fas fa-check"></i> Duyệt
                                             </button>
                                         </form>
                                         
-                                        <form method="POST" action="{{ route('admin.clubs.status', $event->id) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
                                             @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="canceled">
                                             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn hủy sự kiện này?')">
                                                 <i class="fas fa-times"></i> Hủy
                                             </button>
                                         </form>
                                     @endif
                                     
-                                    @if($event->status === 'approved')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $event->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="active">
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-play"></i> Kích hoạt
-                                            </button>
-                                        </form>
-                                    @endif
-                                    
-                                    @if($event->status === 'active')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $event->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="completed">
-                                            <button type="submit" class="btn btn-sm btn-info" onclick="return confirm('Bạn có chắc chắn muốn đánh dấu sự kiện này là hoàn thành?')">
-                                                <i class="fas fa-check-double"></i> Hoàn thành
-                                            </button>
-                                        </form>
-                                    @endif
-                                    
-                                    <button class="btn btn-sm btn-info" onclick="viewEvent({{ $event->id }})">
-                                        <i class="fas fa-eye"></i> Xem
-                                    </button>
+                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> Xem chi tiết
+                                    </a>
                                 </div>
                             </td>
                         </tr>

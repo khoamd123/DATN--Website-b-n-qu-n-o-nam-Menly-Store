@@ -26,7 +26,7 @@ class AdminController extends Controller
             $totalUsers = User::count();
             $totalClubs = Club::count();
             $totalEvents = Event::count();
-            $totalPosts = Post::count();
+            $totalPosts = Post::where('type', 'post')->count();
             
             // Thống kê nâng cao
             $activeClubs = Club::where('status', 'active')->count();
@@ -49,7 +49,7 @@ class AdminController extends Controller
         $usersLastMonth = User::where('created_at', '>=', now()->subMonth())->count();
         $clubsLastMonth = Club::where('created_at', '>=', now()->subMonth())->count();
         $eventsLastMonth = Event::where('created_at', '>=', now()->subMonth())->count();
-        $postsLastMonth = Post::where('created_at', '>=', now()->subMonth())->count();
+        $postsLastMonth = Post::where('type', 'post')->where('created_at', '>=', now()->subMonth())->count();
         
         // Người dùng mới (7 ngày gần nhất)
         $newUsers = User::where('created_at', '>=', now()->subDays(7))
@@ -73,7 +73,12 @@ class AdminController extends Controller
             ->get();
             
         // Top 5 CLB hoạt động mạnh nhất (dựa trên số bài viết + sự kiện)
-        $topClubs = Club::withCount(['posts', 'events'])
+        $topClubs = Club::withCount([
+                'posts as posts_count' => function ($query) {
+                    $query->where('type', 'post');
+                },
+                'events'
+            ])
             ->with(['field'])
             ->having('posts_count', '>', 0)
             ->orHaving('events_count', '>', 0)
@@ -107,7 +112,7 @@ class AdminController extends Controller
                     ->whereMonth('created_at', $date->month)->count(),
                 'events' => Event::whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)->count(),
-                'posts' => Post::whereYear('created_at', $date->year)
+                'posts' => Post::where('type', 'post')->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)->count(),
             ];
         }
@@ -173,7 +178,7 @@ class AdminController extends Controller
             $query->where('is_admin', $request->is_admin);
         }
         
-        $users = $query->orderBy('created_at', 'desc')->orderBy('id', 'desc')->paginate(20);
+        $users = $query->orderBy('id', 'asc')->paginate(20);
         
         return view('admin.users.index', compact('users'));
     }
@@ -206,8 +211,7 @@ class AdminController extends Controller
         }
         
         // Force fresh query - không cache + random để tránh cache
-        $users = $query->orderBy('created_at', 'desc')
-                      ->orderBy('id', 'desc')
+        $users = $query->orderBy('id', 'asc')
                       ->paginate(20);
         
         // Đảm bảo pagination links giữ parameters
@@ -247,11 +251,168 @@ class AdminController extends Controller
     }
 
     /**
+     * Xóa người dùng (soft delete)
+     */
+    public function deleteUser($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $user = User::findOrFail($id);
+        
+        // Không cho phép xóa admin chính
+        if ($user->id == session('user_id')) {
+            return redirect()->back()->with('error', 'Không thể xóa tài khoản admin hiện tại!');
+        }
+        
+        $user->delete(); // Soft delete
+        
+        return redirect()->back()->with('success', 'Người dùng đã được chuyển vào thùng rác!');
+    }
+
+    /**
+     * Xóa câu lạc bộ (soft delete)
+     */
+    public function deleteClub($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $club = Club::findOrFail($id);
+        $club->delete(); // Soft delete
+        
+        return redirect()->back()->with('success', 'Câu lạc bộ đã được chuyển vào thùng rác!');
+    }
+
+    /**
+     * Tìm kiếm toàn cục
+     */
+    public function search(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $query = $request->get('q', '');
+        
+        if (empty($query)) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        $results = [
+            'users' => collect(),
+            'clubs' => collect(),
+            'posts' => collect(),
+            'events' => collect(),
+        ];
+
+        if (!empty($query)) {
+            // Tìm kiếm users
+            $results['users'] = User::where('name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('student_id', 'like', "%{$query}%")
+                ->limit(10)
+                ->get();
+
+            // Tìm kiếm clubs
+            $results['clubs'] = Club::where('name', 'like', "%{$query}%")
+                ->orWhere('description', 'like', "%{$query}%")
+                ->with('owner')
+                ->limit(10)
+                ->get();
+
+            // Tìm kiếm posts
+            $results['posts'] = Post::where('title', 'like', "%{$query}%")
+                ->orWhere('content', 'like', "%{$query}%")
+                ->with(['user', 'club'])
+                ->limit(10)
+                ->get();
+
+            // Tìm kiếm events
+            $results['events'] = Event::where('title', 'like', "%{$query}%")
+                ->orWhere('description', 'like', "%{$query}%")
+                ->with(['creator', 'club'])
+                ->limit(10)
+                ->get();
+        }
+
+        return view('admin.search', compact('query', 'results'));
+    }
+
+    /**
+     * Trang thông báo
+     */
+    public function notifications(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $notifications = \App\Models\Notification::orderBy('created_at', 'desc')->paginate(20);
+        } catch (Exception $e) {
+            $notifications = collect();
+        }
+
+        return view('admin.notifications', compact('notifications'));
+    }
+
+    /**
+     * Trang tin nhắn
+     */
+    public function messages(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        // Tạm thời trả về thông báo không có tin nhắn
+        $messages = collect();
+        
+        return view('admin.messages', compact('messages'));
+    }
+
+    /**
+     * Trang hồ sơ
+     */
+    public function profile(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $user = User::find(session('user_id'));
+        
+        return view('admin.profile', compact('user'));
+    }
+
+    /**
+     * Trang cài đặt
+     */
+    public function settings(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        return view('admin.settings');
+    }
+
+    /**
      * Display clubs management page
      */
     public function clubs(Request $request)
     {
-        $query = Club::with(['field', 'owner']);
+        $query = Club::with(['field', 'owner', 'clubMembers']);
         
         // Tìm kiếm
         if ($request->has('search') && $request->search) {
@@ -269,6 +430,17 @@ class AdminController extends Controller
         $clubs = $query->orderBy('created_at', 'desc')->paginate(20);
         
         return view('admin.clubs.index', compact('clubs'));
+    }
+
+    /**
+     * Display club members page
+     */
+    public function clubMembers($clubId)
+    {
+        $club = Club::with(['owner', 'clubMembers.user'])->findOrFail($clubId);
+        $members = $club->clubMembers()->with('user')->orderBy('position', 'asc')->get();
+        
+        return view('admin.clubs.members-simple', compact('club', 'members'));
     }
 
     /**
@@ -350,6 +522,34 @@ class AdminController extends Controller
         });
         
         return view('admin.fund-management.index', compact('funds', 'clubs', 'totalFunds'));
+    }
+
+    /**
+     * Store fund management record
+     */
+    public function fundManagementStore(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'club_id' => 'required|exists:clubs,id',
+            'content' => 'nullable|string',
+            'type' => 'required|in:thu,chi'
+        ]);
+
+        // Tạo post với type = 'fund'
+        Post::create([
+            'title' => $request->title,
+            'content' => $request->content . ' - Số tiền: ' . $request->amount . 'đ',
+            'type' => 'fund',
+            'status' => 'published',
+            'club_id' => $request->club_id,
+            'user_id' => auth()->id() ?? 1, // Admin user
+            'slug' => \Illuminate\Support\Str::slug($request->title) . '-' . time()
+        ]);
+
+        return redirect()->route('admin.fund-management')
+            ->with('success', 'Thêm giao dịch quỹ thành công!');
     }
 
     /**

@@ -61,9 +61,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $user)
+                    @forelse($users as $index => $user)
                         <tr>
-                            <td>{{ $user->id }}</td>
+                            <td>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</td>
                             <td>
                                 @if($user->avatar && file_exists(public_path($user->avatar)))
                                     <img src="{{ asset($user->avatar) }}" 
@@ -88,11 +88,13 @@
                                 @endif
                             </td>
                             <td>{{ $user->phone ?? 'N/A' }}</td>
-                            <td>{{ Str::limit($user->address ?? 'N/A', 30) }}</td>
+                            <td>{{ substr($user->address ?? 'N/A', 0, 30) }}{{ strlen($user->address ?? 'N/A') > 30 ? '...' : '' }}</td>
                             <td>
-                                <span class="badge bg-{{ $user->role === 'admin' ? 'danger' : ($user->role === 'club_manager' ? 'warning' : 'success') }}">
-                                    {{ ucfirst(str_replace('_', ' ', $user->role)) }}
-                                </span>
+                                @php
+                                    $roleLabel = $user->is_admin ? 'Admin' : 'User';
+                                    $roleColor = $user->is_admin ? 'danger' : 'success';
+                                @endphp
+                                <span class="badge bg-{{ $roleColor }}">{{ $roleLabel }}</span>
                             </td>
                             <td>
                                 @php
@@ -115,10 +117,10 @@
                             </td>
                             <td>
                                 <span class="badge bg-{{ $user->is_admin ? 'danger' : 'secondary' }}">
-                                    {{ $user->is_admin ? 'Admin' : 'User' }}
+                                    {{ $user->is_admin ? 'Có quyền' : 'Không có quyền' }}
                                 </span>
                             </td>
-                            <td>{{ $user->created_at->format('d/m/Y') }}</td>
+                            <td>{{ $user->created_at ? $user->created_at->format('d/m/Y') : 'N/A' }}</td>
                             <td>
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-primary" 
@@ -126,6 +128,13 @@
                                         data-bs-target="#editRoleModal{{ $user->id }}">
                                     <i class="fas fa-edit"></i> Chỉnh sửa
                                 </button>
+                                <form method="POST" action="{{ route('admin.users.delete', $user->id) }}" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     @empty
@@ -142,7 +151,36 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                {{ $users->appends(request()->query())->links() }}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        @if($users->onFirstPage())
+                            <li class="page-item disabled">
+                                <span class="page-link">« Previous</span>
+                            </li>
+                        @else
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $users->previousPageUrl() }}">« Previous</a>
+                            </li>
+                        @endif
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ $users->currentPage() }}</span>
+                        </li>
+                        
+                        @if($users->hasMorePages())
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $users->nextPageUrl() }}">Next »</a>
+                            </li>
+                        @else
+                            <li class="page-item disabled">
+                                <span class="page-link">Next »</span>
+                            </li>
+                        @endif
+                    </ul>
+                </nav>
+            </div>
+            <div class="text-center text-muted mt-2">
+                Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} results
             </div>
         @endif
     </div>
@@ -234,4 +272,40 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 });
 </script>
+
+<style>
+/* Pagination styling */
+.pagination {
+    justify-content: center;
+    margin: 0;
+}
+
+.pagination .page-link {
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    border: 1px solid #dee2e6;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    background-color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+</style>
 @endsection

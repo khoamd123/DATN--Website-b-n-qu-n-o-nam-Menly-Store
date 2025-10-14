@@ -96,21 +96,27 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($allComments as $comment)
+                    @forelse($allComments as $index => $comment)
                         @php
                             $commentable = $comment->post ?? $comment->event ?? null;
                             $commentableType = $comment->post ? 'Bài viết' : 'Sự kiện';
                         @endphp
                         <tr>
-                            <td>{{ $comment->id }}</td>
+                            <td>{{ $index + 1 }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <img src="{{ $comment->user->avatar ?? '/images/avatar/avatar.png' }}" 
-                                         alt="{{ $comment->user->name }}" 
-                                         class="rounded-circle me-2" 
-                                         width="30" 
-                                         height="30"
-                                         onerror="this.src='/images/avatar/avatar.png'">
+                                    @if($comment->user && $comment->user->avatar && file_exists(public_path($comment->user->avatar)))
+                                        <img src="{{ asset($comment->user->avatar) }}" 
+                                             alt="{{ $comment->user->name }}" 
+                                             class="rounded-circle me-2" 
+                                             width="30" 
+                                             height="30">
+                                    @else
+                                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 30px; height: 30px;">
+                                            <i class="fas fa-user text-white" style="font-size: 12px;"></i>
+                                        </div>
+                                    @endif
                                     <div>
                                         <strong>{{ $comment->user->name ?? 'Không xác định' }}</strong>
                                         <br><small class="text-muted">{{ $comment->user->email ?? '' }}</small>
@@ -119,7 +125,7 @@
                             </td>
                             <td>
                                 <div style="max-width: 300px;">
-                                    {{ Str::limit($comment->content, 100) }}
+                                    {{ substr($comment->content, 0, 100) }}{{ strlen($comment->content) > 100 ? '...' : '' }}
                                 </div>
                             </td>
                             <td>

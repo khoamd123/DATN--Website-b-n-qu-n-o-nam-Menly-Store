@@ -76,9 +76,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($posts as $post)
+                    @forelse($posts as $index => $post)
                         <tr>
-                            <td>{{ $post->id }}</td>
+                            <td>{{ ($posts->currentPage() - 1) * $posts->perPage() + $index + 1 }}</td>
                             <td>
                                 <strong>{{ $post->title }}</strong>
                                 <br><small class="text-muted">{{ $post->slug }}</small>
@@ -90,7 +90,7 @@
                             </td>
                             <td>{{ $post->club->name ?? 'Không xác định' }}</td>
                             <td>{{ $post->user->name ?? 'Không xác định' }}</td>
-                            <td>{{ Str::limit($post->content, 50) }}</td>
+                            <td>{{ substr($post->content, 0, 50) }}{{ strlen($post->content) > 50 ? '...' : '' }}</td>
                             <td>
                                 @php
                                     $statusColors = [

@@ -112,7 +112,7 @@
                                     <span class="text-muted">Không có</span>
                                 @endif
                             </td>
-                            <td>{{ $user->created_at->format('d/m/Y') }}</td>
+                            <td>{{ $user->created_at ? $user->created_at->format('d/m/Y') : 'N/A' }}</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editPermissionsModal{{ $user->id }}">
@@ -182,7 +182,36 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                {{ $users->appends(request()->query())->links() }}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        @if($users->onFirstPage())
+                            <li class="page-item disabled">
+                                <span class="page-link">« Previous</span>
+                            </li>
+                        @else
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $users->previousPageUrl() }}">« Previous</a>
+                            </li>
+                        @endif
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ $users->currentPage() }}</span>
+                        </li>
+                        
+                        @if($users->hasMorePages())
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $users->nextPageUrl() }}">Next »</a>
+                            </li>
+                        @else
+                            <li class="page-item disabled">
+                                <span class="page-link">Next »</span>
+                            </li>
+                        @endif
+                    </ul>
+                </nav>
+            </div>
+            <div class="text-center text-muted mt-2">
+                Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} results
             </div>
         @endif
     </div>
@@ -209,4 +238,40 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Pagination styling */
+.pagination {
+    justify-content: center;
+    margin: 0;
+}
+
+.pagination .page-link {
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    border: 1px solid #dee2e6;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    background-color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+</style>
 @endsection

@@ -54,6 +54,7 @@
                         <th>Tên CLB</th>
                         <th>Lĩnh vực</th>
                         <th>Chủ sở hữu</th>
+                        <th>Thành viên</th>
                         <th>Mô tả</th>
                         <th>Trạng thái</th>
                         <th>Ngày tạo</th>
@@ -89,7 +90,11 @@
                             </td>
                             <td>{{ $club->field->name ?? 'Không xác định' }}</td>
                             <td>{{ $club->owner->name ?? 'Không xác định' }}</td>
-                            <td>{{ Str::limit($club->description, 50) }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ $club->clubMembers->count() }}</span>
+                                <br><small class="text-muted">{{ $club->clubMembers->where('position', 'leader')->count() }} trưởng</small>
+                            </td>
+                            <td>{{ substr($club->description, 0, 50) }}{{ strlen($club->description) > 50 ? '...' : '' }}</td>
                             <td>
                                 @php
                                     $statusColors = [
@@ -114,6 +119,9 @@
                             <td>{{ $club->created_at->format('d/m/Y') }}</td>
                             <td>
                                 <div class="btn-group" role="group">
+                                    <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-users"></i> Thành viên
+                                    </a>
                                     <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
                                         @csrf
                                         @method('PATCH')

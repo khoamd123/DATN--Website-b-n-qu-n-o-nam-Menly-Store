@@ -68,16 +68,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($documents as $document)
+                    @forelse($documents as $index => $document)
                         <tr>
-                            <td>{{ $document->id }}</td>
+                            <td>{{ ($documents->currentPage() - 1) * $documents->perPage() + $index + 1 }}</td>
                             <td>
                                 <strong>{{ $document->title }}</strong>
                                 <br><small class="text-muted">{{ $document->slug }}</small>
                             </td>
                             <td>{{ $document->club->name ?? 'Không xác định' }}</td>
                             <td>{{ $document->user->name ?? 'Không xác định' }}</td>
-                            <td>{{ Str::limit($document->content, 50) }}</td>
+                            <td>{{ substr($document->content, 0, 50) }}{{ strlen($document->content) > 50 ? '...' : '' }}</td>
                             <td>
                                 @php
                                     $statusColors = [

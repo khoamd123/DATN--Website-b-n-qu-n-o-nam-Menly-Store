@@ -26,15 +26,16 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 250px;
+            width: 280px;
             z-index: 1000;
         }
         
         .sidebar-header {
             background-color: #2c3e50;
-            padding: 1rem;
+            padding: 0.5rem;
             text-align: center;
             border-bottom: 1px solid #495057;
+            display: none;
         }
         
         .sidebar-header h4 {
@@ -44,7 +45,7 @@
         }
         
         .sidebar-nav {
-            padding: 1rem 0;
+            padding: 1.5rem 0;
         }
         
         .nav-item {
@@ -53,7 +54,7 @@
         
         .nav-link {
             color: #adb5bd;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem 2rem;
             display: flex;
             align-items: center;
             text-decoration: none;
@@ -61,6 +62,7 @@
             border: none;
             background: none;
             width: 100%;
+            font-size: 0.95rem;
         }
         
         .nav-link:hover {
@@ -79,10 +81,103 @@
             text-align: center;
         }
         
+        .top-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            z-index: 999;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: calc(100vw - 280px);
+            min-width: calc(100vw - 280px);
+            max-width: calc(100vw - 280px);
+        }
+        
+        .top-header .d-flex {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        .top-header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            text-decoration: none;
+        }
+        
+        .top-header .logo img {
+            height: 40px;
+            width: auto;
+        }
+        
+        .search-bar {
+            max-width: 500px;
+            position: relative;
+            margin-right: 1.5rem;
+        }
+        
+        .search-bar input {
+            border-radius: 25px;
+            border: 1px solid #dee2e6;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+        }
+        
+        .search-bar .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+            min-width: 200px;
+            justify-content: flex-end;
+        }
+        
+        .notification-btn, .message-btn {
+            position: relative;
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-btn:hover, .message-btn:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        .notification-badge, .message-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
         .main-content {
-            margin-left: 250px;
+            margin-left: 280px;
             padding: 2rem;
             min-height: 100vh;
+            margin-top: 80px;
         }
         
         .content-header {
@@ -225,12 +320,117 @@
     <?php echo $__env->yieldContent('styles'); ?>
 </head>
 <body>
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="d-flex justify-content-between align-items-center w-100">
+            <!-- Search Bar (chiếm toàn bộ không gian) -->
+            <div class="search-bar flex-grow-1">
+                <form method="GET" action="<?php echo e(route('admin.search')); ?>" class="position-relative">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           name="q" 
+                           class="form-control w-100" 
+                           placeholder="Tìm kiếm người dùng, câu lạc bộ, bài viết..."
+                           value="<?php echo e(request('q')); ?>">
+                </form>
+            </div>
+            
+            <!-- Header Actions -->
+            <div class="header-actions">
+                <!-- Notifications -->
+                <div class="dropdown">
+                    <button class="notification-btn dropdown-toggle" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <i class="fas fa-bell"></i>
+                        <?php
+                            try {
+                                $notificationCount = \App\Models\Notification::where('read_at', null)->count();
+                            } catch (Exception $e) {
+                                $notificationCount = 0;
+                            }
+                        ?>
+                        <?php if($notificationCount > 0): ?>
+                            <span class="notification-badge"><?php echo e($notificationCount > 99 ? '99+' : $notificationCount); ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                        <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
+                        <?php if($notificationCount > 0): ?>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus text-success"></i> Có <?php echo e($notificationCount); ?> thông báo mới</a></li>
+                        <?php else: ?>
+                            <li><a class="dropdown-item text-muted" href="#"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
+                        <?php endif; ?>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="<?php echo e(route('admin.notifications')); ?>">Xem tất cả thông báo</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Messages -->
+                <div class="dropdown">
+                    <button class="message-btn dropdown-toggle" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <i class="fas fa-envelope"></i>
+                        <?php
+                            try {
+                                $messageCount = \App\Models\Notification::where('type', 'message')->where('read_at', null)->count();
+                            } catch (Exception $e) {
+                                $messageCount = 0;
+                            }
+                        ?>
+                        <?php if($messageCount > 0): ?>
+                            <span class="message-badge"><?php echo e($messageCount > 99 ? '99+' : $messageCount); ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                        <li><h6 class="dropdown-header">💬 Tin nhắn</h6></li>
+                        <?php if($messageCount > 0): ?>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-comment text-primary"></i> Có <?php echo e($messageCount); ?> tin nhắn mới</a></li>
+                        <?php else: ?>
+                            <li><a class="dropdown-item text-muted" href="#"><i class="fas fa-inbox text-secondary"></i> Hộp thư trống</a></li>
+                        <?php endif; ?>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="<?php echo e(route('admin.messages')); ?>">Xem tất cả tin nhắn</a></li>
+                    </ul>
+                </div>
+                
+                <!-- User Profile -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <div class="user-avatar-fixed me-2" style="width: 30px; height: 30px; font-size: 12px;">
+                            <?php echo e(substr(session('user_name', 'A'), 0, 1)); ?>
+
+                        </div>
+                        <span><?php echo e(session('user_name', 'Admin')); ?></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">👤 <?php echo e(session('user_name', 'Admin')); ?></h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="<?php echo e(route('admin.profile')); ?>"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
+                        <li><a class="dropdown-item" href="<?php echo e(route('admin.settings')); ?>"><i class="fas fa-cog me-2"></i>Cài đặt</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="<?php echo e(route('logout')); ?>" class="d-inline">
+                                <?php echo csrf_field(); ?>
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
     <!-- Sidebar -->
     <nav class="sidebar">
-        <div class="sidebar-header">
-            <h4>CLB Admin</h4>
-        </div>
-        
         <div class="sidebar-nav">
             <ul class="nav flex-column">
                 <li class="nav-item">
@@ -248,7 +448,7 @@
                 <li class="nav-item">
                     <a class="nav-link <?php echo e(request()->routeIs('admin.clubs*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.clubs')); ?>">
                         <i class="fas fa-users"></i>
-                        Thành viên CLB
+                        Quản lý CLB
                     </a>
                 </li>
                 <li class="nav-item">
@@ -291,6 +491,26 @@
          <a class="nav-link <?php echo e(request()->routeIs('admin.permissions.detailed') ? 'active' : ''); ?>" href="<?php echo e(route('admin.permissions.detailed')); ?>">
              <i class="fas fa-cogs"></i>
              Phân Quyền Chi Tiết
+         </a>
+     </li>
+     <li class="nav-item">
+         <a class="nav-link <?php echo e(request()->routeIs('admin.trash*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.trash')); ?>">
+             <i class="fas fa-trash"></i>
+             Thùng rác
+             <?php
+                 try {
+                     $trashCount = \App\Models\User::onlyTrashed()->count() + 
+                                  \App\Models\Club::onlyTrashed()->count() + 
+                                  \App\Models\Post::onlyTrashed()->count() + 
+                                  \App\Models\ClubMember::onlyTrashed()->count() + 
+                                  \App\Models\PostComment::onlyTrashed()->count();
+                 } catch (Exception $e) {
+                     $trashCount = 0;
+                 }
+             ?>
+             <?php if($trashCount > 0): ?>
+                 <span class="badge bg-danger ms-1"><?php echo e($trashCount); ?></span>
+             <?php endif; ?>
          </a>
      </li>
                 <li class="nav-item mt-3">

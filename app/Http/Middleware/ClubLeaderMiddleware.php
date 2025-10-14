@@ -43,4 +43,3 @@ class ClubLeaderMiddleware
         return $next($request);
     }
 }
-

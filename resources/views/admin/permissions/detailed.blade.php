@@ -149,11 +149,18 @@
                 </thead>
                 <tbody>
                     @foreach($users as $user)
-                        @foreach($clubs as $club)
-                            @php
-                                $position = $user->getPositionInClub($club->id);
-                                $userPermissions = $user->getClubPermissions($club->id);
-                            @endphp
+                        @php
+                            $userClubs = $user->clubMembers()->with('club')->get();
+                        @endphp
+                        
+                        @if($userClubs->count() > 0)
+                            {{-- Hiển thị các CLB mà user đã tham gia --}}
+                            @foreach($userClubs as $clubMember)
+                                @php
+                                    $club = $clubMember->club;
+                                    $position = $clubMember->position;
+                                    $userPermissions = $user->getClubPermissions($club->id);
+                                @endphp
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -172,9 +179,9 @@
                                 </td>
                                 <td>
                                     @if($user->isAdmin())
-                                        <span class="badge bg-danger">Admin</span>
-                                        <br><small class="text-muted">Vị trí CLB: 
-                                            @if($position)
+                                        @if($position)
+                                            <span class="badge bg-danger">Admin - Trưởng CLB</span>
+                                            <br><small class="text-muted">Vị trí CLB: 
                                                 @switch($position)
                                                     @case('leader') Trưởng CLB @break
                                                     @case('vice_president') Phó CLB @break
@@ -182,10 +189,11 @@
                                                     @case('member') Thành viên @break
                                                     @default {{ $position }} @break
                                                 @endswitch
-                                            @else
-                                                Không phải thành viên
-                                            @endif
-                                        </small>
+                                            </small>
+                                        @else
+                                            <span class="badge bg-danger">Admin Hệ Thống</span>
+                                            <br><small class="text-muted">Quyền: Tất cả CLB</small>
+                                        @endif
                                     @elseif($position)
                                         @switch($position)
                                             @case('leader')
@@ -204,7 +212,8 @@
                                                 <span class="badge bg-secondary">{{ $position }}</span>
                                         @endswitch
                                     @else
-                                        <span class="badge bg-light text-dark">Không phải thành viên</span>
+                                        <span class="badge bg-secondary">Chưa tham gia</span>
+                                        <br><small class="text-muted">Có thể thêm vào CLB</small>
                                     @endif
                                 </td>
                                 <td>
@@ -220,16 +229,51 @@
                                 </td>
                                 <td>
                                     @if(!$user->isAdmin())
-                                        <button class="btn btn-sm btn-outline-primary" 
-                                                onclick="editPermissions({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
-                                            <i class="fas fa-edit"></i> Sửa quyền
-                                        </button>
+                                        @if($position)
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    onclick="editPermissions({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
+                                                <i class="fas fa-edit"></i> Sửa quyền
+                                            </button>
+                                        @else
+                                            <button class="btn btn-sm btn-success" 
+                                                    onclick="addToClub({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
+                                                <i class="fas fa-plus"></i> Thêm vào CLB
+                                            </button>
+                                        @endif
                                     @else
                                         <span class="text-muted">Admin - Không thể sửa</span>
                                     @endif
                                 </td>
                             </tr>
-                        @endforeach
+                            @endforeach
+                        @else
+                            {{-- Hiển thị user chưa tham gia CLB nào --}}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar-fixed me-2">
+                                            {{ substr($user->name, 0, 1) }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ $user->name }}</strong>
+                                            <br><small class="text-muted">{{ $user->email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted">Chưa tham gia CLB nào</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">Không có</span>
+                                </td>
+                                <td>
+                                    <span class="text-muted">Không có quyền</span>
+                                </td>
+                                <td>
+                                    <span class="text-muted">Chọn CLB để thêm</span>
+                                </td>
+                            </tr>
+                        @endif
                     @endforeach
                 </tbody>
             </table>
@@ -391,4 +435,36 @@ function getPermissionNameById(permissionId) {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 </style>
+
+<script>
+function addToClub(userId, clubId, userName, clubName) {
+    if (confirm(`Bạn có chắc chắn muốn thêm "${userName}" vào CLB "${clubName}"?`)) {
+        // Gửi request thêm user vào CLB
+        fetch('/admin/permissions-detailed/add-to-club', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                club_id: clubId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Thêm thành viên thành công!');
+                location.reload(); // Reload trang để cập nhật
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra!');
+        });
+    }
+}
+</script>
 @endsection

@@ -113,7 +113,7 @@
                             <td>{{ $fund->id }}</td>
                             <td>
                                 <strong>{{ $fund->title }}</strong>
-                                <br><small class="text-muted">{{ Str::limit($fund->content, 50) }}</small>
+                                <br><small class="text-muted">{{ substr($fund->content, 0, 50) }}{{ strlen($fund->content) > 50 ? '...' : '' }}</small>
                             </td>
                             <td>{{ $fund->club->name ?? 'Không xác định' }}</td>
                             <td>
@@ -165,7 +165,7 @@
                 <h5 class="modal-title">Thêm giao dịch quỹ</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ route('admin.posts') }}">
+            <form method="POST" action="{{ route('admin.fund-management.store') }}">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -203,6 +203,7 @@
                     <button type="submit" class="btn btn-primary">Thêm</button>
                 </div>
             </form>
+            
         </div>
     </div>
 </div>
