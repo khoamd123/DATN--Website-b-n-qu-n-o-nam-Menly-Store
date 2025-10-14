@@ -99,20 +99,19 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Kiểm tra xem user có phải là leader, vice_president hoặc officer không
+        // Luôn hiển thị trang, nhưng kiểm tra quyền để hiển thị nội dung phù hợp
         $hasManagementRole = false;
         $clubId = null;
+        $userPosition = null;
+        $userClub = null;
         
         if ($user->clubs->count() > 0) {
-            $clubId = $user->clubs->first()->id;
-            $position = $user->getPositionInClub($clubId);
-            $hasManagementRole = in_array($position, ['leader', 'vice_president', 'officer']);
+            $userClub = $user->clubs->first();
+            $clubId = $userClub->id;
+            $userPosition = $user->getPositionInClub($clubId);
+            $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
         }
 
-        if (!$hasManagementRole) {
-            return redirect()->route('student.dashboard')->with('error', 'Bạn không có quyền truy cập trang quản lý CLB. Chỉ trưởng CLB, phó CLB và cán sự mới có thể truy cập.');
-        }
-
-        return view('student.club-management.index', compact('user'));
+        return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
     }
 }

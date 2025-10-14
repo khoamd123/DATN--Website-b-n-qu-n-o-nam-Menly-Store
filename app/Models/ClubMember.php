@@ -44,7 +44,7 @@ class ClubMember extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('status', 'approved');
+        return $query->where('status', 'active');
     }
 
     /**

@@ -16,25 +16,73 @@
                     <p class="text-muted mb-0">Công cụ quản lý dành cho trưởng CLB và cán sự</p>
                 </div>
                 <div class="user-role-badge">
-                    @php
-                        $userRole = $user->getPositionInClub($user->clubs->first()->id ?? null);
-                    @endphp
-                    @if($userRole === 'leader')
+                    @if($userPosition === 'leader')
                         <span class="badge bg-warning">
                             <i class="fas fa-crown me-1"></i> Trưởng CLB
                         </span>
-                    @elseif($userRole === 'vice_president')
+                    @elseif($userPosition === 'vice_president')
                         <span class="badge bg-info">
                             <i class="fas fa-user-tie me-1"></i> Phó CLB
                         </span>
-                    @elseif($userRole === 'officer')
+                    @elseif($userPosition === 'officer')
                         <span class="badge bg-success">
                             <i class="fas fa-user-shield me-1"></i> Cán sự
+                        </span>
+                    @elseif($userPosition === 'member')
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-user me-1"></i> Thành viên
+                        </span>
+                    @else
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-question me-1"></i> Chưa tham gia CLB
                         </span>
                     @endif
                 </div>
             </div>
         </div>
+
+        @if(!$hasManagementRole)
+        <!-- Access Denied Message -->
+        <div class="content-card">
+            <div class="text-center py-5">
+                <div class="access-denied-icon mb-4">
+                    <i class="fas fa-lock text-muted" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="mb-3">
+                    @if($user->clubs->count() == 0)
+                        Bạn chưa tham gia CLB nào
+                    @else
+                        Bạn không có quyền quản lý CLB
+                    @endif
+                </h4>
+                
+                @if($user->clubs->count() == 0)
+                    <p class="text-muted mb-4">Để quản lý CLB, bạn cần tham gia hoặc tạo một CLB trước.</p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="{{ route('student.clubs.index') }}" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i> Tìm CLB để tham gia
+                        </a>
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                            <i class="fas fa-plus me-2"></i> Tạo CLB mới
+                        </button>
+                    </div>
+                @else
+                    <p class="text-muted mb-4">
+                        Chỉ <strong>Trưởng CLB</strong>, <strong>Phó CLB</strong> và <strong>Cán sự</strong> mới có thể quản lý CLB.<br>
+                        Vai trò hiện tại của bạn: <strong>{{ ucfirst($userPosition) }}</strong>
+                    </p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="{{ route('student.clubs.index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-2"></i> Xem CLB của tôi
+                        </a>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                            <i class="fas fa-plus me-2"></i> Tạo CLB mới
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+        @else
 
         <!-- Management Cards -->
         <div class="row">
@@ -502,4 +550,6 @@
     }
 </style>
 @endpush
+
+@endif
 @endsection

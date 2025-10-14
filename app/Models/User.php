@@ -103,7 +103,7 @@ class User extends Authenticatable
         return $this->clubMembers()
             ->where('club_id', $clubId)
             ->where('position', 'leader')
-            ->where('status', 'approved')
+            ->where('status', 'active')
             ->exists();
     }
 
@@ -115,7 +115,7 @@ class User extends Authenticatable
         return $this->clubMembers()
             ->where('club_id', $clubId)
             ->whereIn('position', ['vice_president', 'officer'])
-            ->where('status', 'approved')
+            ->where('status', 'active')
             ->exists();
     }
 
@@ -126,7 +126,7 @@ class User extends Authenticatable
     {
         return $this->clubMembers()
             ->where('club_id', $clubId)
-            ->where('status', 'approved')
+            ->where('status', 'active')
             ->exists();
     }
 
@@ -137,7 +137,7 @@ class User extends Authenticatable
     {
         $membership = $this->clubMembers()
             ->where('club_id', $clubId)
-            ->where('status', 'approved')
+            ->where('status', 'active')
             ->first();
             
         return $membership ? $membership->position : null;
