@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+define('LARAVEL_START', microtime(true));
+
+require __DIR__.'/vendor/autoload.php';
+
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+// Bootstrap the application
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+// Simple version display
+$args = $argv ?? [];
+if (in_array('--version', $args) || in_array('-V', $args)) {
+    echo "Laravel Framework 8.83.29\n";
+    exit(0);
+}
+
+// Try to run the console kernel
+try {
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $status = $kernel->handle(
+        $input = new Symfony\Component\Console\Input\ArgvInput,
+        new Symfony\Component\Console\Output\ConsoleOutput
+    );
+    $kernel->terminate($input, $status);
+    exit($status);
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+    exit(1);
+}
