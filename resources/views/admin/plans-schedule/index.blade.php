@@ -85,12 +85,14 @@
                 </button>
             </div>
             <div class="col-md-3 text-end">
-                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary me-2">
-                    <i class="fas fa-refresh"></i> Làm mới
-                </a>
-                <a href="{{ route('admin.events.index') }}" class="btn btn-success" target="_blank">
-                    <i class="fas fa-plus"></i> Tạo lịch trình sự kiện
-                </a>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i> Làm mới
+                    </a>
+                    <a href="{{ route('admin.events.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Tạo lịch trình sự kiện
+                    </a>
+                </div>
             </div>
         </form>
     </div>
@@ -170,25 +172,25 @@
                                 </span>
                             </td>
                             <td>{{ $event->creator->name ?? 'Không xác định' }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
+                            <td style="min-width: 140px; width: 140px;">
+                                <div class="d-flex flex-column gap-1">
                                     @if($event->status === 'pending')
                                         <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                            <button type="submit" class="btn btn-sm btn-success w-100" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
                                                 <i class="fas fa-check"></i> Duyệt
                                             </button>
                                         </form>
                                         
                                         <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn hủy sự kiện này?')">
+                                            <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn hủy sự kiện này?')">
                                                 <i class="fas fa-times"></i> Hủy
                                             </button>
                                         </form>
                                     @endif
                                     
-                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-info w-100">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
                                 </div>

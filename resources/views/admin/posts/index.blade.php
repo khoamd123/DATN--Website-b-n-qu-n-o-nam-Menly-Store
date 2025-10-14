@@ -49,9 +49,14 @@
                 </button>
             </div>
             <div class="col-md-2 text-end">
-                <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
-                    <i class="fas fa-refresh"></i> Làm mới
-                </a>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i> Làm mới
+                    </a>
+                    <a href="{{ route('admin.posts.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Tạo bài viết
+                    </a>
+                </div>
             </div>
         </form>
     </div>
@@ -109,14 +114,17 @@
                                 </span>
                             </td>
                             <td>{{ $post->created_at->format('d/m/Y') }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
+            <td style="min-width: 140px; width: 140px;">
+                <div class="d-flex flex-column gap-1">
+                    <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa
+                    </a>
                                     @if($post->status === 'published')
                                         <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="hidden">
-                                            <button type="submit" class="btn btn-sm btn-warning">
+                                            <button type="submit" class="btn btn-sm btn-warning w-100">
                                                 <i class="fas fa-eye-slash"></i> Ẩn
                                             </button>
                                         </form>
@@ -127,7 +135,7 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="published">
-                                            <button type="submit" class="btn btn-sm btn-success">
+                                            <button type="submit" class="btn btn-sm btn-success w-100">
                                                 <i class="fas fa-eye"></i> Hiện
                                             </button>
                                         </form>
@@ -138,13 +146,13 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="deleted">
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa bài viết này?')">
+                                            <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa bài viết này?')">
                                                 <i class="fas fa-trash"></i> Xóa
                                             </button>
                                         </form>
                                     @endif
                                     
-                                    <button class="btn btn-sm btn-info" onclick="viewPost({{ $post->id }})">
+                                    <button class="btn btn-sm btn-info w-100" onclick="viewPost({{ $post->id }})">
                                         <i class="fas fa-eye"></i> Xem
                                     </button>
                                 </div>

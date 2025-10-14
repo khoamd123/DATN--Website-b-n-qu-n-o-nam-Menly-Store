@@ -21,13 +21,15 @@
         
         .sidebar {
             background-color: #343a40;
-            min-height: 100vh;
+            height: 100vh;
             padding: 0;
             position: fixed;
             top: 0;
             left: 0;
             width: 280px;
             z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
         .sidebar-header {
@@ -46,6 +48,8 @@
         
         .sidebar-nav {
             padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
         }
         
         .nav-item {
@@ -175,9 +179,11 @@
         
         .main-content {
             margin-left: 280px;
-            padding: 2rem;
+            padding: 1rem;
             min-height: 100vh;
             margin-top: 80px;
+            position: relative;
+            overflow-x: auto;
         }
         
         .content-header {
@@ -187,6 +193,65 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
+        
+        /* Table responsive */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .table {
+            margin-bottom: 0;
+            min-width: 1000px;
+        }
+        
+        /* Column width optimization - COMPACT VERSION */
+        .table th:nth-child(1), .table td:nth-child(1) { width: 50px; } /* STT */
+        .table th:nth-child(2), .table td:nth-child(2) { width: 60px; } /* Avatar */
+        .table th:nth-child(3), .table td:nth-child(3) { width: 100px; } /* Name */
+        .table th:nth-child(4), .table td:nth-child(4) { width: 140px; } /* Email */
+        .table th:nth-child(5), .table td:nth-child(5) { width: 80px; } /* Student ID */
+        .table th:nth-child(6), .table td:nth-child(6) { width: 100px; } /* Phone */
+        .table th:nth-child(7), .table td:nth-child(7) { width: 120px; } /* Address */
+        .table th:nth-child(8), .table td:nth-child(8) { width: 70px; } /* Role */
+        .table th:nth-child(9), .table td:nth-child(9) { width: 150px; } /* Club Role */
+        .table th:nth-child(10), .table td:nth-child(10) { width: 100px; } /* Admin Permission */
+        .table th:nth-child(11), .table td:nth-child(11) { width: 80px; } /* Created Date */
+        .table th:nth-child(12), .table td:nth-child(12) { width: 130px; } /* Actions */
+        
+        /* Text truncation for long content - COMPACT VERSION */
+        .table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.25rem;
+        }
+        
+        .table td:nth-child(3) { max-width: 100px; } /* Name */
+        .table td:nth-child(4) { max-width: 140px; } /* Email */
+        .table td:nth-child(7) { max-width: 120px; } /* Address */
+        .table td:nth-child(9) { max-width: 150px; } /* Club Role */
         
         .content-header h1 {
             margin: 0;

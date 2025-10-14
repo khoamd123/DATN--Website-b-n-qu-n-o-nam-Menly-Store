@@ -172,11 +172,13 @@ Route::prefix('admin')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     
-    // Quản lý người dùng
-    Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
-    Route::get('/users-simple', [AdminController::class, 'usersSimple'])->name('admin.users.simple');
-    Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
-    Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+            // Quản lý người dùng
+            Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+            Route::get('/users/{id}', [AdminController::class, 'showUser'])->name('admin.users.show');
+            Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
+            Route::get('/users-simple', [AdminController::class, 'usersSimple'])->name('admin.users.simple');
+            Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
+            Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     
     // Phân quyền
     Route::get('/permissions', [AdminController::class, 'permissionsSimple'])->name('admin.permissions');
@@ -205,13 +207,21 @@ Route::prefix('admin')->group(function () {
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
     Route::get('/settings', [AdminController::class, 'settings'])->name('admin.settings');
     
-    // Quản lý câu lạc bộ
-    Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
-    Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
-    Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
+            // Quản lý câu lạc bộ
+            Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
+            Route::get('/clubs/create', [AdminController::class, 'clubsCreate'])->name('admin.clubs.create');
+            Route::post('/clubs', [AdminController::class, 'clubsStore'])->name('admin.clubs.store');
+            Route::get('/clubs/{id}/edit', [AdminController::class, 'clubsEdit'])->name('admin.clubs.edit');
+            Route::put('/clubs/{id}', [AdminController::class, 'clubsUpdate'])->name('admin.clubs.update');
+            Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+            Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
     
     // Tài liệu học tập
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
+    Route::get('/learning-materials/create', [AdminController::class, 'learningMaterialsCreate'])->name('admin.learning-materials.create');
+    Route::post('/learning-materials', [AdminController::class, 'learningMaterialsStore'])->name('admin.learning-materials.store');
+    Route::get('/learning-materials/{id}/edit', [AdminController::class, 'learningMaterialsEdit'])->name('admin.learning-materials.edit');
+    Route::put('/learning-materials/{id}', [AdminController::class, 'learningMaterialsUpdate'])->name('admin.learning-materials.update');
     
     // Quản lý quỹ
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
@@ -221,10 +231,19 @@ Route::prefix('admin')->group(function () {
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');
     
     // Events (sự kiện)
-    Route::get('/events', [AdminController::class, 'plansSchedule'])->name('admin.events.index');
+    Route::get('/events', [AdminController::class, 'eventsIndex'])->name('admin.events.index');
+    Route::get('/events/create', [AdminController::class, 'eventsCreate'])->name('admin.events.create');
+    Route::post('/events', [AdminController::class, 'eventsStore'])->name('admin.events.store');
+    Route::get('/events/{id}', [AdminController::class, 'eventsShow'])->name('admin.events.show');
+    Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
+    Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');
     
     // Bài viết
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
+    Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
+    Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+    Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
+    Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
     Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
     
     // Bình luận
@@ -268,13 +287,36 @@ Route::prefix('admin')->group(function () {
             ]);
         }
     })->name('admin.data-test');
+
+// Route test debug
+Route::get('/test-clubs-create', function () {
+    $fields = \App\Models\Field::all();
+    $users = \App\Models\User::where('is_admin', false)->get();
+    
+    return response()->json([
+        'fields_count' => $fields->count(),
+        'users_count' => $users->count(),
+        'fields' => $fields->toArray(),
+        'users' => $users->toArray()
+    ]);
+});
+
+// Route test view
+Route::get('/test-clubs-create-view', function () {
+    $fields = \App\Models\Field::all();
+    $users = \App\Models\User::where('is_admin', false)->get();
+    
+    return view('admin.clubs.create-simple', compact('fields', 'users'));
+});
+
+// Route test với controller mới
+Route::get('/test-new-controller', [App\Http\Controllers\TestController::class, 'clubsCreate']);
     
     
     // Quản lý CLB cho Admin
     Route::get('/clubs-management', [App\Http\Controllers\ClubManagementController::class, 'index'])->name('admin.clubs.management');
-    Route::get('/clubs/create', [App\Http\Controllers\ClubManagementController::class, 'create'])->name('admin.clubs.create');
     Route::get('/clubs/{club}/members', [AdminController::class, 'clubMembers'])->name('admin.clubs.members');
-    Route::post('/clubs', [App\Http\Controllers\ClubManagementController::class, 'store'])->name('admin.clubs.store');
+    Route::post('/clubs-management', [App\Http\Controllers\ClubManagementController::class, 'store'])->name('admin.clubs.management.store');
     Route::post('/clubs/create-student', [App\Http\Controllers\ClubManagementController::class, 'createStudentAccount'])->name('admin.create.student');
 });
 

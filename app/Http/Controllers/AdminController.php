@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\Post;
+use App\Models\Field;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
@@ -251,6 +252,52 @@ class AdminController extends Controller
     }
 
     /**
+     * Xem chi tiết người dùng
+     */
+    public function showUser($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $user = User::findOrFail($id);
+            return view('admin.users.show', compact('user'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users')->with('error', 'Không tìm thấy người dùng.');
+        }
+    }
+
+    /**
+     * Cập nhật thông tin người dùng
+     */
+    public function updateUser(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $user = User::findOrFail($id);
+            
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|max:255|unique:users,email,' . $id,
+                'student_id' => 'nullable|string|max:20',
+                'phone' => 'nullable|string|max:20',
+                'address' => 'nullable|string|max:500',
+            ]);
+            
+            $user->update($request->all());
+            return redirect()->route('admin.users.show', $user->id)->with('success', 'Đã cập nhật thông tin người dùng thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật thông tin.');
+        }
+    }
+
+    /**
      * Xóa người dùng (soft delete)
      */
     public function deleteUser($id)
@@ -433,6 +480,183 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị form tạo CLB mới
+     */
+    public function clubsCreate()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            return view('admin.clubs.create-fixed');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.clubs')->with('error', 'Có lỗi xảy ra khi tải dữ liệu: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lưu CLB mới
+     */
+    public function clubsStore(Request $request)
+    {
+        // Debug: Log request data
+        \Log::info('ClubsStore called', [
+            'request_data' => $request->all(),
+            'user_id' => session('user_id'),
+            'is_admin' => session('is_admin')
+        ]);
+
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'required|string',
+                'field_id' => 'nullable|exists:fields,id',
+                'new_field_name' => 'nullable|string|max:255',
+                'leader_id' => 'nullable|exists:users,id',
+            ]);
+
+            // Xử lý field_id
+            $fieldId = null;
+            if ($request->filled('new_field_name')) {
+                // Tạo slug từ tên lĩnh vực
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->new_field_name)));
+                $slug = preg_replace('/-+/', '-', $slug);
+                $slug = trim($slug, '-');
+                
+                // Đảm bảo slug unique
+                $originalSlug = $slug;
+                $counter = 1;
+                while (Field::where('slug', $slug)->exists()) {
+                    $slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+
+                // Tạo lĩnh vực mới
+                $field = Field::create([
+                    'name' => $request->new_field_name,
+                    'slug' => $slug,
+                    'description' => 'Lĩnh vực mới được tạo từ form tạo CLB',
+                ]);
+                $fieldId = $field->id;
+            } else {
+                $fieldId = $request->field_id;
+            }
+
+            // Tạo slug cho CLB
+            $clubSlug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->name)));
+            $clubSlug = preg_replace('/-+/', '-', $clubSlug);
+            $clubSlug = trim($clubSlug, '-');
+            
+            // Đảm bảo slug unique
+            $originalClubSlug = $clubSlug;
+            $counter = 1;
+            while (Club::where('slug', $clubSlug)->exists()) {
+                $clubSlug = $originalClubSlug . '-' . $counter;
+                $counter++;
+            }
+
+            // Debug: Log data trước khi tạo
+            \Log::info('Creating club with data:', [
+                'name' => $request->name,
+                'slug' => $clubSlug,
+                'description' => $request->description,
+                'field_id' => $fieldId,
+                'leader_id' => $request->leader_id,
+                'status' => 'pending'
+            ]);
+
+            $club = Club::create([
+                'name' => $request->name,
+                'slug' => $clubSlug,
+                'description' => $request->description,
+                'logo' => '', // Set logo to empty string
+                'field_id' => $fieldId,
+                'owner_id' => session('user_id'), // Set owner to current admin user
+                'leader_id' => $request->leader_id,
+                'status' => 'pending',
+            ]);
+
+            // Tự động tạo club member nếu có leader
+            if ($request->leader_id) {
+                ClubMember::create([
+                    'club_id' => $club->id,
+                    'user_id' => $request->leader_id,
+                    'position' => 'leader',
+                    'status' => 'active',
+                    'joined_at' => now(),
+                ]);
+            }
+
+            \Log::info('Club created successfully:', ['club_id' => $club->id, 'leader_id' => $request->leader_id]);
+
+            return redirect()->route('admin.clubs')->with('success', 'Đã tạo câu lạc bộ thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi tạo câu lạc bộ: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hiển thị form chỉnh sửa CLB
+     */
+    public function clubsEdit($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $club = Club::findOrFail($id);
+            $fields = \App\Models\Field::all();
+            $users = \App\Models\User::where('is_admin', false)->get();
+            return view('admin.clubs.edit', compact('club', 'fields', 'users'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.clubs')->with('error', 'Không tìm thấy câu lạc bộ.');
+        }
+    }
+
+    /**
+     * Cập nhật CLB
+     */
+    public function clubsUpdate(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'required|string',
+                'field_id' => 'required|exists:fields,id',
+                'leader_id' => 'nullable|exists:users,id',
+                'status' => 'required|in:pending,approved,active,inactive,rejected',
+            ]);
+
+            $club = Club::findOrFail($id);
+            $club->update([
+                'name' => $request->name,
+                'description' => $request->description,
+                'field_id' => $request->field_id,
+                'leader_id' => $request->leader_id,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.clubs')->with('success', 'Đã cập nhật câu lạc bộ thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật câu lạc bộ: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Display club members page
      */
     public function clubMembers($clubId)
@@ -450,12 +674,26 @@ class AdminController extends Controller
     {
         $club = Club::findOrFail($id);
         
+        // Debug: Log request data
+        \Log::info('UpdateClubStatus called', [
+            'club_id' => $id,
+            'club_name' => $club->name,
+            'old_status' => $club->status,
+            'new_status' => $request->status,
+            'request_data' => $request->all()
+        ]);
+        
         $request->validate([
             'status' => 'required|in:pending,approved,rejected,active,inactive'
         ]);
         
         $club->update([
             'status' => $request->status
+        ]);
+        
+        \Log::info('Club status updated successfully', [
+            'club_id' => $id,
+            'new_status' => $club->fresh()->status
         ]);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
@@ -490,6 +728,126 @@ class AdminController extends Controller
         $clubs = Club::where('status', 'active')->get();
         
         return view('admin.learning-materials.index', compact('documents', 'clubs'));
+    }
+
+    /**
+     * Hiển thị form tạo tài liệu học tập mới
+     */
+    public function learningMaterialsCreate()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $clubs = Club::where('status', 'active')->get();
+            return view('admin.learning-materials.create', compact('clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.learning-materials')->with('error', 'Có lỗi xảy ra khi tải dữ liệu.');
+        }
+    }
+
+    /**
+     * Lưu tài liệu học tập mới
+     */
+    public function learningMaterialsStore(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string',
+                'club_id' => 'required|exists:clubs,id',
+                'file_path' => 'nullable|string|max:255',
+                'status' => 'required|in:published,hidden,deleted',
+            ]);
+
+            // Tạo slug từ title
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
+            $slug = preg_replace('/-+/', '-', $slug);
+            $slug = trim($slug, '-');
+            
+            // Đảm bảo slug unique
+            $originalSlug = $slug;
+            $counter = 1;
+            while (Post::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+
+            Post::create([
+                'title' => $request->title,
+                'slug' => $slug,
+                'content' => $request->content,
+                'club_id' => $request->club_id,
+                'user_id' => session('user_id'),
+                'type' => 'document',
+                'file_path' => $request->file_path,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.learning-materials')->with('success', 'Đã tạo tài liệu học tập thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi tạo tài liệu học tập: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hiển thị form chỉnh sửa tài liệu học tập
+     */
+    public function learningMaterialsEdit($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $document = Post::where('type', 'document')->findOrFail($id);
+            $clubs = Club::where('status', 'active')->get();
+            return view('admin.learning-materials.edit', compact('document', 'clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.learning-materials')->with('error', 'Không tìm thấy tài liệu học tập.');
+        }
+    }
+
+    /**
+     * Cập nhật tài liệu học tập
+     */
+    public function learningMaterialsUpdate(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string',
+                'club_id' => 'required|exists:clubs,id',
+                'file_path' => 'nullable|string|max:255',
+                'status' => 'required|in:published,hidden,deleted',
+            ]);
+
+            $document = Post::where('type', 'document')->findOrFail($id);
+            $document->update([
+                'title' => $request->title,
+                'content' => $request->content,
+                'club_id' => $request->club_id,
+                'file_path' => $request->file_path,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.learning-materials')->with('success', 'Đã cập nhật tài liệu học tập thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật tài liệu học tập: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -581,6 +939,156 @@ class AdminController extends Controller
     }
 
     /**
+     * Danh sách sự kiện (events index)
+     */
+    public function eventsIndex(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $events = Event::with(['club', 'creator'])->orderBy('created_at', 'desc')->paginate(20);
+            $clubs = Club::all();
+
+            return view('admin.events.index', compact('events', 'clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard')->with('error', 'Có lỗi xảy ra khi tải dữ liệu.');
+        }
+    }
+
+    /**
+     * Tạo sự kiện mới
+     */
+    public function eventsCreate()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $clubs = Club::all();
+            return view('admin.events.create', compact('clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.events.index')->with('error', 'Có lỗi xảy ra khi tải dữ liệu.');
+        }
+    }
+
+    /**
+     * Lưu sự kiện mới
+     */
+    public function eventsStore(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'club_id' => 'required|exists:clubs,id',
+                'description' => 'nullable|string',
+                'start_time' => 'required|date',
+                'end_time' => 'required|date|after:start_time',
+                'mode' => 'required|in:offline,online,hybrid',
+                'location' => 'nullable|string|max:255',
+                'max_participants' => 'nullable|integer|min:1',
+                'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+            ]);
+
+            // Tạo slug từ title
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
+            $slug = preg_replace('/-+/', '-', $slug);
+            $slug = trim($slug, '-');
+            
+            // Đảm bảo slug unique
+            $originalSlug = $slug;
+            $counter = 1;
+            while (Event::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+
+            Event::create([
+                'title' => $request->title,
+                'slug' => $slug,
+                'description' => $request->description,
+                'club_id' => $request->club_id,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'mode' => $request->mode,
+                'location' => $request->location,
+                'max_participants' => $request->max_participants,
+                'status' => $request->status,
+                'created_by' => session('user_id'),
+            ]);
+
+            return redirect()->route('admin.plans-schedule')->with('success', 'Đã tạo sự kiện thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi tạo sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Xem chi tiết sự kiện
+     */
+    public function eventsShow($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::with(['club', 'creator'])->findOrFail($id);
+            return view('admin.events.show', compact('event'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện.');
+        }
+    }
+
+    /**
+     * Duyệt sự kiện
+     */
+    public function eventsApprove($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::findOrFail($id);
+            $event->update(['status' => 'approved']);
+            return redirect()->route('admin.plans-schedule')->with('success', 'Đã duyệt sự kiện thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi duyệt sự kiện.');
+        }
+    }
+
+    /**
+     * Hủy sự kiện
+     */
+    public function eventsCancel($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::findOrFail($id);
+            $event->update(['status' => 'cancelled']);
+            return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện.');
+        }
+    }
+
+    /**
      * Display posts management page
      */
     public function postsManagement(Request $request)
@@ -610,6 +1118,125 @@ class AdminController extends Controller
         $clubs = Club::where('status', 'active')->get();
         
         return view('admin.posts.index', compact('posts', 'clubs'));
+    }
+
+    /**
+     * Hiển thị form tạo bài viết mới
+     */
+    public function postsCreate()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $clubs = Club::where('status', 'active')->get();
+            return view('admin.posts.create', compact('clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Có lỗi xảy ra khi tải dữ liệu.');
+        }
+    }
+
+    /**
+     * Lưu bài viết mới
+     */
+    public function postsStore(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string',
+                'club_id' => 'required|exists:clubs,id',
+                'type' => 'required|in:post,announcement',
+                'status' => 'required|in:published,hidden,deleted',
+            ]);
+
+            // Tạo slug từ title
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
+            $slug = preg_replace('/-+/', '-', $slug);
+            $slug = trim($slug, '-');
+            
+            // Đảm bảo slug unique
+            $originalSlug = $slug;
+            $counter = 1;
+            while (Post::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+
+            Post::create([
+                'title' => $request->title,
+                'slug' => $slug,
+                'content' => $request->content,
+                'club_id' => $request->club_id,
+                'user_id' => session('user_id'),
+                'type' => $request->type,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.posts')->with('success', 'Đã tạo bài viết thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi tạo bài viết: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hiển thị form chỉnh sửa bài viết
+     */
+    public function postsEdit($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $post = Post::whereIn('type', ['post', 'announcement'])->findOrFail($id);
+            $clubs = Club::where('status', 'active')->get();
+            return view('admin.posts.edit', compact('post', 'clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết.');
+        }
+    }
+
+    /**
+     * Cập nhật bài viết
+     */
+    public function postsUpdate(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'content' => 'required|string',
+                'club_id' => 'required|exists:clubs,id',
+                'type' => 'required|in:post,announcement',
+                'status' => 'required|in:published,hidden,deleted',
+            ]);
+
+            $post = Post::whereIn('type', ['post', 'announcement'])->findOrFail($id);
+            $post->update([
+                'title' => $request->title,
+                'content' => $request->content,
+                'club_id' => $request->club_id,
+                'type' => $request->type,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.posts')->with('success', 'Đã cập nhật bài viết thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật bài viết: ' . $e->getMessage());
+        }
     }
 
     /**

@@ -33,11 +33,16 @@
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
             </div>
-            <div class="col-md-3 text-end">
+        <div class="col-md-3 text-end">
+            <div class="d-flex flex-column gap-2">
                 <a href="{{ route('admin.clubs') }}" class="btn btn-secondary">
                     <i class="fas fa-refresh"></i> Làm mới
                 </a>
+                <a href="{{ route('admin.clubs.create') }}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Tạo CLB mới
+                </a>
             </div>
+        </div>
         </form>
     </div>
 </div>
@@ -89,10 +94,29 @@
                                 <br><small class="text-muted">{{ $club->slug }}</small>
                             </td>
                             <td>{{ $club->field->name ?? 'Không xác định' }}</td>
-                            <td>{{ $club->owner->name ?? 'Không xác định' }}</td>
+                            <td>
+                                <strong>{{ $club->owner->name ?? 'Không xác định' }}</strong>
+                                <br><small class="text-muted">Chủ sở hữu</small>
+                            </td>
                             <td>
                                 <span class="badge bg-info">{{ $club->clubMembers->count() }}</span>
                                 <br><small class="text-muted">{{ $club->clubMembers->where('position', 'leader')->count() }} trưởng</small>
+                                @if($club->leader)
+                                    <br><small class="text-success">
+                                        <i class="fas fa-crown"></i> {{ $club->leader->name }}
+                                    </small>
+                                @elseif($club->clubMembers->where('position', 'leader')->count() > 0)
+                                    <br><small class="text-warning">
+                                        <i class="fas fa-users"></i> 
+                                        @foreach($club->clubMembers->where('position', 'leader') as $leader)
+                                            {{ $leader->user->name }}@if(!$loop->last), @endif
+                                        @endforeach
+                                    </small>
+                                @else
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> Chưa có trưởng
+                                    </small>
+                                @endif
                             </td>
                             <td>{{ substr($club->description, 0, 50) }}{{ strlen($club->description) > 50 ? '...' : '' }}</td>
                             <td>
@@ -117,46 +141,64 @@
                                 </span>
                             </td>
                             <td>{{ $club->created_at->format('d/m/Y') }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-users"></i> Thành viên
-                                    </a>
+            <td style="min-width: 160px; width: 160px;">
+                <div class="d-flex flex-column gap-1">
+                    <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
+                        <i class="fas fa-users"></i> Thành viên
+                    </a>
+                    <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa
+                    </a>
                                     <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
                                         @csrf
                                         @method('PATCH')
                                         @if($club->status === 'pending')
-                                            <input type="hidden" name="status" value="approved">
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="fas fa-check"></i> Duyệt
-                                            </button>
+                                            <!-- Form Duyệt -->
+                                            <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="approved">
+                                                <button type="submit" class="btn btn-sm btn-success w-100">
+                                                    <i class="fas fa-check"></i> Duyệt
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Form Từ chối -->
+                                            <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="rejected">
+                                                <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn từ chối câu lạc bộ này?')">
+                                                    <i class="fas fa-times"></i> Từ chối
+                                                </button>
+                                            </form>
                                         @endif
                                         
                                         @if($club->status === 'approved')
                                             <input type="hidden" name="status" value="active">
-                                            <button type="submit" class="btn btn-sm btn-primary">
+                                            <button type="submit" class="btn btn-sm btn-primary w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt
                                             </button>
                                         @endif
                                         
                                         @if(in_array($club->status, ['active', 'approved']))
                                             <input type="hidden" name="status" value="inactive">
-                                            <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
+                                            <button type="submit" class="btn btn-sm btn-warning w-100" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
                                                 <i class="fas fa-pause"></i> Tạm dừng
-                                            </button>
-                                        @endif
-                                        
-                                        @if($club->status === 'pending')
-                                            <input type="hidden" name="status" value="rejected">
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn từ chối câu lạc bộ này?')">
-                                                <i class="fas fa-times"></i> Từ chối
                                             </button>
                                         @endif
                                         
                                         @if($club->status === 'inactive')
                                             <input type="hidden" name="status" value="active">
-                                            <button type="submit" class="btn btn-sm btn-success">
+                                            <button type="submit" class="btn btn-sm btn-success w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt lại
+                                            </button>
+                                        @endif
+                                        
+                                        @if($club->status === 'rejected')
+                                            <input type="hidden" name="status" value="pending">
+                                            <button type="submit" class="btn btn-sm btn-info w-100">
+                                                <i class="fas fa-undo"></i> Khôi phục
                                             </button>
                                         @endif
                                     </form>

@@ -142,15 +142,15 @@
                                 @endif
                             </td>
                             <td>{{ $comment->created_at->format('d/m/Y H:i') }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
+                            <td style="min-width: 120px; width: 120px;">
+                                <div class="d-flex flex-column gap-1">
                                     <button class="btn btn-sm btn-info" onclick="viewComment({{ $comment->id }})">
                                         <i class="fas fa-eye"></i> Xem
                                     </button>
                                     <form method="POST" action="{{ route('admin.comments.delete', [$comment->post ? 'post' : 'event', $comment->id]) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>

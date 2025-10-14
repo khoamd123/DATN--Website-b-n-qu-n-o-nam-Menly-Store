@@ -15,6 +15,7 @@ class Club extends Model
         'description',
         'logo',
         'field_id',
+        'leader_id',
         'owner_id',
         'max_members',
         'status'
@@ -26,6 +27,14 @@ class Club extends Model
     public function field()
     {
         return $this->belongsTo(Field::class);
+    }
+
+    /**
+     * Get the leader of the club
+     */
+    public function leader()
+    {
+        return $this->belongsTo(User::class, 'leader_id');
     }
 
     /**
@@ -60,13 +69,6 @@ class Club extends Model
         return $this->hasMany(Post::class);
     }
 
-    /**
-     * Get the leader of the club (alias for owner)
-     */
-    public function leader()
-    {
-        return $this->belongsTo(User::class, 'owner_id');
-    }
 
     /**
      * Get active members of the club
