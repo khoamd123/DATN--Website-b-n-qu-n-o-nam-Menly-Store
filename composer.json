@@ -6,7 +6,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.0",
-        "doctrine/dbal": "^4.2",
+        "carbonphp/carbon-doctrine-types": "^2.0",
+        "doctrine/dbal": "^3.7",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^8.83",
         "laravel/sanctum": "^2.15",
