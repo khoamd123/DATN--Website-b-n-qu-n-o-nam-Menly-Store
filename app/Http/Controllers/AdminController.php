@@ -991,6 +991,7 @@ class AdminController extends Controller
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1012,10 +1013,16 @@ class AdminController extends Controller
                 $counter++;
             }
 
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('events', 'public');
+            }
+
             Event::create([
                 'title' => $request->title,
                 'slug' => $slug,
                 'description' => $request->description,
+                'image' => $imagePath,
                 'club_id' => $request->club_id,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -1029,6 +1036,96 @@ class AdminController extends Controller
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã tạo sự kiện thành công!');
         } catch (\Exception $e) {
             return back()->with('error', 'Có lỗi xảy ra khi tạo sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hiển thị form chỉnh sửa sự kiện
+     */
+    public function eventsEdit($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::findOrFail($id);
+            $clubs = Club::all();
+            return view('admin.events.edit', compact('event', 'clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.events.index')->with('error', 'Không tìm thấy sự kiện.');
+        }
+    }
+
+    /**
+     * Cập nhật sự kiện
+     */
+    public function eventsUpdate(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'club_id' => 'required|exists:clubs,id',
+                'description' => 'nullable|string',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'remove_image' => 'nullable|boolean',
+                'start_time' => 'required|date',
+                'end_time' => 'required|date|after:start_time',
+                'mode' => 'required|in:offline,online,hybrid',
+                'location' => 'nullable|string|max:255',
+                'max_participants' => 'nullable|integer|min:1',
+                'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+            ]);
+
+            $event = Event::findOrFail($id);
+
+            // Slug có thể cập nhật theo title nếu muốn giữ consistent
+            $slug = $event->slug;
+            if ($request->title !== $event->title) {
+                $slugCandidate = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
+                $slugCandidate = preg_replace('/-+/', '-', $slugCandidate);
+                $slugCandidate = trim($slugCandidate, '-');
+                $originalSlug = $slugCandidate;
+                $counter = 1;
+                while (Event::where('slug', $slugCandidate)->where('id', '!=', $event->id)->exists()) {
+                    $slugCandidate = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+                $slug = $slugCandidate;
+            }
+
+            $data = [
+                'title' => $request->title,
+                'slug' => $slug,
+                'description' => $request->description,
+                'club_id' => $request->club_id,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'mode' => $request->mode,
+                'location' => $request->location,
+                'max_participants' => $request->max_participants,
+                'status' => $request->status,
+            ];
+
+            // Xử lý ảnh: xoá nếu tick, hoặc thay nếu upload mới
+            if ($request->boolean('remove_image')) {
+                $data['image'] = null;
+            }
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('events', 'public');
+            }
+
+            $event->update($data);
+
+            return redirect()->route('admin.events.show', $event->id)->with('success', 'Cập nhật sự kiện thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật sự kiện: ' . $e->getMessage());
         }
     }
 

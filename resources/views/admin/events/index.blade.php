@@ -31,7 +31,7 @@
         </h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ route('admin.events.store') }}" id="createEventForm">
+        <form method="POST" action="{{ route('admin.events.store') }}" id="createEventForm" enctype="multipart/form-data">
             @csrf
             <div class="row g-3">
                 <div class="col-md-6">
@@ -126,6 +126,10 @@
                     @error('slug')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
+                </div>
+                <div class="col-12">
+                    <label for="image" class="form-label">Ảnh sự kiện</label>
+                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
                 </div>
                 <div class="col-12">
                     <div class="d-flex gap-2">
@@ -271,6 +275,7 @@
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Ảnh</th>
                         <th>Thông tin sự kiện</th>
                         <th>Câu lạc bộ</th>
                         <th>Thời gian & Địa điểm</th>
@@ -285,6 +290,17 @@
                     @forelse($events as $event)
                         <tr>
                             <td>{{ $event->id }}</td>
+                            <td>
+                                <div style="width: 78px;">
+                                    <div style="width: 76px; height: 56px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
+                                        @if(!empty($event->image))
+                                            <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;"/>
+                                        @else
+                                            <i class="fas fa-image" style="color:#adb5bd; font-size: 18px;"></i>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
                             <td>
                                 <strong>{{ $event->title }}</strong>
                                 <br><small class="text-muted">{{ Str::limit($event->description, 60) }}</small>
