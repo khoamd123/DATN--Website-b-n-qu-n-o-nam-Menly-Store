@@ -190,6 +190,9 @@
                                         </form>
                                     @endif
                                     
+                                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-sm btn-warning w-100">
+                                        <i class="fas fa-edit"></i> Chỉnh sửa
+                                    </a>
                                     <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-info w-100">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
