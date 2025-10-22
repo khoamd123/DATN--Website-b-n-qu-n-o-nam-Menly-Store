@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Club;
 use App\Models\Fund;
-use App\Models\FundItem;
+use App\Models\ClubMember; 
+use App\Models\EventMemberEvaluation; 
+use App\Models\UserPermissionsClub; 
+use App\Models\Field; 
 use App\Models\Event;
-use App\Models\Post;;
-use App\Models\Notification;
+use App\Models\FundItem;
+use App\Models\Post; 
+
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -126,6 +131,116 @@ class AdminController extends Controller
     }
 
     /**
+     * Show the form for creating a new club.
+     */
+    public function createClub()
+    {
+        $users = User::where('is_admin', false)->get(); 
+        $fields = Field::all(); 
+        
+        return view('admin.clubs.create', compact('users', 'fields'));
+    }
+
+    /**
+     * Display the specified club.
+     */
+    public function showClub($club)
+    {
+        $club = Club::with([
+            'field', 
+            'owner', 
+            'clubMembers', 
+            'posts', 
+            'events'
+        ])->findOrFail($club);
+
+        return view('admin.clubs.show', compact('club'));
+    }
+
+    /**
+     * Store a newly created club in storage.
+     */
+    public function storeClub(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:clubs,name',
+            'description' => 'nullable|string',
+            'field_id' => 'required|exists:fields,id',
+            'user_id' => 'required|exists:users,id', 
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        $logoPath = null;
+        if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
+            $logoPath = $request->file('logo')->store('club_logos', 'public');
+        }
+
+        Club::create([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+            'field_id' => $request->field_id,
+            'owner_id' => $request->user_id, 
+            'logo' => $logoPath ?? 'images/default_club_logo.png', // Cung cấp đường dẫn logo mặc định
+            'status' => 'pending', 
+        ]);
+
+        return redirect()->route('admin.clubs')->with('success', 'Tạo câu lạc bộ mới thành công!');
+    }
+
+    /**
+     * Remove the specified club from storage.
+     */
+    public function deleteClub($id)
+    {
+        $club = Club::findOrFail($id);
+        
+        // Kiểm tra điều kiện: chỉ cho phép xóa nếu câu lạc bộ đang ở trạng thái 'inactive' (tạm dừng)
+        if ($club->status !== 'inactive') {
+            return redirect()->back()->with('error', 'Không thể xóa câu lạc bộ khi chưa tạm dừng. Vui lòng chuyển trạng thái sang "Tạm dừng" trước khi xóa.');
+        }
+
+        // Xóa các bản ghi liên quan trước để tránh lỗi ràng buộc khóa ngoại
+        
+        // 1. Xóa thành viên câu lạc bộ
+        // club_members sử dụng soft deletes, cần forceDelete() để xóa vĩnh viễn khỏi DB
+        $club->clubMembers()->forceDelete();
+
+        // 2. Xóa bài viết/tài liệu của câu lạc bộ
+        // posts sử dụng soft deletes, cần forceDelete() để xóa vĩnh viễn khỏi DB
+        $club->posts()->forceDelete();
+
+        // 3. Xóa các đánh giá thành viên sự kiện liên quan đến câu lạc bộ này
+        // event_member_evaluations không sử dụng soft deletes, delete() sẽ xóa vĩnh viễn
+        EventMemberEvaluation::where('club_id', $club->id)->delete();
+
+        // 4. Xóa sự kiện của câu lạc bộ
+        // Giả định Event không sử dụng soft deletes, delete() sẽ xóa vĩnh viễn.
+        // Nếu model Event có sử dụng SoftDeletes, bạn cần dùng $club->events()->forceDelete();
+        $club->events()->delete();
+
+        // 5. Xóa các giao dịch quỹ và các mục quỹ liên quan (Fund and FundItem)
+        // Lấy tất cả các quỹ liên quan đến câu lạc bộ này
+        $funds = Fund::where('club_id', $club->id)->get();
+        foreach ($funds as $fund) {
+            // Xóa tất cả FundItems liên quan đến quỹ này
+            $fund->items()->delete(); 
+            // Sau đó xóa quỹ
+            $fund->delete(); 
+        }
+
+        // 6. Xóa quyền người dùng liên quan đến câu lạc bộ
+        // user_permissions_club không sử dụng soft deletes, delete() sẽ xóa vĩnh viễn
+        // Assuming UserPermissionsClub model exists and has a club_id foreign key
+        UserPermissionsClub::where('club_id', $club->id)->delete();
+
+        // Cuối cùng, xóa câu lạc bộ
+        $club->delete();
+
+        return redirect()->route('admin.clubs')->with('success', 'Xóa câu lạc bộ thành công!');
+    }
+
+    /**
      * Update club status
      */
     public function updateClubStatus(Request $request, $id)
@@ -141,6 +256,74 @@ class AdminController extends Controller
         ]);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
+    }
+
+    /**
+     * Show the form for editing the specified club.
+     *
+     * @param  \App\Models\Club  $club
+     * @return \Illuminate\View\View
+     */
+    public function editClub(Club $club)
+    {
+        $users = User::where('is_admin', false)->get(); // Get all non-admin users for leader selection
+        $fields = Field::all(); // Get all fields for field selection
+        
+        return view('admin.clubs.edit', compact('club', 'users', 'fields'));
+    }
+    /**
+     * Update the specified club in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Club  $club
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateClub(Request $request, Club $club)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:clubs,name,' . $club->id,
+            'description' => 'nullable|string',
+            'field_id' => 'required|exists:fields,id',
+            'leader_id' => 'nullable|exists:users,id',
+            'status' => 'required|in:pending,approved,active,inactive,rejected',
+        ]);
+
+        $oldLeaderId = $club->leader_id;
+
+        $club->update([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name), // Update slug if name changes
+            'description' => $request->description,
+            'field_id' => $request->field_id,
+            'leader_id' => $request->leader_id,
+            'status' => $request->status,
+        ]);
+
+        // --- Synchronize leader_id with club_members table ---
+
+        // If a new leader is selected
+        if ($request->leader_id) {
+            // Ensure the new leader is a 'chunhiem' in club_members
+            ClubMember::updateOrCreate(
+                ['club_id' => $club->id, 'user_id' => $request->leader_id],
+                ['role_in_club' => 'chunhiem', 'status' => 'approved', 'joined_at' => now()]
+            );
+        }
+
+        // If the leader has changed or been removed
+        if ($oldLeaderId && $oldLeaderId !== $request->leader_id) {
+            // Find the old leader's ClubMember record
+            $oldLeaderMember = ClubMember::where('club_id', $club->id)
+                                         ->where('user_id', $oldLeaderId)
+                                         ->first();
+            if ($oldLeaderMember && $oldLeaderMember->role_in_club === 'chunhiem') {
+                // Demote the old leader to a regular member if they are not the new leader
+                $oldLeaderMember->update(['role_in_club' => 'thanhvien']);
+            }
+        }
+
+        return redirect()->route('admin.clubs.show', $club->id)
+                         ->with('success', 'Cập nhật câu lạc bộ thành công!');
     }
 
     /**
