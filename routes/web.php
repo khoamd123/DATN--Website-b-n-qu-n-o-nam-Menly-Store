@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
+use App\Http\Controllers\ClubResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -216,12 +217,17 @@ Route::prefix('admin')->group(function () {
             Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
             Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
     
-    // Tài liệu học tập
-    Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
-    Route::get('/learning-materials/create', [AdminController::class, 'learningMaterialsCreate'])->name('admin.learning-materials.create');
-    Route::post('/learning-materials', [AdminController::class, 'learningMaterialsStore'])->name('admin.learning-materials.store');
-    Route::get('/learning-materials/{id}/edit', [AdminController::class, 'learningMaterialsEdit'])->name('admin.learning-materials.edit');
-    Route::put('/learning-materials/{id}', [AdminController::class, 'learningMaterialsUpdate'])->name('admin.learning-materials.update');
+    // Tài Nguyên CLB
+    Route::get('/club-resources', [ClubResourceController::class, 'index'])->name('admin.club-resources.index');
+    Route::get('/club-resources/create', [ClubResourceController::class, 'create'])->name('admin.club-resources.create');
+    Route::post('/club-resources', [ClubResourceController::class, 'store'])->name('admin.club-resources.store');
+    Route::get('/club-resources/{id}', [ClubResourceController::class, 'show'])->name('admin.club-resources.show');
+    Route::get('/club-resources/{id}/edit', [ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
+    Route::put('/club-resources/{id}', [ClubResourceController::class, 'update'])->name('admin.club-resources.update');
+    Route::patch('/club-resources/{id}/status', [ClubResourceController::class, 'updateStatus'])->name('admin.club-resources.update-status');
+    Route::delete('/club-resources/{id}', [ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
+    Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
+    Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
     
     // Quản lý quỹ
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
@@ -242,9 +248,10 @@ Route::prefix('admin')->group(function () {
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
     Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
     Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
-    Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
-    Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
-    Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
+        Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
+        Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
+        Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
+        Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');

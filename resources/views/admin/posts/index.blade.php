@@ -7,6 +7,20 @@
     <h1>Quản lý Bài viết</h1>
 </div>
 
+@if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
 <!-- Bộ lọc và tìm kiếm -->
 <div class="card mb-4">
     <div class="card-body">
@@ -114,8 +128,11 @@
                                 </span>
                             </td>
                             <td>{{ $post->created_at->format('d/m/Y') }}</td>
-            <td style="min-width: 140px; width: 140px;">
+            <td style="min-width: 180px; width: 180px;">
                 <div class="d-flex flex-column gap-1">
+                    <a href="{{ route('admin.posts.show', $post->id) }}" class="btn btn-sm btn-info">
+                        <i class="fas fa-eye"></i> Xem chi tiết
+                    </a>
                     <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-sm btn-warning">
                         <i class="fas fa-edit"></i> Chỉnh sửa
                     </a>

@@ -516,9 +516,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.learning-materials*') ? 'active' : '' }}" href="{{ route('admin.learning-materials') }}">
-                        <i class="fas fa-file-alt"></i>
-                        Tài liệu học tập
+                    <a class="nav-link {{ request()->routeIs('admin.club-resources*') ? 'active' : '' }}" href="{{ route('admin.club-resources.index') }}">
+                        <i class="fas fa-folder-open"></i>
+                        Tài Nguyên CLB
                     </a>
                 </li>
                 <li class="nav-item">

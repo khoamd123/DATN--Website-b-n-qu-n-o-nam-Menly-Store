@@ -33,10 +33,6 @@ class ClubResourceController extends Controller
             $query->where('club_id', $request->club_id);
         }
         
-        // Filter by resource type
-        if ($request->has('resource_type') && $request->resource_type) {
-            $query->where('resource_type', $request->resource_type);
-        }
         
         // Filter by status
         if ($request->has('status') && $request->status) {
@@ -72,7 +68,6 @@ class ClubResourceController extends Controller
         $request->validate([
             'title' => 'required|string|min:5|max:255',
             'description' => 'nullable|string|max:1000',
-            'resource_type' => 'required|in:form,image,video,pdf,document,guide,other',
             'club_id' => 'required|exists:clubs,id',
             'status' => 'required|in:active,inactive,archived',
             'file' => 'nullable|file|max:20480', // 20MB
@@ -82,7 +77,6 @@ class ClubResourceController extends Controller
             'title.required' => 'Tiêu đề là bắt buộc.',
             'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
             'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
-            'resource_type.required' => 'Vui lòng chọn loại tài nguyên.',
             'club_id.required' => 'Vui lòng chọn câu lạc bộ.',
             'file.max' => 'File không được vượt quá 20MB.',
             'external_link.url' => 'Link không hợp lệ.'
@@ -95,7 +89,7 @@ class ClubResourceController extends Controller
             'title' => $title,
             'slug' => Str::slug($title) . '-' . time(),
             'description' => $request->description,
-            'resource_type' => $request->resource_type,
+            'resource_type' => 'other', // Default value
             'club_id' => $request->club_id,
             'user_id' => session('user_id') ?? 1,
             'status' => $request->status,
@@ -108,7 +102,7 @@ class ClubResourceController extends Controller
             $this->handleFileUpload($resource, $request->file('file'));
         }
 
-        return redirect()->route('test.club-resources.index')
+        return redirect()->route('admin.club-resources.index')
             ->with('success', 'Tài nguyên đã được tạo thành công!');
     }
 
@@ -144,7 +138,6 @@ class ClubResourceController extends Controller
         $request->validate([
             'title' => 'required|string|min:5|max:255',
             'description' => 'nullable|string|max:1000',
-            'resource_type' => 'required|in:form,image,video,pdf,document,guide,other',
             'club_id' => 'required|exists:clubs,id',
             'status' => 'required|in:active,inactive,archived',
             'file' => 'nullable|file|max:20480',
@@ -159,7 +152,6 @@ class ClubResourceController extends Controller
             'title' => $title,
             'slug' => Str::slug($title) . '-' . $resource->id,
             'description' => $request->description,
-            'resource_type' => $request->resource_type,
             'club_id' => $request->club_id,
             'status' => $request->status,
             'external_link' => $request->external_link,
@@ -179,7 +171,7 @@ class ClubResourceController extends Controller
             $this->handleFileUpload($resource, $request->file('file'));
         }
 
-        return redirect()->route('test.club-resources.index')
+        return redirect()->route('admin.club-resources.index')
             ->with('success', 'Tài nguyên đã được cập nhật thành công!');
     }
 
@@ -202,7 +194,7 @@ class ClubResourceController extends Controller
             'archived' => 'Lưu trữ'
         ];
         
-        return redirect()->route('test.club-resources.index')
+        return redirect()->route('admin.club-resources.index')
             ->with('success', "Tài nguyên đã được cập nhật trạng thái thành '{$statusLabels[$request->status]}'!");
     }
 
@@ -214,7 +206,7 @@ class ClubResourceController extends Controller
         $resource = ClubResource::findOrFail($id);
         $resource->delete();
 
-        return redirect()->route('test.club-resources.index')
+        return redirect()->route('admin.club-resources.index')
             ->with('success', 'Tài nguyên đã được xóa thành công!');
     }
 

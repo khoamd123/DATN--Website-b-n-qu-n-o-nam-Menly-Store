@@ -1155,7 +1155,11 @@ class AdminController extends Controller
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
                 'status' => 'required|in:published,hidden,deleted',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
+            
+            // Debug logging
+            \Log::info('Creating post with data:', $request->all());
 
             // Tạo slug từ title
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
@@ -1170,19 +1174,54 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            Post::create([
+            // Handle image upload
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $imagePath = $image->storeAs('public/posts', $imageName);
+                $imagePath = str_replace('public/', '', $imagePath);
+            }
+
+            $postData = [
                 'title' => $request->title,
                 'slug' => $slug,
                 'content' => $request->content,
                 'club_id' => $request->club_id,
-                'user_id' => session('user_id'),
+                'user_id' => session('user_id') ?? 1,
                 'type' => $request->type,
                 'status' => $request->status,
-            ]);
+                'image' => $imagePath,
+            ];
+            
+            \Log::info('Post data to create:', $postData);
+            
+            $post = Post::create($postData);
+            
+            \Log::info('Post created successfully with ID: ' . $post->id);
 
             return redirect()->route('admin.posts')->with('success', 'Đã tạo bài viết thành công!');
         } catch (\Exception $e) {
             return back()->with('error', 'Có lỗi xảy ra khi tạo bài viết: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hiển thị chi tiết bài viết
+     */
+    public function postsShow($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $post = Post::whereIn('type', ['post', 'announcement'])->with(['club', 'user'])->findOrFail($id);
+            
+            return view('admin.posts.show', compact('post'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết hoặc có lỗi xảy ra.');
         }
     }
 
