@@ -518,12 +518,6 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.learning-materials*') ? 'active' : '' }}" href="{{ route('admin.learning-materials') }}">
-                        <i class="fas fa-file-alt"></i>
-                        Tài nguyên CLB
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.fund-management*') ? 'active' : '' }}" href="{{ route('admin.fund-management') }}">
                         <i class="fas fa-coins"></i>
                         Quản lý quỹ
