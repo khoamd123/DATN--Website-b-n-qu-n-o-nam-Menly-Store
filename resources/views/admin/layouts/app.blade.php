@@ -10,6 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- CKEditor -->
+    <script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
     
     @yield('styles')
     
@@ -540,6 +542,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.club-resources*') ? 'active' : '' }}" href="{{ route('admin.club-resources.index') }}">
+                        <i class="fas fa-folder-open"></i>
+                        Tài nguyên CLB
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.comments*') ? 'active' : '' }}" href="{{ route('admin.comments') }}">
                         <i class="fas fa-comments"></i>
                         Bình luận
@@ -555,6 +563,18 @@
          <a class="nav-link {{ request()->routeIs('admin.permissions.detailed') ? 'active' : '' }}" href="{{ route('admin.permissions.detailed') }}">
              <i class="fas fa-cogs"></i>
              Phân Quyền Chi Tiết
+         </a>
+     </li>
+     <li class="nav-item">
+         <a class="nav-link {{ request()->routeIs('admin.test-ckeditor') ? 'active' : '' }}" href="{{ route('admin.test-ckeditor') }}">
+             <i class="fas fa-edit"></i>
+             Test CKEditor
+         </a>
+     </li>
+     <li class="nav-item">
+         <a class="nav-link {{ request()->routeIs('admin.test-menu') ? 'active' : '' }}" href="{{ route('admin.test-menu') }}">
+             <i class="fas fa-list"></i>
+             Test Menu
          </a>
      </li>
      <li class="nav-item">

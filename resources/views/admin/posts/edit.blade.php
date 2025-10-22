@@ -47,7 +47,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Nội dung <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="content" rows="10" required>{{ old('content', $post->content) }}</textarea>
+                            <textarea class="form-control" id="content" name="content" rows="10" required>{{ old('content', $post->content) }}</textarea>
                         </div>
 
                         <div class="row">
@@ -153,6 +153,47 @@
     </div>
 </div>
 @endsection
+
+@section('scripts')
+<script>
+    ClassicEditor
+        .create(document.querySelector('#content'), {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'blockQuote', 'insertTable', '|',
+                    'link', 'imageUpload', '|',
+                    'undo', 'redo'
+                ]
+            },
+            language: 'vi',
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    'imageStyle:full',
+                    'imageStyle:side'
+                ]
+            },
+            table: {
+                contentToolbar: [
+                    'tableColumn',
+                    'tableRow',
+                    'mergeTableCells'
+                ]
+            }
+        })
+        .then(editor => {
+            console.log('CKEditor initialized successfully');
+        })
+        .catch(error => {
+            console.error('Error initializing CKEditor:', error);
+        });
+</script>
+@endsection
+
 
 
 

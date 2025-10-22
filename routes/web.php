@@ -244,6 +244,21 @@ Route::prefix('admin')->group(function () {
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
     Route::post('/fund-management', [AdminController::class, 'fundManagementStore'])->name('admin.fund-management.store');
     
+    // Quản lý câu lạc bộ
+    Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
+    Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+    
+    // Tài nguyên CLB - CRUD (của Nam)
+    Route::get('/club-resources', [App\Http\Controllers\ClubResourceController::class, 'index'])->name('admin.club-resources.index');
+    Route::get('/club-resources/create', [App\Http\Controllers\ClubResourceController::class, 'create'])->name('admin.club-resources.create');
+    Route::post('/club-resources', [App\Http\Controllers\ClubResourceController::class, 'store'])->name('admin.club-resources.store');
+    Route::get('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'show'])->name('admin.club-resources.show');
+    Route::get('/club-resources/{id}/edit', [App\Http\Controllers\ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
+    Route::put('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'update'])->name('admin.club-resources.update');
+    Route::delete('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
+    Route::get('/club-resources/{id}/download', [App\Http\Controllers\ClubResourceController::class, 'download'])->name('admin.club-resources.download');
+    Route::post('/club-resources/{id}/restore', [App\Http\Controllers\ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
+    
     // Kế hoạch
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');
     
@@ -257,13 +272,16 @@ Route::prefix('admin')->group(function () {
     Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
     Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');
     
-    // Bài viết
-    Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
-    Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
-    Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
-    Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
-    Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
-    Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
+    // Bài viết - CRUD operations (của Nam)
+    Route::get('/posts', [App\Http\Controllers\PostController::class, 'index'])->name('admin.posts');
+    Route::get('/posts/create', [App\Http\Controllers\PostController::class, 'create'])->name('admin.posts.create');
+    Route::post('/posts', [App\Http\Controllers\PostController::class, 'store'])->name('admin.posts.store');
+    Route::get('/posts/{id}', [App\Http\Controllers\PostController::class, 'show'])->name('admin.posts.show');
+    Route::get('/posts/{id}/edit', [App\Http\Controllers\PostController::class, 'edit'])->name('admin.posts.edit');
+    Route::put('/posts/{id}', [App\Http\Controllers\PostController::class, 'update'])->name('admin.posts.update');
+    Route::delete('/posts/{id}', [App\Http\Controllers\PostController::class, 'destroy'])->name('admin.posts.destroy');
+    Route::patch('/posts/{id}/status', [App\Http\Controllers\PostController::class, 'updateStatus'])->name('admin.posts.status');
+    Route::post('/posts/{id}/restore', [App\Http\Controllers\PostController::class, 'restore'])->name('admin.posts.restore');
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');
@@ -279,6 +297,26 @@ Route::prefix('admin')->group(function () {
     Route::get('/test-links', function() {
         return view('admin.test-links');
     })->name('admin.test-links');
+    
+    // Test CKEditor
+    Route::get('/test-ckeditor', function() {
+        return view('admin.test-ckeditor');
+    })->name('admin.test-ckeditor');
+    
+    // Test Menu
+    Route::get('/test-menu', function() {
+        return view('admin.test-menu');
+    })->name('admin.test-menu');
+    
+    // Test Club Resources
+    Route::get('/test-club-resources', function() {
+        try {
+            $clubs = \App\Models\Club::where('status', 'active')->get();
+            return view('admin.club-resources.index', compact('clubs'));
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    })->name('admin.test-club-resources');
     
     // Data Test
     Route::get('/data-test', function() {
