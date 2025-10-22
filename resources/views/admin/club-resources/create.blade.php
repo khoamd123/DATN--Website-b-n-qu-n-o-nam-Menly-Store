@@ -51,18 +51,73 @@
                     <!-- Mô tả -->
                     <div class="mb-4">
                         <label for="description" class="form-label fw-bold">
-                            Mô tả
+                            <i class="fas fa-align-left text-primary"></i> Mô tả chi tiết
                         </label>
-                        <textarea class="form-control @error('description') is-invalid @enderror" 
-                                  id="description" 
-                                  name="description" 
-                                  rows="4" 
-                                  placeholder="Mô tả chi tiết về tài nguyên này..."
-                                  maxlength="1000">{{ old('description') }}</textarea>
+                        
+                        <!-- Rich Text Editor Toolbar -->
+                        <div class="rich-text-toolbar mb-2">
+                            <div class="toolbar-group">
+                                <select class="form-select form-select-sm" id="formatSelect">
+                                    <option value="p">Paragraph</option>
+                                    <option value="h1">Heading 1</option>
+                                    <option value="h2">Heading 2</option>
+                                    <option value="h3">Heading 3</option>
+                                </select>
+                            </div>
+                            
+                            <div class="toolbar-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="boldBtn" title="Bold">
+                                    <strong>B</strong>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="italicBtn" title="Italic">
+                                    <em>I</em>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="bulletListBtn" title="Bullet List">
+                                    <i class="fas fa-list-ul"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="numberListBtn" title="Number List">
+                                    <i class="fas fa-list-ol"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="linkBtn" title="Link">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="imageBtn" title="Insert Image">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Area -->
+                        <div class="rich-text-content">
+                            <textarea class="form-control @error('description') is-invalid @enderror" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="6" 
+                                      placeholder="Mô tả chi tiết về tài nguyên này..."
+                                      maxlength="2000">{{ old('description') }}</textarea>
+                        </div>
+                        
+                        <!-- Content Preview -->
+                        <div id="contentPreview" class="mt-3" style="display: none;">
+                            <h6 class="mb-2">Preview:</h6>
+                            <div id="previewContent" class="border rounded p-3 bg-light" style="min-height: 100px;"></div>
+                        </div>
+                        
                         @error('description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <div class="form-text">Mô tả giúp người dùng hiểu rõ hơn về tài nguyên</div>
+                        <div class="form-text">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Sử dụng các nút trên để định dạng mô tả. Mô tả chi tiết giúp người dùng hiểu rõ hơn về tài nguyên.
+                            </small>
+                        </div>
                     </div>
 
                     <!-- Upload file hoặc link -->
@@ -206,6 +261,266 @@
 
 @section('scripts')
 <script>
+// Rich Text Editor Functions
+(function() {
+    'use strict';
+    
+    // Initialize when DOM is ready
+    function init() {
+        console.log('Initializing rich text editor for description...');
+        initializeToolbar();
+    }
+    
+    // Try multiple initialization strategies
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    // Fallback initialization
+    window.addEventListener('load', function() {
+        console.log('Window loaded, re-initializing...');
+        setTimeout(init, 100);
+    });
+})();
+
+function initializeToolbar() {
+    console.log('Initializing toolbar...');
+    const contentTextarea = document.getElementById('description');
+    if (!contentTextarea) {
+        console.error('Description textarea not found');
+        return;
+    }
+    
+    // Format Select
+    const formatSelect = document.getElementById('formatSelect');
+    if (formatSelect) {
+        formatSelect.addEventListener('change', function() {
+            const format = this.value;
+            const selectedText = getSelectedText();
+            if (selectedText) {
+                let formattedText = '';
+                switch(format) {
+                    case 'h1':
+                        formattedText = '# ' + selectedText;
+                        break;
+                    case 'h2':
+                        formattedText = '## ' + selectedText;
+                        break;
+                    case 'h3':
+                        formattedText = '### ' + selectedText;
+                        break;
+                    default:
+                        formattedText = selectedText;
+                }
+                insertText(formattedText);
+            }
+            this.value = 'p'; // Reset to paragraph
+        });
+    }
+    
+    // Bold Button
+    const boldBtn = document.getElementById('boldBtn');
+    if (boldBtn) {
+        boldBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            wrapSelectedText('**', '**');
+            toggleButtonActive(this);
+        });
+    }
+    
+    // Italic Button
+    const italicBtn = document.getElementById('italicBtn');
+    if (italicBtn) {
+        italicBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            wrapSelectedText('*', '*');
+            toggleButtonActive(this);
+        });
+    }
+    
+    // List Buttons
+    const bulletListBtn = document.getElementById('bulletListBtn');
+    if (bulletListBtn) {
+        bulletListBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedText = getSelectedText();
+            if (selectedText) {
+                const lines = selectedText.split('\n');
+                const bulletList = lines.map(line => '- ' + line).join('\n');
+                insertText(bulletList);
+            } else {
+                insertText('- ');
+            }
+            toggleButtonActive(this);
+        });
+    }
+    
+    const numberListBtn = document.getElementById('numberListBtn');
+    if (numberListBtn) {
+        numberListBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedText = getSelectedText();
+            if (selectedText) {
+                const lines = selectedText.split('\n');
+                const numberList = lines.map((line, index) => (index + 1) + '. ' + line).join('\n');
+                insertText(numberList);
+            } else {
+                insertText('1. ');
+            }
+            toggleButtonActive(this);
+        });
+    }
+    
+    // Link Button
+    const linkBtn = document.getElementById('linkBtn');
+    if (linkBtn) {
+        linkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedText = getSelectedText();
+            const url = prompt('Nhập URL:', 'https://');
+            if (url) {
+                const linkText = selectedText || 'Link text';
+                insertText(`[${linkText}](${url})`);
+            }
+            toggleButtonActive(this);
+        });
+    }
+    
+    // Image Button
+    const imageBtn = document.getElementById('imageBtn');
+    if (imageBtn) {
+        imageBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Create a hidden file input for image selection
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = false;
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    // Validate file size (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.');
+                        return;
+                    }
+                    
+                    // Validate file type
+                    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'].includes(file.type)) {
+                        alert('Vui lòng chọn file ảnh hợp lệ (JPG, PNG, GIF, WebP).');
+                        return;
+                    }
+                    
+                    // Convert to base64 and insert into content
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imageMarkdown = `![${file.name}](${e.target.result})`;
+                        insertText(imageMarkdown);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Trigger file selection
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+            
+            toggleButtonActive(this);
+        });
+    }
+}
+
+// Helper Functions
+function getSelectedText() {
+    const textarea = document.getElementById('description');
+    if (!textarea) return '';
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    return textarea.value.substring(start, end);
+}
+
+function insertText(text) {
+    const textarea = document.getElementById('description');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    
+    textarea.value = before + text + after;
+    
+    // Set cursor position after inserted text
+    const newCursorPos = start + text.length;
+    textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+    textarea.focus();
+    
+    // Trigger input event for character counter
+    textarea.dispatchEvent(new Event('input'));
+}
+
+function wrapSelectedText(prefix, suffix) {
+    const textarea = document.getElementById('description');
+    if (!textarea) return;
+    
+    const selectedText = getSelectedText();
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    // Check if text is already wrapped with the same prefix/suffix
+    if (selectedText) {
+        // Check if already wrapped
+        if (selectedText.startsWith(prefix) && selectedText.endsWith(suffix)) {
+            // Remove wrapping
+            const unwrappedText = selectedText.substring(prefix.length, selectedText.length - suffix.length);
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+            const newText = before + unwrappedText + after;
+            
+            textarea.value = newText;
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + unwrappedText.length;
+        } else {
+            // Add wrapping
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+            const newText = before + prefix + selectedText + suffix + after;
+            
+            textarea.value = newText;
+            textarea.selectionStart = start + prefix.length;
+            textarea.selectionEnd = start + prefix.length + selectedText.length;
+        }
+    } else {
+        // Insert at cursor position
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+        const newText = before + prefix + suffix + after;
+        
+        textarea.value = newText;
+        textarea.selectionStart = textarea.selectionEnd = start + prefix.length;
+    }
+    
+    textarea.focus();
+    textarea.dispatchEvent(new Event('input'));
+}
+
+function toggleButtonActive(button) {
+    if (!button) return;
+    
+    button.classList.add('active');
+    setTimeout(() => {
+        button.classList.remove('active');
+    }, 200);
+}
+
 // File upload handling
 document.getElementById('file').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -318,6 +633,145 @@ document.getElementById('resourceForm').addEventListener('submit', function(e) {
 .nav-tabs .nav-link.active {
     color: #0d6efd;
     font-weight: 600;
+}
+
+/* Rich Text Toolbar Styles */
+.rich-text-toolbar {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem 0.375rem 0 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+    border-right: 1px solid #dee2e6;
+}
+
+.toolbar-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.toolbar-group .btn {
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid #dee2e6;
+    background-color: #ffffff;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.toolbar-group .btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+.toolbar-group .btn.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #ffffff;
+}
+
+.toolbar-group .form-select {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    background-color: #ffffff;
+    min-width: 100px;
+}
+
+.rich-text-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    overflow: hidden;
+}
+
+.rich-text-content .form-control {
+    border: none;
+    border-radius: 0;
+    resize: vertical;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.rich-text-content .form-control:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* Content Preview Styles */
+#contentPreview {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #ffffff;
+}
+
+#previewContent {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+}
+
+#previewContent img {
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+#previewContent img:hover {
+    transform: scale(1.02);
+}
+
+#previewContent blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    background-color: #f8f9fa;
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+#previewContent ul, #previewContent ol {
+    padding-left: 1.5rem;
+}
+
+#previewContent li {
+    margin-bottom: 0.25rem;
+}
+
+/* Responsive toolbar */
+@media (max-width: 768px) {
+    .rich-text-toolbar {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .toolbar-group {
+        gap: 2px;
+        padding-right: 4px;
+    }
+    
+    .toolbar-group .btn {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+    
+    .toolbar-group .form-select {
+        font-size: 11px;
+        padding: 3px 6px;
+        min-width: 80px;
+    }
 }
 </style>
 @endsection
