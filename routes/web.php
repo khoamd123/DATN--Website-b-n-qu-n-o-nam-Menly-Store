@@ -62,12 +62,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
     
     // Quản lý quỹ
-    Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
-        // ...existing code...
-        Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
-        Route::post('/fund-management', [AdminController::class, 'storeFund'])->name('admin.fund-management.store');
-    });
-    
+    Route::get('/fund-management', [App\Http\Controllers\AdminController::class, 'fundManagement'])->name('admin.fund-management');
+    Route::post('/fund-management', [App\Http\Controllers\AdminController::class, 'storeFund'])->name('admin.fund-management.store');
+    Route::post('/fund-management/{fund}/approve', [App\Http\Controllers\AdminController::class, 'approveFund'])->name('admin.fund-management.approve');
+    Route::get('/fund-management/{fund}/json', [App\Http\Controllers\AdminController::class, 'fundJson'])->name('admin.fund-management.json');
+    Route::get('/fund-management/{fund}', [App\Http\Controllers\AdminController::class, 'showFund'])->name('admin.fund-management.show');
+    Route::get('/fund-management/{fund}/edit', [App\Http\Controllers\AdminController::class, 'editFund'])->name('admin.fund-management.edit');
+    Route::put('/fund-management/{fund}', [App\Http\Controllers\AdminController::class, 'updateFund'])->name('admin.fund-management.update');
+    Route::delete('/fund-management/{fund}', [App\Http\Controllers\AdminController::class, 'destroyFund'])->name('admin.fund-management.destroy');
+
     // Kế hoạch
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');
     
