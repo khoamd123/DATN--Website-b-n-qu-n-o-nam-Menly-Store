@@ -105,21 +105,21 @@
                 <tbody>
                     @forelse($funds as $fund)
                         @php
-                            preg_match('/\d+/', $fund->content, $matches);
-                            $amount = isset($matches[0]) ? (int)$matches[0] : 0;
-                            $isIncome = strpos(strtolower($fund->title), 'thu') !== false || strpos(strtolower($fund->title), 'nhận') !== false;
+                            $amount = (float) ($fund->amount ?? 0);
+                            $isIncome = ($fund->transaction_type ?? 'chi') === 'thu';
                         @endphp
                         <tr>
                             <td>{{ $fund->id }}</td>
                             <td>
                                 <strong>{{ $fund->title }}</strong>
-                                <br><small class="text-muted">{{ Str::limit($fund->content, 50) }}</small>
                             </td>
                             <td>{{ $fund->club->name ?? 'Không xác định' }}</td>
-                            <td>
-                                <span class="badge bg-{{ $isIncome ? 'success' : 'danger' }}">
-                                    {{ $isIncome ? '+' : '-' }}{{ number_format($amount) }}đ
-                                </span>
+                            <td class="text-center">
+                                @if($isIncome)
+                                    <span class="badge bg-success">+{{ number_format($amount,0,',','.') }}đ</span>
+                                @else
+                                    <span class="badge bg-danger">-{{ number_format($amount,0,',','.') }}đ</span>
+                                @endif
                             </td>
                             <td>
                                 <span class="badge bg-{{ $isIncome ? 'success' : 'warning' }}">
@@ -129,9 +129,12 @@
                             <td>{{ $fund->user->name ?? 'Không xác định' }}</td>
                             <td>{{ $fund->created_at->format('d/m/Y H:i') }}</td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="viewFund({{ $fund->id }})">
+                                <a href="{{ route('admin.fund-management.show', $fund->id) }}" class="btn btn-sm btn-info text-white">
                                     <i class="fas fa-eye"></i> Xem
-                                </button>
+                                </a>
+                                <a href="{{ route('admin.fund-management.edit', $fund->id) }}" class="btn btn-sm btn-warning text-white">
+                                    <i class="fas fa-edit"></i> Sửa
+                                </a>
                                 <button class="btn btn-sm btn-danger" onclick="deleteFund({{ $fund->id }})">
                                     <i class="fas fa-trash"></i> Xóa
                                 </button>
@@ -157,9 +160,9 @@
     </div>
 </div>
 
-<!-- Modal thêm quỹ -->
+<!--Thêm quỹ -->
 <div class="modal fade" id="addFundModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Thêm giao dịch quỹ</h5>
@@ -172,17 +175,19 @@
                         <label class="form-label">Mô tả</label>
                         <input type="text" class="form-control" name="title" required>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Số tiền</label>
-                        <input type="number" class="form-control" name="amount" required>
+                        <input name="items[0][amount]" class="form-control" type="number" step="0.01" placeholder="Số tiền" required>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Loại giao dịch</label>
-                        <select class="form-select" name="type">
+                        <select class="form-select" name="transaction_type">
                             <option value="thu">Thu</option>
                             <option value="chi">Chi</option>
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Câu lạc bộ</label>
                         <select class="form-select" name="club_id" required>
@@ -191,20 +196,48 @@
                             @endforeach
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Ghi chú</label>
                         <textarea class="form-control" name="content" rows="3"></textarea>
                     </div>
-                    <input type="hidden" name="type" value="fund">
-                    <input type="hidden" name="status" value="published">
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary">Thêm</button>
                 </div>
             </form>
-            
+
         </div>
     </div>
 </div>
+
+@endsection
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // nothing required here for simple mode
+});
+
+// Xóa đơn giản: tạo form POST với _method = DELETE để submit
+function deleteFund(id) {
+    if (!confirm('Bạn có chắc muốn xóa giao dịch này?')) return;
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `{{ url('admin/fund-management') }}/${id}`; // Sử dụng url() helper
+    form.style.display = 'none';
+    const inputToken = document.createElement('input');
+    inputToken.name = '_token';
+    inputToken.value = token;
+    form.appendChild(inputToken);
+    const inputMethod = document.createElement('input');
+    inputMethod.name = '_method';
+    inputMethod.value = 'DELETE';
+    form.appendChild(inputMethod);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 @endsection

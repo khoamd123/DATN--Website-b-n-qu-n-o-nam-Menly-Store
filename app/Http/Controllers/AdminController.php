@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Club;
+use App\Models\Fund;
+use App\Models\FundItem;
 use App\Models\Event;
-use App\Models\Post;
+use App\Models\Post;;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
@@ -177,10 +179,10 @@ class AdminController extends Controller
      */
     public function fundManagement(Request $request)
     {
-        // Tạm thời sử dụng bảng posts với type = 'fund' để quản lý quỹ
-        $query = Post::where('type', 'fund')->with(['club', 'user']);
+        $query = Fund::with(['club', 'user']);
         
         if ($request->has('search') && $request->search) {
+            $search = $request->search;
             $query->where(function($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
                   ->orWhere('content', 'like', '%' . $request->search . '%');
@@ -194,12 +196,18 @@ class AdminController extends Controller
         $funds = $query->orderBy('created_at', 'desc')->paginate(20);
         $clubs = Club::where('status', 'active')->get();
         
-        // Thống kê quỹ
-        $totalFunds = $funds->sum(function($fund) {
-            // Giả định content chứa số tiền
-            preg_match('/\d+/', $fund->content, $matches);
-            return isset($matches[0]) ? (int)$matches[0] : 0;
-        });
+        // Tính tổng quỹ: thu cộng, chi trừ
+        $totalFunds = Fund::where(function($q) use ($request) {
+            if ($request->filled('search')) {
+                $q->where('title','like',"%{$request->search}%")
+                ->orWhere('content','like',"%{$request->search}%");
+            }
+            if ($request->filled('club_id')) {
+                $q->where('club_id', $request->club_id);
+            }
+        })->get()->reduce(function($carry, $f) {
+            return $carry + (($f->transaction_type === 'thu') ? (float)$f->amount : - (float)$f->amount);
+        }, 0);
         
         return view('admin.fund-management.index', compact('funds', 'clubs', 'totalFunds'));
     }
@@ -207,25 +215,162 @@ class AdminController extends Controller
     public function storeFund(Request $request)
         {
             $request->validate([
-                'title' => 'required|string|max:255',
-                'amount' => 'required|numeric',
-                'type' => 'required|in:thu,chi',
-                'club_id' => 'required|exists:clubs,id',
-                'content' => 'nullable|string',
-            ]);
+            'title' => 'required|string|max:255',
+            'items.*.amount' => 'required|numeric|min:0.01',
+            'transaction_type' => 'required|in:thu,chi',
+            'club_id' => 'required|exists:clubs,id',
+        ]);
 
-            // Lưu vào bảng posts với type = 'fund'
-            Post::create([
+            $items = $request->input('items', [['amount' => $request->input('items.0.amount',0),'description' => $request->input('title')]]);
+            $total = array_sum(array_map(fn($it)=>(float)($it['amount'] ?? 0), $items));
+
+            $fund = Fund::create([
                 'title' => $request->title,
-                'content' => 'Số tiền: ' . $request->amount . ' - ' . $request->content,
-                'type' => 'fund',
+                'amount' => $total,
+                'transaction_type' => $request->transaction_type,
                 'club_id' => $request->club_id,
                 'user_id' => auth()->id(),
-                'status' => 'published',
+                'content' => $request->content,
+                'status' => 'pending',
             ]);
+
+            foreach ($request->input('items', []) as $it) {
+                FundItem::create([
+                    'fund_id' => $fund->id,
+                    'description' => $it['description'] ?? $fund->title,
+                    'amount' => $it['amount'] ?? 0,
+                ]);
+            }
 
             return redirect()->route('admin.fund-management')->with('success', 'Thêm giao dịch quỹ thành công!');
         }
+
+    public function approveFund(Request $request, Fund $fund)
+    {
+        // server-side kiểm tra số mục được duyệt không vượt quá 6
+        $approvedIds = $request->input('approved_items', []);
+        if (count($approvedIds) > 6) {
+            return back()->withErrors(['approved_items' => 'Chỉ được duyệt tối đa 6 mục.']);
+        }
+
+        $request->validate([
+            'voucher' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'approved_items' => 'array',
+            'rejected_items' => 'array',
+            'rejection_reasons' => 'array',
+            'approval_note' => 'nullable|string|max:1000',
+        ]);
+
+        if ($request->hasFile('voucher')) {
+            $path = $request->file('voucher')->store('vouchers','public');
+            $fund->voucher_path = $path;
+        }
+
+        $approvedSum = 0;
+        $approvedItems = $request->input('approved_items', []);
+        $rejectedItems = $request->input('rejected_items', []);
+        $rejectionReasons = $request->input('rejection_reasons', []);
+
+        foreach ($fund->items as $item) {
+            if (in_array($item->id, $approvedItems)) {
+                $item->status = 'approved';
+                $approvedSum += (float) $item->amount;
+                $item->rejection_reason = null;
+            } elseif (in_array($item->id, $rejectedItems)) {
+                $item->status = 'rejected';
+                $item->rejection_reason = $rejectionReasons[$item->id] ?? null;
+            } else {
+                $item->status = 'pending';
+                $item->rejection_reason = null;
+            }
+            $item->save();
+        }
+
+        $fund->approved_by = auth()->id();
+        $fund->approved_at = now();
+        $fund->approved_amount = $approvedSum;
+        $fund->approval_note = $request->approval_note;
+        $fund->status = 'approved';
+        $fund->save();
+
+        return redirect()->route('admin.fund-management')->with('success','Yêu cầu đã được xử lý.');
+    }
+
+    public function showFund(Fund $fund)
+    {
+        $fund->load(['items','club','user','items']);
+        return view('admin.fund-management.show', compact('fund'));
+    }
+
+    public function fundJson(Fund $fund)
+    {
+        $fund->load(['items','club','user']);
+        return response()->json($fund);
+    }
+
+    /**
+     * Show the form for editing the specified fund.
+     */
+    public function editFund(Fund $fund)
+    {
+        $clubs = Club::where('status', 'active')->get();
+        $fund->load('items'); // Tải các mục để hiển thị
+        return view('admin.fund-management.edit', compact('fund', 'clubs'));
+    }
+
+    /**
+     * Update the specified fund in storage.
+     */
+    public function updateFund(Request $request, Fund $fund)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'transaction_type' => 'required|in:thu,chi',
+            'club_id' => 'required|exists:clubs,id',
+            'content' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.amount' => 'required|numeric|min:0.01',
+        ]);
+
+        // Lấy thông tin mục duy nhất từ request
+        $itemData = array_values($request->input('items', []))[0];
+        $totalAmount = (float)($itemData['amount'] ?? 0);
+
+        // Cập nhật thông tin chính của quỹ
+        $fund->update([
+            'title' => $request->title,
+            'transaction_type' => $request->transaction_type,
+            'club_id' => $request->club_id,
+            'content' => $request->content,
+            'amount' => $totalAmount, // Cập nhật tổng tiền
+        ]);
+
+        // Xóa tất cả các mục cũ để đảm bảo chỉ có một mục mới được lưu
+        $fund->items()->delete();
+
+        // Tạo lại mục duy nhất với thông tin mới
+        FundItem::create([
+            'fund_id' => $fund->id,
+            'description' => $request->title, // Sử dụng tiêu đề của quỹ làm mô tả cho mục
+            'amount' => $totalAmount,
+            'status' => 'pending', // Reset trạng thái về pending khi chỉnh sửa
+        ]);
+
+        return redirect()->route('admin.fund-management.show', $fund->id)->with('success', 'Cập nhật giao dịch quỹ thành công!');
+    }
+
+    /**
+     * Delete a fund and its items.
+     */
+    public function destroyFund(Fund $fund)
+    {
+        // Xóa các mục liên quan trước để đảm bảo toàn vẹn dữ liệu
+        $fund->items()->delete();
+        // Xóa bản ghi quỹ
+        $fund->delete();
+
+        return redirect()->route('admin.fund-management')->with('success', 'Xóa giao dịch quỹ thành công!');
+    }
     /**
      * Display plans/schedule management page
      */
