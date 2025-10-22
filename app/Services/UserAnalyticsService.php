@@ -47,7 +47,7 @@ class UserAnalyticsService
      */
     public function getLastOnline()
     {
-        return $this->user->last_online;
+        return $this->user->last_online ?? now()->subDays(30); // Nếu null thì trả về 30 ngày trước
     }
 
     /**

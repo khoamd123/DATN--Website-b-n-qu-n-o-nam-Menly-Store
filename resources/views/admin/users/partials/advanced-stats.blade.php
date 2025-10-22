@@ -34,9 +34,9 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="me-3">
-                        @if($userStats['last_online']->diffInMinutes(now()) < 5)
+                        @if($userStats['last_online'] && $userStats['last_online']->diffInMinutes(now()) < 5)
                             <span class="badge bg-success">Online</span>
-                        @elseif($userStats['last_online']->diffInHours(now()) < 1)
+                        @elseif($userStats['last_online'] && $userStats['last_online']->diffInHours(now()) < 1)
                             <span class="badge bg-warning">Vừa offline</span>
                         @else
                             <span class="badge bg-secondary">Offline</span>
@@ -44,7 +44,7 @@
                     </div>
                     <div>
                         <strong>Lần cuối online:</strong><br>
-                        <small class="text-muted">{{ $userStats['last_online']->format('d/m/Y H:i:s') }}</small>
+                        <small class="text-muted">{{ $userStats['last_online'] ? $userStats['last_online']->format('d/m/Y H:i:s') : 'Chưa từng online' }}</small>
                     </div>
                 </div>
             </div>
