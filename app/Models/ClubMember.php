@@ -18,4 +18,20 @@ class ClubMember extends Model
         'joined_at',
         'left_at',
     ];
+
+    /**
+     * Get the club that the member belongs to.
+     */
+    public function club()
+    {
+        return $this->belongsTo(Club::class);
+    }
+
+    /**
+     * Get the user that is the member.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

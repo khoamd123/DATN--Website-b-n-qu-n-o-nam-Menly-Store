@@ -55,8 +55,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
     
     // Quản lý câu lạc bộ
-    Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
-    Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+    Route::get('/clubs', [App\Http\Controllers\AdminController::class, 'clubs'])->name('admin.clubs');
+    Route::get('/clubs/create', [App\Http\Controllers\AdminController::class, 'createClub'])->name('admin.clubs.create');
+    Route::post('/clubs', [App\Http\Controllers\AdminController::class, 'storeClub'])->name('admin.clubs.store');
+    Route::get('/clubs/{club}', [AdminController::class, 'showClub'])->name('admin.clubs.show');
+    Route::get('/clubs/{club}/edit', [App\Http\Controllers\AdminController::class, 'editClub'])->name('admin.clubs.edit');
+    Route::put('/clubs/{club}', [App\Http\Controllers\AdminController::class, 'updateClub'])->name('admin.clubs.update');
+    Route::get('/clubs/{id}/members', [App\Http\Controllers\AdminController::class, 'clubMembers'])->name('admin.clubs.members');
+    Route::patch('/clubs/{id}/status', [App\Http\Controllers\AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+    Route::delete('/clubs/{id}', [App\Http\Controllers\AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
     
     // Tài liệu học tập
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
