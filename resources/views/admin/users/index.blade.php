@@ -4,7 +4,12 @@
 
 @section('content')
 <div class="content-header">
-    <h1>Quản lý người dùng</h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Quản lý người dùng</h1>
+        <a href="{{ route('admin.users.create') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Thêm người dùng mới
+        </a>
+    </div>
 </div>
 
 <!-- Bộ lọc và tìm kiếm -->

@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Dashboard - CLB Admin'); ?>
 
 <?php $__env->startSection('styles'); ?>

@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
+use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
@@ -342,7 +343,10 @@ class AdminController extends Controller
 
         try {
             $user = User::findOrFail($id);
-            return view('admin.users.show', compact('user'));
+            $analytics = new UserAnalyticsService($user);
+            $userStats = $analytics->getAllAnalytics();
+            
+            return view('admin.users.show', compact('user', 'userStats'));
         } catch (\Exception $e) {
             return redirect()->route('admin.users')->with('error', 'Không tìm thấy người dùng.');
         }
@@ -1710,5 +1714,45 @@ class AdminController extends Controller
                     'end' => now()->endOfMonth()
                 ];
         }
+    }
+
+    /**
+     * Hiển thị form thêm người dùng mới
+     */
+    public function createUser()
+    {
+        return view('admin.users.create');
+    }
+
+    /**
+     * Xử lý thêm người dùng mới
+     */
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'student_id' => 'nullable|string|max:50|unique:users,student_id',
+            'role' => 'required|in:user,admin',
+            'is_admin' => 'boolean'
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'student_id' => $request->student_id,
+            'role' => $request->role,
+            'is_admin' => $request->has('is_admin') ? 1 : 0,
+            'last_online' => now()
+        ]);
+
+        return redirect()->route('admin.users.show', $user->id)
+            ->with('success', 'Thêm người dùng mới thành công!');
     }
 }

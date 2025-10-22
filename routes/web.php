@@ -189,6 +189,8 @@ Route::prefix('admin')->group(function () {
     
             // Quản lý người dùng
             Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+            Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
+            Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
             Route::get('/users/{id}', [AdminController::class, 'showUser'])->name('admin.users.show');
             Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
             Route::get('/users-simple', [AdminController::class, 'usersSimple'])->name('admin.users.simple');

@@ -35,6 +35,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\UpdateLastOnline::class,
         ],
 
         'api' => [
@@ -73,5 +74,6 @@ class Kernel extends HttpKernel
         'club_officer' => \App\Http\Middleware\ClubOfficerMiddleware::class,
         'club_member' => \App\Http\Middleware\ClubMemberMiddleware::class,
         'check_permission' => \App\Http\Middleware\CheckPermissionMiddleware::class,
+        'update_last_online' => \App\Http\Middleware\UpdateLastOnline::class,
     ];
 }

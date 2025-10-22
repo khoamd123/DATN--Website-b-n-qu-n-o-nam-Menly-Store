@@ -75,6 +75,20 @@
                         <strong>Cập nhật lần cuối:</strong><br>
                         <span class="text-muted">{{ $user->updated_at ? $user->updated_at->format('d/m/Y H:i:s') : 'N/A' }}</span>
                     </div>
+                    
+                    <div class="mt-3">
+                        <strong>Lần cuối online:</strong><br>
+                        @if($user->last_online)
+                            @php
+                                $diffInMinutes = $user->last_online->diffInMinutes(now());
+                                $statusClass = $diffInMinutes < 5 ? 'success' : ($diffInMinutes < 60 ? 'warning' : 'secondary');
+                                $statusText = $diffInMinutes < 5 ? 'Đang online' : ($diffInMinutes < 60 ? $user->last_online->diffForHumans() . ' trước' : $user->last_online->format('d/m/Y H:i'));
+                            @endphp
+                            <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
+                        @else
+                            <span class="text-muted">Chưa từng online</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,12 +164,12 @@
                 </div>
             </div>
 
-            <!-- Thống kê hoạt động -->
+            <!-- Thống kê hoạt động cơ bản -->
             <div class="row mt-4">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Thống kê hoạt động</h5>
+                            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Thống kê hoạt động cơ bản</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -195,6 +209,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Thống kê nâng cao -->
+            @include('admin.users.partials.advanced-stats')
 
             <!-- Các bài viết gần đây -->
             <div class="row mt-4">

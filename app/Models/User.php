@@ -26,7 +26,8 @@ class User extends Authenticatable
         'address',
         'avatar',
         'role',
-        'student_id'
+        'student_id',
+        'last_online'
     ];
     protected $attributes = [
         'is_admin' => 0,
@@ -53,6 +54,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'is_admin' => 'boolean',
         'role' => 'string',
+        'last_online' => 'datetime',
     ];
 
     /**
