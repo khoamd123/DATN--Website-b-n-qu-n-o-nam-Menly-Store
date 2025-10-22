@@ -39,7 +39,9 @@
                 </div>
                 
                 <div class="post-content">
-                    {!! nl2br(e($post->content)) !!}
+                    <div class="markdown-content">
+                        {!! $this->renderMarkdown($post->content) !!}
+                    </div>
                 </div>
 
                 <!-- Album ảnh -->
@@ -241,3 +243,153 @@ function showImageModal(imageUrl, caption) {
     </div>
 </div>
 @endsection
+
+<style>
+.markdown-content {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.markdown-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 1.5rem 0 1rem 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.markdown-content h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.75rem 0;
+    color: #34495e;
+}
+
+.markdown-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: #34495e;
+}
+
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+
+.markdown-content img {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    margin: 1rem 0;
+}
+
+.markdown-content img:hover {
+    transform: scale(1.02);
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid #3498db;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    background-color: #f8f9fa;
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-style: italic;
+    color: #555;
+}
+
+.markdown-content ul, .markdown-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content strong {
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.markdown-content em {
+    font-style: italic;
+    color: #555;
+}
+
+.markdown-content a {
+    color: #3498db;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.markdown-content a:hover {
+    color: #2980b9;
+    border-bottom-color: #2980b9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .markdown-content h1 {
+        font-size: 1.5rem;
+    }
+    
+    .markdown-content h2 {
+        font-size: 1.25rem;
+    }
+    
+    .markdown-content h3 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+
+@php
+function renderMarkdown($content) {
+    if (!$content) return '';
+    
+    // Convert markdown to HTML
+    $html = $content;
+    
+    // Headers
+    $html = preg_replace('/^### (.*$)/m', '<h3>$1</h3>', $html);
+    $html = preg_replace('/^## (.*$)/m', '<h2>$1</h2>', $html);
+    $html = preg_replace('/^# (.*$)/m', '<h1>$1</h1>', $html);
+    
+    // Bold
+    $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+    
+    // Italic
+    $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+    
+    // Images
+    $html = preg_replace('/!\[([^\]]*)\]\(([^)]+)\)/', '<img src="$2" alt="$1" class="img-fluid mb-2" style="max-width: 100%; height: auto; border-radius: 0.375rem;">', $html);
+    
+    // Links
+    $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2" target="_blank">$1</a>', $html);
+    
+    // Line breaks
+    $html = nl2br($html);
+    
+    // Blockquotes
+    $html = preg_replace('/^> (.*$)/m', '<blockquote class="blockquote"><p class="mb-0">$1</p></blockquote>', $html);
+    
+    // Lists
+    $html = preg_replace('/^\* (.*$)/m', '<li>$1</li>', $html);
+    $html = preg_replace('/^- (.*$)/m', '<li>$1</li>', $html);
+    $html = preg_replace('/^\d+\. (.*$)/m', '<li>$1</li>', $html);
+    
+    // Wrap list items in ul/ol tags
+    $html = preg_replace_callback('/(<li>.*<\/li>)/s', function($match) {
+        if (strpos($match[0], '1.') !== false || strpos($match[0], '2.') !== false || strpos($match[0], '3.') !== false) {
+            return '<ol>' . $match[0] . '</ol>';
+        } else {
+            return '<ul>' . $match[0] . '</ul>';
+        }
+    }, $html);
+    
+    return $html;
+}
+@endphp
