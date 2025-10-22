@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('post_id');
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->foreign('user_id')->references('id')->on('users');
-            $table->foreign('post_id')->references('id')->on('posts');
+            $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
             $table->foreign('parent_id')->references('id')->on('post_comments')->onDelete('cascade');
             $table->text('content')->nullable(false);
             $table->enum('status' ,['visible','hidden','deleted'])->default('visible');
