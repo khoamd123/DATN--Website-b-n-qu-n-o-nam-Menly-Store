@@ -64,7 +64,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
     Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
     
-    // Tài liệu học tập
+    // Tài nguyên CLB
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
     
     // Quản lý quỹ

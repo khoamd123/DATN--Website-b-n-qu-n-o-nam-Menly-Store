@@ -20,6 +20,21 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+// Debug route for date filter
+Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
+Route::get('/admin/test-date-filter', [AdminController::class, 'testDateFilter'])->name('admin.test-date-filter');
+
+// Quick test routes
+Route::get('/admin/test-today', function() {
+    return redirect()->route('admin.dashboard', ['date_range' => 'today']);
+})->name('admin.test-today');
+Route::get('/admin/test-yesterday', function() {
+    return redirect()->route('admin.dashboard', ['date_range' => 'yesterday']);
+})->name('admin.test-yesterday');
+Route::get('/admin/test-yesterday-debug', function() {
+    return redirect()->route('admin.test-date-filter', ['date_range' => 'yesterday']);
+})->name('admin.test-yesterday-debug');
+
 // Route đăng nhập đơn giản cho admin
 // Simple Login Routes
 Route::get('/admin-login', [App\Http\Controllers\SimpleLoginController::class, 'showLogin'])->name('simple.login');
@@ -216,7 +231,7 @@ Route::prefix('admin')->group(function () {
             Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
             Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
     
-    // Tài liệu học tập
+    // Tài nguyên CLB
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
     Route::get('/learning-materials/create', [AdminController::class, 'learningMaterialsCreate'])->name('admin.learning-materials.create');
     Route::post('/learning-materials', [AdminController::class, 'learningMaterialsStore'])->name('admin.learning-materials.store');

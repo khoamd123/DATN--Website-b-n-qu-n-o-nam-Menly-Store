@@ -518,7 +518,7 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.learning-materials*') ? 'active' : '' }}" href="{{ route('admin.learning-materials') }}">
                         <i class="fas fa-file-alt"></i>
-                        Tài liệu học tập
+                        Tài nguyên CLB
                     </a>
                 </li>
                 <li class="nav-item">

@@ -1,10 +1,10 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Tài liệu học tập - CLB Admin')
+@section('title', 'Tài nguyên CLB - CLB Admin')
 
 @section('content')
 <div class="content-header">
-    <h1>Tài liệu học tập</h1>
+    <h1>Tài nguyên CLB</h1>
 </div>
 
 <!-- Bộ lọc và tìm kiếm -->
@@ -15,7 +15,7 @@
                 <input type="text" 
                        name="search" 
                        class="form-control" 
-                       placeholder="Tìm kiếm tài liệu..."
+                       placeholder="Tìm kiếm tài nguyên..."
                        value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
@@ -47,7 +47,7 @@
                         <i class="fas fa-refresh"></i> Làm mới
                     </a>
                     <a href="{{ route('admin.learning-materials.create') }}" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Thêm tài liệu
+                        <i class="fas fa-plus"></i> Thêm tài nguyên
                     </a>
                 </div>
             </div>
@@ -55,7 +55,7 @@
     </div>
 </div>
 
-<!-- Danh sách tài liệu -->
+<!-- Danh sách tài nguyên -->
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
@@ -132,7 +132,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="status" value="deleted">
-                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa tài liệu này?')">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa tài nguyên này?')">
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>
@@ -142,7 +142,7 @@
                     @empty
                         <tr>
                             <td colspan="8" class="text-center text-muted py-4">
-                                Không tìm thấy tài liệu nào
+                                Không tìm thấy tài nguyên nào
                             </td>
                         </tr>
                     @endforelse

@@ -25,6 +25,28 @@
     <p class="text-muted">Tổng quan hệ thống quản lý câu lạc bộ</p>
 </div>
 
+
+<?php echo $__env->make('admin.partials.dashboard-date-filter', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+
+
+<?php if($startDate && $endDate): ?>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-filter me-2"></i>
+            <strong>Đang hiển thị thống kê từ:</strong> 
+            <?php echo e(\Carbon\Carbon::parse($startDate)->format('d/m/Y')); ?> 
+            <strong>đến:</strong> 
+            <?php echo e(\Carbon\Carbon::parse($endDate)->format('d/m/Y')); ?>
+
+            <a href="<?php echo e(route('admin.dashboard')); ?>" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="fas fa-times me-1"></i>Xóa bộ lọc
+            </a>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Quick Actions -->
 <div class="row mb-4">
     <div class="col-12">
@@ -65,8 +87,8 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number"><?php echo e($totalUsers); ?></p>
-            <p class="stats-label">Tổng người dùng</p>
+            <p class="stats-number"><?php echo e($usersInPeriod); ?></p>
+            <p class="stats-label">Người dùng trong khoảng thời gian</p>
             <small class="text-success">+<?php echo e($usersLastMonth); ?> tháng này</small>
             <a href="<?php echo e(route('admin.users')); ?>" class="stats-link">Xem tất cả</a>
         </div>
@@ -77,8 +99,8 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number"><?php echo e($totalClubs); ?></p>
-            <p class="stats-label">Tổng câu lạc bộ</p>
+            <p class="stats-number"><?php echo e($clubsInPeriod); ?></p>
+            <p class="stats-label">Câu lạc bộ trong khoảng thời gian</p>
             <small class="text-info"><?php echo e($activeClubs); ?> hoạt động, <?php echo e($pendingClubs); ?> chờ duyệt</small>
             <a href="<?php echo e(route('admin.clubs')); ?>" class="stats-link">Xem tất cả</a>
         </div>
@@ -89,8 +111,8 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-calendar-alt"></i>
             </div>
-            <p class="stats-number"><?php echo e($totalEvents); ?></p>
-            <p class="stats-label">Tổng sự kiện</p>
+            <p class="stats-number"><?php echo e($eventsInPeriod); ?></p>
+            <p class="stats-label">Sự kiện trong khoảng thời gian</p>
             <small class="text-warning"><?php echo e($activeEvents); ?> đang hoạt động</small>
             <a href="<?php echo e(route('admin.plans-schedule')); ?>" class="stats-link">Xem tất cả</a>
         </div>
@@ -101,8 +123,8 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-newspaper"></i>
             </div>
-            <p class="stats-number"><?php echo e($totalPosts); ?></p>
-            <p class="stats-label">Tổng bài viết</p>
+            <p class="stats-number"><?php echo e($postsInPeriod); ?></p>
+            <p class="stats-label">Bài viết trong khoảng thời gian</p>
             <small class="text-success">+<?php echo e($postsLastMonth); ?> tháng này</small>
             <a href="<?php echo e(route('admin.posts')); ?>" class="stats-link">Xem tất cả</a>
         </div>

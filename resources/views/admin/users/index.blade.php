@@ -11,18 +11,34 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.users') }}" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" 
                        name="search" 
                        class="form-control" 
                        placeholder="Tìm kiếm theo tên, email, số điện thoại..."
                        value="{{ request('search') }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="is_admin" class="form-select">
                     <option value="">Tất cả quyền</option>
                     <option value="1" {{ request('is_admin') == '1' ? 'selected' : '' }}>Admin</option>
                     <option value="0" {{ request('is_admin') == '0' ? 'selected' : '' }}>User thường</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="date_range" class="form-select">
+                    <option value="">Tất cả thời gian</option>
+                    <option value="today" {{ request('date_range') == 'today' ? 'selected' : '' }}>Hôm nay</option>
+                    <option value="yesterday" {{ request('date_range') == 'yesterday' ? 'selected' : '' }}>Hôm qua</option>
+                    <option value="this_week" {{ request('date_range') == 'this_week' ? 'selected' : '' }}>Tuần này</option>
+                    <option value="last_week" {{ request('date_range') == 'last_week' ? 'selected' : '' }}>Tuần trước</option>
+                    <option value="this_month" {{ request('date_range') == 'this_month' ? 'selected' : '' }}>Tháng này</option>
+                    <option value="last_month" {{ request('date_range') == 'last_month' ? 'selected' : '' }}>Tháng trước</option>
+                    <option value="this_year" {{ request('date_range') == 'this_year' ? 'selected' : '' }}>Năm nay</option>
+                    <option value="last_year" {{ request('date_range') == 'last_year' ? 'selected' : '' }}>Năm trước</option>
+                    <option value="last_7_days" {{ request('date_range') == 'last_7_days' ? 'selected' : '' }}>7 ngày qua</option>
+                    <option value="last_30_days" {{ request('date_range') == 'last_30_days' ? 'selected' : '' }}>30 ngày qua</option>
+                    <option value="last_90_days" {{ request('date_range') == 'last_90_days' ? 'selected' : '' }}>90 ngày qua</option>
                 </select>
             </div>
             <div class="col-md-2">

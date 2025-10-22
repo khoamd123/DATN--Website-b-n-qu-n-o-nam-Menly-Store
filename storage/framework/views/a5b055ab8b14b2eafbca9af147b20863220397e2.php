@@ -519,7 +519,7 @@
                 <li class="nav-item">
                     <a class="nav-link <?php echo e(request()->routeIs('admin.learning-materials*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.learning-materials')); ?>">
                         <i class="fas fa-file-alt"></i>
-                        Tài liệu học tập
+                        Tài nguyên CLB
                     </a>
                 </li>
                 <li class="nav-item">

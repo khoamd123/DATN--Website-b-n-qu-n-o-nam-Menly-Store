@@ -15,12 +15,28 @@ class AdminController extends Controller
     /**
      * Display admin dashboard
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         // Kiểm tra đăng nhập đơn giản
         if (!session('logged_in') || !session('is_admin')) {
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
+
+        // Xử lý bộ lọc thời gian
+        $dateFilter = $this->getDateFilter($request);
+        $startDate = $dateFilter ? $dateFilter['start'] : null;
+        $endDate = $dateFilter ? $dateFilter['end'] : null;
+        
+        // Debug: Log date filter
+        \Log::info('Dashboard Date Filter', [
+            'date_range' => $request->get('date_range'),
+            'start_date' => $request->get('start_date'),
+            'end_date' => $request->get('end_date'),
+            'computed_start' => $startDate ? $startDate->format('Y-m-d H:i:s') : 'null',
+            'computed_end' => $endDate ? $endDate->format('Y-m-d H:i:s') : 'null',
+            'has_filter' => $dateFilter !== null,
+            'current_time' => now()->format('Y-m-d H:i:s')
+        ]);
 
         try {
             // Thống kê tổng quan - với try catch để tránh lỗi
@@ -46,32 +62,77 @@ class AdminController extends Controller
             $activeEvents = 0;
         }
         
+        // Thống kê tăng trưởng theo khoảng thời gian được chọn
+        if ($dateFilter) {
+            $usersInPeriod = User::whereBetween('created_at', [$startDate, $endDate])->count();
+            $clubsInPeriod = Club::whereBetween('created_at', [$startDate, $endDate])->count();
+            $eventsInPeriod = Event::whereBetween('created_at', [$startDate, $endDate])->count();
+            $postsInPeriod = Post::where('type', 'post')->whereBetween('created_at', [$startDate, $endDate])->count();
+        } else {
+            $usersInPeriod = $totalUsers;
+            $clubsInPeriod = $totalClubs;
+            $eventsInPeriod = $totalEvents;
+            $postsInPeriod = $totalPosts;
+        }
+        
+        // Debug: Log statistics
+        \Log::info('Dashboard Statistics', [
+            'users_in_period' => $usersInPeriod,
+            'clubs_in_period' => $clubsInPeriod,
+            'events_in_period' => $eventsInPeriod,
+            'posts_in_period' => $postsInPeriod,
+            'has_filter' => $dateFilter !== null
+        ]);
+        
         // Thống kê tăng trưởng (so với tháng trước)
         $usersLastMonth = User::where('created_at', '>=', now()->subMonth())->count();
         $clubsLastMonth = Club::where('created_at', '>=', now()->subMonth())->count();
         $eventsLastMonth = Event::where('created_at', '>=', now()->subMonth())->count();
         $postsLastMonth = Post::where('type', 'post')->where('created_at', '>=', now()->subMonth())->count();
         
-        // Người dùng mới (7 ngày gần nhất)
-        $newUsers = User::where('created_at', '>=', now()->subDays(7))
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-        
-        // Câu lạc bộ mới
-        $newClubs = Club::with(['field', 'owner'])
-            ->where('created_at', '>=', now()->subDays(7))
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-        
-        // Sự kiện sắp diễn ra
-        $upcomingEvents = Event::with(['club'])
-            ->where('start_time', '>', now())
-            ->where('status', 'active')
-            ->orderBy('start_time', 'asc')
-            ->limit(5)
-            ->get();
+        // Người dùng mới trong khoảng thời gian được chọn
+        if ($dateFilter) {
+            $newUsers = User::whereBetween('created_at', [$startDate, $endDate])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+            
+            // Câu lạc bộ mới trong khoảng thời gian được chọn
+            $newClubs = Club::with(['field', 'owner'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+            
+            // Sự kiện sắp diễn ra trong khoảng thời gian được chọn
+            $upcomingEvents = Event::with(['club'])
+                ->whereBetween('start_time', [$startDate, $endDate])
+                ->where('status', 'active')
+                ->orderBy('start_time', 'asc')
+                ->limit(5)
+                ->get();
+        } else {
+            // Người dùng mới (7 ngày gần nhất)
+            $newUsers = User::where('created_at', '>=', now()->subDays(7))
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+            
+            // Câu lạc bộ mới
+            $newClubs = Club::with(['field', 'owner'])
+                ->where('created_at', '>=', now()->subDays(7))
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+            
+            // Sự kiện sắp diễn ra
+            $upcomingEvents = Event::with(['club'])
+                ->where('start_time', '>', now())
+                ->where('status', 'active')
+                ->orderBy('start_time', 'asc')
+                ->limit(5)
+                ->get();
+        }
             
         // Top 5 CLB hoạt động mạnh nhất (dựa trên số bài viết + sự kiện)
         $topClubs = Club::withCount([
@@ -145,6 +206,10 @@ class AdminController extends Controller
             'pendingClubs', 
             'totalAdmins',
             'activeEvents',
+            'usersInPeriod',
+            'clubsInPeriod',
+            'eventsInPeriod',
+            'postsInPeriod',
             'usersLastMonth',
             'clubsLastMonth',
             'eventsLastMonth',
@@ -154,7 +219,9 @@ class AdminController extends Controller
             'upcomingEvents',
             'topClubs',
             'clubsByField',
-            'monthlyStats'
+            'monthlyStats',
+            'startDate',
+            'endDate'
         ));
     }
 
@@ -177,6 +244,12 @@ class AdminController extends Controller
         // Lọc theo quyền admin
         if ($request->has('is_admin') && $request->is_admin !== '') {
             $query->where('is_admin', $request->is_admin);
+        }
+        
+        // Lọc theo khoảng thời gian
+        $dateFilter = $this->getDateFilter($request);
+        if ($dateFilter) {
+            $query->whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']]);
         }
         
         $users = $query->orderBy('id', 'asc')->paginate(20);
@@ -209,6 +282,12 @@ class AdminController extends Controller
         // Lọc theo quyền admin
         if ($request->has('is_admin') && $request->is_admin !== '') {
             $query->where('is_admin', $request->is_admin);
+        }
+        
+        // Lọc theo khoảng thời gian
+        $dateFilter = $this->getDateFilter($request);
+        if ($dateFilter) {
+            $query->whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']]);
         }
         
         // Force fresh query - không cache + random để tránh cache
@@ -474,6 +553,12 @@ class AdminController extends Controller
             $query->where('status', $request->status);
         }
         
+        // Lọc theo khoảng thời gian
+        $dateFilter = $this->getDateFilter($request);
+        if ($dateFilter) {
+            $query->whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']]);
+        }
+        
         $clubs = $query->orderBy('created_at', 'desc')->paginate(20);
         
         return view('admin.clubs.index', compact('clubs'));
@@ -724,6 +809,12 @@ class AdminController extends Controller
             $query->where('status', $request->status);
         }
         
+        // Lọc theo khoảng thời gian
+        $dateFilter = $this->getDateFilter($request);
+        if ($dateFilter) {
+            $query->whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']]);
+        }
+        
         $documents = $query->orderBy('created_at', 'desc')->paginate(20);
         $clubs = Club::where('status', 'active')->get();
         
@@ -731,7 +822,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Hiển thị form tạo tài liệu học tập mới
+     * Hiển thị form tạo tài nguyên CLB mới
      */
     public function learningMaterialsCreate()
     {
@@ -749,7 +840,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Lưu tài liệu học tập mới
+     * Lưu tài nguyên CLB mới
      */
     public function learningMaterialsStore(Request $request)
     {
@@ -791,14 +882,14 @@ class AdminController extends Controller
                 'status' => $request->status,
             ]);
 
-            return redirect()->route('admin.learning-materials')->with('success', 'Đã tạo tài liệu học tập thành công!');
+            return redirect()->route('admin.learning-materials')->with('success', 'Đã tạo tài nguyên CLB thành công!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi tạo tài liệu học tập: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi tạo tài nguyên CLB: ' . $e->getMessage());
         }
     }
 
     /**
-     * Hiển thị form chỉnh sửa tài liệu học tập
+     * Hiển thị form chỉnh sửa tài nguyên CLB
      */
     public function learningMaterialsEdit($id)
     {
@@ -812,12 +903,12 @@ class AdminController extends Controller
             $clubs = Club::where('status', 'active')->get();
             return view('admin.learning-materials.edit', compact('document', 'clubs'));
         } catch (\Exception $e) {
-            return redirect()->route('admin.learning-materials')->with('error', 'Không tìm thấy tài liệu học tập.');
+            return redirect()->route('admin.learning-materials')->with('error', 'Không tìm thấy tài nguyên CLB.');
         }
     }
 
     /**
-     * Cập nhật tài liệu học tập
+     * Cập nhật tài nguyên CLB
      */
     public function learningMaterialsUpdate(Request $request, $id)
     {
@@ -844,9 +935,9 @@ class AdminController extends Controller
                 'status' => $request->status,
             ]);
 
-            return redirect()->route('admin.learning-materials')->with('success', 'Đã cập nhật tài liệu học tập thành công!');
+            return redirect()->route('admin.learning-materials')->with('success', 'Đã cập nhật tài nguyên CLB thành công!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi cập nhật tài liệu học tập: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật tài nguyên CLB: ' . $e->getMessage());
         }
     }
 
@@ -930,6 +1021,12 @@ class AdminController extends Controller
         
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
+        }
+        
+        // Lọc theo khoảng thời gian
+        if ($request->has('date_range') || $request->has('start_date') || $request->has('end_date')) {
+            $dateFilter = $this->getDateFilter($request);
+            $query->whereBetween('start_time', [$dateFilter['start'], $dateFilter['end']]);
         }
         
         $events = $query->orderBy('start_time', 'asc')->paginate(20);
@@ -1112,6 +1209,12 @@ class AdminController extends Controller
         
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
+        }
+        
+        // Lọc theo khoảng thời gian
+        $dateFilter = $this->getDateFilter($request);
+        if ($dateFilter) {
+            $query->whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']]);
         }
         
         $posts = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -1356,5 +1459,159 @@ class AdminController extends Controller
         }
         
         return redirect()->back()->with('success', 'Cập nhật quyền người dùng thành công!');
+    }
+
+    /**
+     * Debug method để test date filter
+     */
+    public function debugDateFilter(Request $request)
+    {
+        $dateFilter = $this->getDateFilter($request);
+        
+        $debugInfo = [
+            'request_data' => $request->all(),
+            'date_filter_result' => $dateFilter,
+            'has_filter' => $dateFilter !== null,
+        ];
+        
+        if ($dateFilter) {
+            $debugInfo['start_date'] = $dateFilter['start']->format('Y-m-d H:i:s');
+            $debugInfo['end_date'] = $dateFilter['end']->format('Y-m-d H:i:s');
+            
+            // Test queries
+            $debugInfo['users_count'] = \App\Models\User::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+            $debugInfo['clubs_count'] = \App\Models\Club::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+            $debugInfo['events_count'] = \App\Models\Event::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+        }
+        
+        return response()->json($debugInfo);
+    }
+
+    /**
+     * Test method để kiểm tra date filter
+     */
+    public function testDateFilter(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $dateFilter = $this->getDateFilter($request);
+        
+        $testResults = [
+            'request_params' => $request->all(),
+            'date_filter' => $dateFilter,
+            'has_filter' => $dateFilter !== null,
+            'current_time' => now()->format('Y-m-d H:i:s'),
+            'yesterday_start' => now()->subDay()->startOfDay()->format('Y-m-d H:i:s'),
+            'yesterday_end' => now()->subDay()->endOfDay()->format('Y-m-d H:i:s'),
+        ];
+        
+        if ($dateFilter) {
+            $testResults['start_date'] = $dateFilter['start']->format('Y-m-d H:i:s');
+            $testResults['end_date'] = $dateFilter['end']->format('Y-m-d H:i:s');
+            
+            // Test queries
+            $testResults['users_in_period'] = \App\Models\User::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+            $testResults['clubs_in_period'] = \App\Models\Club::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+            $testResults['events_in_period'] = \App\Models\Event::whereBetween('created_at', [$dateFilter['start'], $dateFilter['end']])->count();
+        } else {
+            $testResults['message'] = 'Không có filter được áp dụng';
+        }
+        
+        return view('admin.test-date-filter', compact('testResults'));
+    }
+
+    /**
+     * Helper method để xử lý bộ lọc thời gian
+     */
+    private function getDateFilter(Request $request)
+    {
+        $dateRange = $request->get('date_range');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        
+        // Nếu không có filter nào được chọn, trả về null
+        if (!$dateRange && !$startDate && !$endDate) {
+            return null;
+        }
+        
+        // Nếu có start_date và end_date từ form (chỉ khi không có date_range preset)
+        if ($startDate && $endDate && !$dateRange) {
+            return [
+                'start' => \Carbon\Carbon::parse($startDate)->startOfDay(),
+                'end' => \Carbon\Carbon::parse($endDate)->endOfDay()
+            ];
+        }
+        
+        // Xử lý các khoảng thời gian định sẵn
+        switch ($dateRange) {
+            case 'today':
+                return [
+                    'start' => now()->startOfDay(),
+                    'end' => now()->endOfDay()
+                ];
+            case 'yesterday':
+                return [
+                    'start' => now()->subDay()->startOfDay(),
+                    'end' => now()->subDay()->endOfDay()
+                ];
+            case 'this_week':
+                return [
+                    'start' => now()->startOfWeek(),
+                    'end' => now()->endOfWeek()
+                ];
+            case 'last_week':
+                return [
+                    'start' => now()->subWeek()->startOfWeek(),
+                    'end' => now()->subWeek()->endOfWeek()
+                ];
+            case 'this_month':
+                return [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'last_month':
+                return [
+                    'start' => now()->subMonth()->startOfMonth(),
+                    'end' => now()->subMonth()->endOfMonth()
+                ];
+            case 'this_quarter':
+                return [
+                    'start' => now()->startOfQuarter(),
+                    'end' => now()->endOfQuarter()
+                ];
+            case 'this_year':
+                return [
+                    'start' => now()->startOfYear(),
+                    'end' => now()->endOfYear()
+                ];
+            case 'last_year':
+                return [
+                    'start' => now()->subYear()->startOfYear(),
+                    'end' => now()->subYear()->endOfYear()
+                ];
+            case 'last_7_days':
+                return [
+                    'start' => now()->subDays(7),
+                    'end' => now()
+                ];
+            case 'last_30_days':
+                return [
+                    'start' => now()->subDays(30),
+                    'end' => now()
+                ];
+            case 'last_90_days':
+                return [
+                    'start' => now()->subDays(90),
+                    'end' => now()
+                ];
+            default:
+                return [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+        }
     }
 }

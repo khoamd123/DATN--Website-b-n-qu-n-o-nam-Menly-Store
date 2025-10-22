@@ -25,6 +25,27 @@
     <p class="text-muted">Tổng quan hệ thống quản lý câu lạc bộ</p>
 </div>
 
+{{-- Date Filter --}}
+@include('admin.partials.dashboard-date-filter')
+
+{{-- Filter Status Indicator --}}
+@if($startDate && $endDate)
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-filter me-2"></i>
+            <strong>Đang hiển thị thống kê từ:</strong> 
+            {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} 
+            <strong>đến:</strong> 
+            {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="fas fa-times me-1"></i>Xóa bộ lọc
+            </a>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Quick Actions -->
 <div class="row mb-4">
     <div class="col-12">
@@ -65,8 +86,8 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number">{{ $totalUsers }}</p>
-            <p class="stats-label">Tổng người dùng</p>
+            <p class="stats-number">{{ $usersInPeriod }}</p>
+            <p class="stats-label">Người dùng trong khoảng thời gian</p>
             <small class="text-success">+{{ $usersLastMonth }} tháng này</small>
             <a href="{{ route('admin.users') }}" class="stats-link">Xem tất cả</a>
         </div>
@@ -77,8 +98,8 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number">{{ $totalClubs }}</p>
-            <p class="stats-label">Tổng câu lạc bộ</p>
+            <p class="stats-number">{{ $clubsInPeriod }}</p>
+            <p class="stats-label">Câu lạc bộ trong khoảng thời gian</p>
             <small class="text-info">{{ $activeClubs }} hoạt động, {{ $pendingClubs }} chờ duyệt</small>
             <a href="{{ route('admin.clubs') }}" class="stats-link">Xem tất cả</a>
         </div>
@@ -89,8 +110,8 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-calendar-alt"></i>
             </div>
-            <p class="stats-number">{{ $totalEvents }}</p>
-            <p class="stats-label">Tổng sự kiện</p>
+            <p class="stats-number">{{ $eventsInPeriod }}</p>
+            <p class="stats-label">Sự kiện trong khoảng thời gian</p>
             <small class="text-warning">{{ $activeEvents }} đang hoạt động</small>
             <a href="{{ route('admin.plans-schedule') }}" class="stats-link">Xem tất cả</a>
         </div>
@@ -101,8 +122,8 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-newspaper"></i>
             </div>
-            <p class="stats-number">{{ $totalPosts }}</p>
-            <p class="stats-label">Tổng bài viết</p>
+            <p class="stats-number">{{ $postsInPeriod }}</p>
+            <p class="stats-label">Bài viết trong khoảng thời gian</p>
             <small class="text-success">+{{ $postsLastMonth }} tháng này</small>
             <a href="{{ route('admin.posts') }}" class="stats-link">Xem tất cả</a>
         </div>

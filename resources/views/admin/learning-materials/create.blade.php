@@ -1,16 +1,16 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Thêm tài liệu học tập')
+@section('title', 'Thêm tài nguyên CLB')
 
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-plus-circle"></i> Thêm tài liệu học tập</h1>
+        <h1><i class="fas fa-plus-circle"></i> Thêm tài nguyên CLB</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.learning-materials') }}">Tài liệu học tập</a></li>
-                <li class="breadcrumb-item active">Thêm tài liệu</li>
+                <li class="breadcrumb-item"><a href="{{ route('admin.learning-materials') }}">Tài nguyên CLB</a></li>
+                <li class="breadcrumb-item active">Thêm tài nguyên</li>
             </ol>
         </nav>
     </div>
@@ -33,14 +33,14 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Thông tin tài liệu</h5>
+                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Thông tin tài nguyên</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.learning-materials.store') }}">
                         @csrf
                         
                         <div class="mb-3">
-                            <label class="form-label">Tiêu đề tài liệu <span class="text-danger">*</span></label>
+                            <label class="form-label">Tiêu đề tài nguyên <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="title" value="{{ old('title') }}" required>
                         </div>
 
@@ -82,7 +82,7 @@
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Tạo tài liệu
+                                <i class="fas fa-save"></i> Tạo tài nguyên
                             </button>
                             <a href="{{ route('admin.learning-materials') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Quay lại
@@ -100,7 +100,7 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-lightbulb"></i> Mẹo tạo tài liệu:</h6>
+                        <h6><i class="fas fa-lightbulb"></i> Mẹo tạo tài nguyên:</h6>
                         <ul class="mb-0">
                             <li>Đặt tiêu đề rõ ràng và dễ hiểu</li>
                             <li>Nội dung chi tiết, dễ theo dõi</li>
@@ -112,7 +112,7 @@
                     <div class="alert alert-warning">
                         <h6><i class="fas fa-exclamation-triangle"></i> Lưu ý:</h6>
                         <ul class="mb-0">
-                            <li>Tài liệu sẽ được tạo ở trạng thái "Công khai"</li>
+                            <li>Tài nguyên sẽ được tạo ở trạng thái "Công khai"</li>
                             <li>Có thể thay đổi trạng thái sau</li>
                             <li>Kiểm tra kỹ nội dung trước khi lưu</li>
                         </ul>
@@ -123,4 +123,5 @@
     </div>
 </div>
 @endsection
+
 

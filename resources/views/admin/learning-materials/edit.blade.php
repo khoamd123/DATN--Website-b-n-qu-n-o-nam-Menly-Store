@@ -1,16 +1,16 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Chỉnh sửa tài liệu học tập')
+@section('title', 'Chỉnh sửa tài nguyên CLB')
 
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-edit"></i> Chỉnh sửa tài liệu học tập</h1>
+        <h1><i class="fas fa-edit"></i> Chỉnh sửa tài nguyên CLB</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.learning-materials') }}">Tài liệu học tập</a></li>
-                <li class="breadcrumb-item active">Chỉnh sửa tài liệu</li>
+                <li class="breadcrumb-item"><a href="{{ route('admin.learning-materials') }}">Tài nguyên CLB</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa tài nguyên</li>
             </ol>
         </nav>
     </div>
@@ -33,7 +33,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin tài liệu</h5>
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin tài nguyên</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.learning-materials.update', $document->id) }}">
@@ -41,7 +41,7 @@
                         @method('PUT')
                         
                         <div class="mb-3">
-                            <label class="form-label">Tiêu đề tài liệu <span class="text-danger">*</span></label>
+                            <label class="form-label">Tiêu đề tài nguyên <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="title" value="{{ old('title', $document->title) }}" required>
                         </div>
 
@@ -130,4 +130,5 @@
     </div>
 </div>
 @endsection
+
 

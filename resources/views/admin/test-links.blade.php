@@ -182,7 +182,7 @@
                                         <i class="fas fa-book"></i>
                                     </div>
                                     <h5 class="card-title fw-bold">Learning Materials</h5>
-                                    <p class="card-text text-muted">Tài liệu học tập</p>
+                                    <p class="card-text text-muted">Tài nguyên CLB</p>
                                     <div class="d-grid gap-2">
                                         <a href="{{ route('admin.learning-materials') }}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-list me-2"></i>Danh sách Materials
