@@ -298,25 +298,6 @@ Route::prefix('admin')->group(function () {
         return view('admin.test-links');
     })->name('admin.test-links');
     
-    // Test CKEditor
-    Route::get('/test-ckeditor', function() {
-        return view('admin.test-ckeditor');
-    })->name('admin.test-ckeditor');
-    
-    // Test Menu
-    Route::get('/test-menu', function() {
-        return view('admin.test-menu');
-    })->name('admin.test-menu');
-    
-    // Test Club Resources
-    Route::get('/test-club-resources', function() {
-        try {
-            $clubs = \App\Models\Club::where('status', 'active')->get();
-            return view('admin.club-resources.index', compact('clubs'));
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    })->name('admin.test-club-resources');
     
     // Data Test
     Route::get('/data-test', function() {

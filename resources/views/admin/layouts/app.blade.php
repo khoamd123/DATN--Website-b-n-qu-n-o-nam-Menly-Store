@@ -566,18 +566,6 @@
          </a>
      </li>
      <li class="nav-item">
-         <a class="nav-link {{ request()->routeIs('admin.test-ckeditor') ? 'active' : '' }}" href="{{ route('admin.test-ckeditor') }}">
-             <i class="fas fa-edit"></i>
-             Test CKEditor
-         </a>
-     </li>
-     <li class="nav-item">
-         <a class="nav-link {{ request()->routeIs('admin.test-menu') ? 'active' : '' }}" href="{{ route('admin.test-menu') }}">
-             <i class="fas fa-list"></i>
-             Test Menu
-         </a>
-     </li>
-     <li class="nav-item">
          <a class="nav-link {{ request()->routeIs('admin.trash*') ? 'active' : '' }}" href="{{ route('admin.trash') }}">
              <i class="fas fa-trash"></i>
              Thùng rác
