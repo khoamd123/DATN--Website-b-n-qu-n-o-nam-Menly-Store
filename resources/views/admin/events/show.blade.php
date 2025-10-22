@@ -29,9 +29,9 @@
         </div>
     @endif
 
-    <div class="row">
+    <div class="d-flex flex-row flex-nowrap gap-3 align-items-start">
         <!-- Thông tin sự kiện -->
-        <div class="col-md-8">
+        <div class="flex-grow-1" style="min-width: 0;">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin sự kiện</h5>
@@ -141,12 +141,25 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+
+                    @if($event->image)
+                    <hr>
+                    <div class="mt-3">
+                        <h6 class="mb-2"><i class="fas fa-image"></i> Thông tin hình ảnh sự kiện</h6>
+                        <div style="max-width: 280px;">
+                            <div style="width: 100%; height: 160px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
+                                <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;">
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
 
         <!-- Thống kê và hành động -->
-        <div class="col-md-4">
+        <div class="flex-shrink-0" style="width: 360px; max-width: 100%;">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Thống kê</h5>

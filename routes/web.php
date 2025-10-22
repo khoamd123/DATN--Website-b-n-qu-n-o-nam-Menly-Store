@@ -249,6 +249,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/events', [AdminController::class, 'eventsIndex'])->name('admin.events.index');
     Route::get('/events/create', [AdminController::class, 'eventsCreate'])->name('admin.events.create');
     Route::post('/events', [AdminController::class, 'eventsStore'])->name('admin.events.store');
+    Route::get('/events/{id}/edit', [AdminController::class, 'eventsEdit'])->name('admin.events.edit');
+    Route::put('/events/{id}', [AdminController::class, 'eventsUpdate'])->name('admin.events.update');
     Route::get('/events/{id}', [AdminController::class, 'eventsShow'])->name('admin.events.show');
     Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
     Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');

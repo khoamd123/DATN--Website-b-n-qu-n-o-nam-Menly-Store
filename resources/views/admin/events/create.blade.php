@@ -36,7 +36,7 @@
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin sự kiện</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.events.store') }}">
+                    <form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data" id="eventCreateForm">
                         @csrf
                         
                         <div class="row">
@@ -62,6 +62,17 @@
                         <div class="mb-3">
                             <label class="form-label">Mô tả sự kiện</label>
                             <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ảnh sự kiện</label>
+                            <input type="file" class="form-control" name="image" accept="image/*" id="imageInput">
+                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB.</small>
+                            <div class="mt-2" id="imagePreviewWrap" style="display:none;">
+                                <div style="width: 100%; max-height: 260px; overflow:hidden; border-radius: 8px; border: 1px solid #e9ecef; background:#f8f9fa;">
+                                    <img id="imagePreview" alt="Xem trước ảnh" style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -160,5 +171,29 @@
             </div>
         </div>
     </div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('imageInput');
+    const wrap = document.getElementById('imagePreviewWrap');
+    const img = document.getElementById('imagePreview');
+
+    input?.addEventListener('change', function(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) {
+            wrap.style.display = 'none';
+            img.src = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            img.src = ev.target.result;
+            wrap.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
+});
+</script>
+@endpush
 </div>
 @endsection
