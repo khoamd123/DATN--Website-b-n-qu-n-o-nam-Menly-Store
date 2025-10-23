@@ -534,7 +534,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.posts*') ? 'active' : '' }}" href="{{ route('admin.posts') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.posts*') && !request()->routeIs('admin.posts.trash') ? 'active' : '' }}" href="{{ route('admin.posts') }}">
                         <i class="fas fa-newspaper"></i>
                         Bài viết
                     </a>

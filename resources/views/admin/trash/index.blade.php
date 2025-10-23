@@ -10,7 +10,7 @@
 
 <!-- Thống kê thùng rác -->
 <div class="row mb-4">
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="text-danger">{{ \App\Models\User::onlyTrashed()->count() }}</h5>
@@ -18,7 +18,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="text-warning">{{ \App\Models\Club::onlyTrashed()->count() }}</h5>
@@ -26,7 +26,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="text-info">{{ \App\Models\Post::onlyTrashed()->count() }}</h5>
@@ -34,7 +34,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="text-success">{{ \App\Models\ClubMember::onlyTrashed()->count() }}</h5>
@@ -42,7 +42,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="text-primary">{{ \App\Models\PostComment::onlyTrashed()->count() }}</h5>
@@ -50,11 +50,23 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-dark">{{ \App\Models\User::onlyTrashed()->count() + \App\Models\Club::onlyTrashed()->count() + \App\Models\Post::onlyTrashed()->count() + \App\Models\ClubMember::onlyTrashed()->count() + \App\Models\PostComment::onlyTrashed()->count() }}</h5>
-                <p class="card-text">Tổng cộng</p>
+                <h5 class="text-secondary">{{ \App\Models\ClubResource::onlyTrashed()->count() }}</h5>
+                <p class="card-text">Tài nguyên CLB</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tổng cộng -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-dark">{{ \App\Models\User::onlyTrashed()->count() + \App\Models\Club::onlyTrashed()->count() + \App\Models\Post::onlyTrashed()->count() + \App\Models\ClubMember::onlyTrashed()->count() + \App\Models\PostComment::onlyTrashed()->count() + \App\Models\ClubResource::onlyTrashed()->count() }}</h3>
+                <p class="card-text h5">Tổng cộng</p>
             </div>
         </div>
     </div>
@@ -88,6 +100,10 @@
                class="btn {{ $type === 'comments' ? 'btn-primary' : 'btn-outline-primary' }}">
                 <i class="fas fa-comments"></i> Bình luận
             </a>
+            <a href="{{ route('admin.trash', ['type' => 'club-resources']) }}" 
+               class="btn {{ $type === 'club-resources' ? 'btn-primary' : 'btn-outline-primary' }}">
+                <i class="fas fa-folder-open"></i> Tài nguyên CLB
+            </a>
         </div>
     </div>
 </div>
@@ -95,7 +111,7 @@
 <!-- Danh sách dữ liệu đã xóa -->
 @if($type === 'all')
     <!-- Hiển thị tất cả -->
-    @foreach(['users' => 'Người dùng', 'clubs' => 'Câu lạc bộ', 'posts' => 'Bài viết', 'clubMembers' => 'Thành viên CLB', 'comments' => 'Bình luận'] as $key => $title)
+    @foreach(['users' => 'Người dùng', 'clubs' => 'Câu lạc bộ', 'posts' => 'Bài viết', 'clubMembers' => 'Thành viên CLB', 'comments' => 'Bình luận', 'clubResources' => 'Tài nguyên CLB'] as $key => $title)
         @if($data[$key]->count() > 0)
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -107,7 +123,7 @@
                     @endif
                 </div>
                 <div class="card-body">
-                    @include('admin.trash.partials.' . str_replace('clubMembers', 'club-members', $key), ['items' => $data[$key]])
+                    @include('admin.trash.partials.' . \Str::kebab($key), ['items' => $data[$key]])
                 </div>
             </div>
         @endif
@@ -123,6 +139,7 @@
                     @case('posts') Bài viết đã xóa @break
                     @case('club-members') Thành viên CLB đã xóa @break
                     @case('comments') Bình luận đã xóa @break
+                    @case('club-resources') Tài nguyên CLB đã xóa @break
                 @endswitch
             </h5>
             <div>
@@ -139,7 +156,7 @@
                 $key = str_replace('-', '', ucwords($type, '-'));
                 $key = lcfirst($key);
             @endphp
-            @include('admin.trash.partials.' . str_replace('-', '', $type), ['items' => $data[$key]])
+            @include('admin.trash.partials.' . $type, ['items' => $data[$key]])
         </div>
     </div>
 @endif

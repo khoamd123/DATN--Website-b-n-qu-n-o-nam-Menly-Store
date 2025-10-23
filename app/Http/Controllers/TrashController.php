@@ -8,6 +8,7 @@ use App\Models\Club;
 use App\Models\Post;
 use App\Models\ClubMember;
 use App\Models\PostComment;
+use App\Models\ClubResource;
 
 class TrashController extends Controller
 {
@@ -29,6 +30,7 @@ class TrashController extends Controller
             'posts' => collect(),
             'clubMembers' => collect(),
             'comments' => collect(),
+            'clubResources' => collect(),
         ];
 
         switch ($type) {
@@ -47,6 +49,9 @@ class TrashController extends Controller
             case 'comments':
                 $data['comments'] = PostComment::onlyTrashed()->with(['user', 'post'])->paginate(20);
                 break;
+            case 'club-resources':
+                $data['clubResources'] = ClubResource::onlyTrashed()->with(['club', 'user'])->paginate(20);
+                break;
             default:
                 // Hiển thị tất cả
                 $data['users'] = User::onlyTrashed()->limit(5)->get();
@@ -54,6 +59,7 @@ class TrashController extends Controller
                 $data['posts'] = Post::onlyTrashed()->with(['user', 'club'])->limit(5)->get();
                 $data['clubMembers'] = ClubMember::onlyTrashed()->with(['user', 'club'])->limit(5)->get();
                 $data['comments'] = PostComment::onlyTrashed()->with(['user', 'post'])->limit(5)->get();
+                $data['clubResources'] = ClubResource::onlyTrashed()->with(['club', 'user'])->limit(5)->get();
                 break;
         }
 
@@ -89,6 +95,9 @@ class TrashController extends Controller
                     break;
                 case 'comment':
                     $item = PostComment::onlyTrashed()->findOrFail($id);
+                    break;
+                case 'club-resource':
+                    $item = ClubResource::onlyTrashed()->findOrFail($id);
                     break;
                 default:
                     return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);
@@ -132,12 +141,17 @@ class TrashController extends Controller
                     break;
                 case 'post':
                     $item = Post::onlyTrashed()->findOrFail($id);
+                    // Xóa tất cả bình luận liên kết trước
+                    $item->comments()->forceDelete();
                     break;
                 case 'club-member':
                     $item = ClubMember::onlyTrashed()->findOrFail($id);
                     break;
                 case 'comment':
                     $item = PostComment::onlyTrashed()->findOrFail($id);
+                    break;
+                case 'club-resource':
+                    $item = ClubResource::onlyTrashed()->findOrFail($id);
                     break;
                 default:
                     return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);
@@ -187,6 +201,9 @@ class TrashController extends Controller
                 case 'comments':
                     PostComment::onlyTrashed()->restore();
                     break;
+                case 'club-resources':
+                    ClubResource::onlyTrashed()->restore();
+                    break;
                 default:
                     return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);
             }
@@ -225,13 +242,21 @@ class TrashController extends Controller
                     Club::onlyTrashed()->forceDelete();
                     break;
                 case 'posts':
-                    Post::onlyTrashed()->forceDelete();
+                    // Xóa tất cả bình luận trước, sau đó xóa bài viết
+                    $posts = Post::onlyTrashed()->get();
+                    foreach ($posts as $post) {
+                        $post->comments()->forceDelete();
+                        $post->forceDelete();
+                    }
                     break;
                 case 'club-members':
                     ClubMember::onlyTrashed()->forceDelete();
                     break;
                 case 'comments':
                     PostComment::onlyTrashed()->forceDelete();
+                    break;
+                case 'club-resources':
+                    ClubResource::onlyTrashed()->forceDelete();
                     break;
                 default:
                     return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);

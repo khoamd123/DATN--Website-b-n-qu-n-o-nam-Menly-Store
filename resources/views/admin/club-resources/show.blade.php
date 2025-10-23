@@ -37,19 +37,10 @@
                                             <td>{{ $resource->title }}</td>
                                         </tr>
                                         <tr>
-                                            <td><strong>Slug:</strong></td>
-                                            <td><code>{{ $resource->slug }}</code></td>
-                                        </tr>
-                                        <tr>
                                             <td><strong>Mô tả:</strong></td>
-                                            <td>{{ $resource->description ?: 'Không có mô tả' }}</td>
+                                            <td>{!! $resource->description ?: 'Không có mô tả' !!}</td>
                                         </tr>
-                                        <tr>
-                                            <td><strong>Loại:</strong></td>
-                                            <td>
-                                                <span class="badge badge-info">{{ ucfirst($resource->resource_type) }}</span>
-                                            </td>
-                                        </tr>
+                                     
                                         <tr>
                                             <td><strong>CLB:</strong></td>
                                             <td>{{ $resource->club->name }}</td>
@@ -62,21 +53,20 @@
                                             <td><strong>Trạng thái:</strong></td>
                                             <td>
                                                 @if($resource->status == 'active')
-                                                    <span class="badge badge-success">Hoạt động</span>
+                                                    <span class="badge bg-success">Hoạt động</span>
                                                 @elseif($resource->status == 'inactive')
-                                                    <span class="badge badge-warning">Không hoạt động</span>
+                                                    <span class="badge bg-warning">Không hoạt động</span>
+                                                @elseif($resource->status == 'archived')
+                                                    <span class="badge bg-secondary">Lưu trữ</span>
                                                 @else
-                                                    <span class="badge badge-secondary">Lưu trữ</span>
+                                                    <span class="badge bg-light text-dark">{{ $resource->status ?? 'Không xác định' }}</span>
                                                 @endif
+                                                <!-- Debug: {{ $resource->status }} -->
                                             </td>
                                         </tr>
                                         <tr>
                                             <td><strong>Lượt xem:</strong></td>
                                             <td>{{ number_format($resource->view_count ?? 0) }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Lượt tải:</strong></td>
-                                            <td>{{ number_format($resource->download_count ?? 0) }}</td>
                                         </tr>
                                         <tr>
                                             <td><strong>Ngày tạo:</strong></td>
@@ -90,37 +80,158 @@
                                 </div>
                             </div>
 
-                            <!-- File Information -->
-                            @if($resource->file_path)
+                            <!-- Image & Video Album Display -->
+                            @if($resource->images && $resource->images->count() > 0)
                                 <div class="card mt-3">
                                     <div class="card-header">
-                                        <h5 class="card-title">Thông tin file</h5>
+                                        <h5 class="card-title">Album hình ảnh & video ({{ $resource->images->count() }} file)</h5>
                                     </div>
                                     <div class="card-body">
-                                        <table class="table table-borderless">
-                                            <tr>
-                                                <td width="150"><strong>Tên file:</strong></td>
-                                                <td>{{ $resource->file_name }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Loại file:</strong></td>
-                                                <td>{{ $resource->file_type }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Kích thước:</strong></td>
-                                                <td>{{ number_format($resource->file_size / 1024, 2) }} KB</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Đường dẫn:</strong></td>
-                                                <td><code>{{ $resource->file_path }}</code></td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <div class="mt-3">
-                                            <a href="{{ route('admin.club-resources.download', $resource->id) }}" 
-                                               class="btn btn-success">
-                                                <i class="fas fa-download"></i> Tải xuống file
-                                            </a>
+                                        <div class="row">
+                                            @foreach($resource->images as $index => $image)
+                                                <div class="col-md-4 col-sm-6 mb-3">
+                                                    <div class="card image-gallery-card {{ $image->is_primary ? 'border-primary' : '' }}" 
+                                                         data-bs-toggle="modal" data-bs-target="#imageModal{{ $image->id }}">
+                                                        <div class="card-body p-2">
+                                                            @if(str_contains($image->image_type, 'video'))
+                                                                <!-- Video Thumbnail -->
+                                                                <video class="img-fluid rounded" style="height: 200px; width: 100%; object-fit: cover; cursor: pointer;" muted>
+                                                                    <source src="{{ $image->image_url }}" type="{{ $image->image_type }}">
+                                                                    Your browser does not support the video tag.
+                                                                </video>
+                                                                <div class="video-play-overlay">
+                                                                    <i class="fas fa-play-circle"></i>
+                                                                </div>
+                                                            @else
+                                                                <!-- Image Thumbnail -->
+                                                                <img src="{{ $image->thumbnail_url }}" 
+                                                                     alt="{{ $image->image_name }}" 
+                                                                     class="img-fluid rounded" 
+                                                                     style="height: 200px; width: 100%; object-fit: cover; cursor: pointer;">
+                                                            @endif
+                                                            
+                                                            @if($image->is_primary)
+                                                                <div class="primary-badge">
+                                                                    <i class="fas fa-star"></i>
+                                                                </div>
+                                                            @endif
+                                                            
+                                                            <div class="mt-2">
+                                                                <small class="text-muted">{{ $image->image_name }}</small>
+                                                                <br>
+                                                                <small class="text-muted">{{ $image->formatted_size }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Image/Video Modal -->
+                                                <div class="modal fade" id="imageModal{{ $image->id }}" tabindex="-1">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">{{ $image->image_name }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body text-center">
+                                                                @if(str_contains($image->image_type, 'video'))
+                                                                    <video controls class="img-fluid rounded" style="max-height: 70vh;">
+                                                                        <source src="{{ $image->image_url }}" type="{{ $image->image_type }}">
+                                                                        Your browser does not support the video tag.
+                                                                    </video>
+                                                                @else
+                                                                    <img src="{{ $image->image_url }}" 
+                                                                         alt="{{ $image->image_name }}" 
+                                                                         class="img-fluid rounded">
+                                                                @endif
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <small class="text-muted">
+                                                                    Kích thước: {{ $image->formatted_size }} | 
+                                                                    Loại: {{ $image->image_type }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- File Album Display -->
+                            @if($resource->files && $resource->files->count() > 0)
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Album file ({{ $resource->files->count() }} file)</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            @foreach($resource->files as $index => $file)
+                                                <div class="col-md-4 col-sm-6 mb-3">
+                                                    <div class="card file-gallery-card {{ $file->is_primary ? 'border-primary' : '' }}" 
+                                                         data-bs-toggle="modal" data-bs-target="#fileModal{{ $file->id }}">
+                                                        <div class="card-body p-2">
+                                                            <div class="text-center">
+                                                                <i class="{{ $file->file_icon }}" style="font-size: 3rem; margin-bottom: 10px;"></i>
+                                                            </div>
+                                                            @if($file->is_primary)
+                                                                <div class="primary-badge">
+                                                                    <i class="fas fa-star"></i>
+                                                                </div>
+                                                            @endif
+                                                            <div class="text-center">
+                                                                <small class="text-muted">{{ $file->file_name }}</small>
+                                                                <br>
+                                                                <small class="text-muted">{{ $file->formatted_size }}</small>
+                                                            </div>
+                                                            <div class="mt-2 text-center">
+                                                                <a href="{{ $file->file_url }}" class="btn btn-sm btn-success" download>
+                                                                    <i class="fas fa-download"></i> Tải xuống
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- File Modal -->
+                                                <div class="modal fade" id="fileModal{{ $file->id }}" tabindex="-1">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">{{ $file->file_name }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body text-center">
+                                                                @if(str_contains($file->file_type, 'video'))
+                                                                    <video controls class="img-fluid rounded" style="max-height: 400px;">
+                                                                        <source src="{{ $file->file_url }}" type="{{ $file->file_type }}">
+                                                                        Your browser does not support the video tag.
+                                                                    </video>
+                                                                @elseif(str_contains($file->file_type, 'image'))
+                                                                    <img src="{{ $file->file_url }}" alt="{{ $file->file_name }}" class="img-fluid rounded" style="max-height: 400px;">
+                                                                @else
+                                                                    <div class="text-center">
+                                                                        <i class="{{ $file->file_icon }}" style="font-size: 5rem; margin-bottom: 20px;"></i>
+                                                                        <p>{{ $file->file_name }}</p>
+                                                                        <p class="text-muted">{{ $file->formatted_size }}</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <a href="{{ $file->file_url }}" class="btn btn-success" download>
+                                                                    <i class="fas fa-download"></i> Tải xuống
+                                                                </a>
+                                                                <small class="text-muted ms-3">
+                                                                    Kích thước: {{ $file->formatted_size }} | 
+                                                                    Loại: {{ $file->file_type }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
                                         </div>
                                     </div>
                                 </div>
@@ -188,39 +299,6 @@
                                             </a>
                                         @endif
 
-                                        <!-- Status Update -->
-                                        <div class="dropdown">
-                                            <button class="btn btn-info dropdown-toggle w-100" type="button" 
-                                                    data-toggle="dropdown">
-                                                <i class="fas fa-cog"></i> Cập nhật trạng thái
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <form action="{{ route('admin.club-resources.update-status', $resource->id) }}" 
-                                                      method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="active">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="fas fa-check text-success"></i> Hoạt động
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.club-resources.update-status', $resource->id) }}" 
-                                                      method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="inactive">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="fas fa-pause text-warning"></i> Không hoạt động
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.club-resources.update-status', $resource->id) }}" 
-                                                      method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="archived">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="fas fa-archive text-secondary"></i> Lưu trữ
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
 
                                         <!-- Delete -->
                                         <form action="{{ route('admin.club-resources.destroy', $resource->id) }}" 
@@ -242,4 +320,104 @@
         </div>
     </div>
 </div>
+
+<style>
+.image-preview {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.image-preview img {
+    transition: transform 0.3s ease;
+}
+
+.image-preview img:hover {
+    transform: scale(1.05);
+}
+
+.shadow {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Image Gallery Styles */
+.image-gallery-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.image-gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.image-gallery-card.border-primary {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.primary-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    z-index: 10;
+}
+
+.image-gallery-card .card-body {
+    position: relative;
+}
+
+/* Video Play Overlay */
+.video-play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 3rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.image-gallery-card:hover .video-play-overlay {
+    color: #007bff;
+    transform: translate(-50%, -50%) scale(1.1);
+    transition: all 0.3s ease;
+}
+
+/* Modal styles */
+.modal-body img {
+    max-height: 70vh;
+    object-fit: contain;
+}
+
+/* File Gallery Styles */
+.file-gallery-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.file-gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.file-gallery-card.border-primary {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+</style>
 @endsection

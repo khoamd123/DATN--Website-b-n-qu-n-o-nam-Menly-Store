@@ -53,6 +53,38 @@ class ClubResource extends Model
     }
 
     /**
+     * Get the images for this resource
+     */
+    public function images()
+    {
+        return $this->hasMany(ClubResourceImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the primary image
+     */
+    public function primaryImage()
+    {
+        return $this->hasOne(ClubResourceImage::class)->where('is_primary', true);
+    }
+
+    /**
+     * Get the files for this resource
+     */
+    public function files()
+    {
+        return $this->hasMany(ClubResourceFile::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the primary file
+     */
+    public function primaryFile()
+    {
+        return $this->hasOne(ClubResourceFile::class)->where('is_primary', true);
+    }
+
+    /**
      * Increment view count
      */
     public function incrementViewCount()

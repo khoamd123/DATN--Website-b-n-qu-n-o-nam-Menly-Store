@@ -221,13 +221,14 @@ Route::prefix('admin')->group(function () {
     Route::get('/club-resources', [ClubResourceController::class, 'index'])->name('admin.club-resources.index');
     Route::get('/club-resources/create', [ClubResourceController::class, 'create'])->name('admin.club-resources.create');
     Route::post('/club-resources', [ClubResourceController::class, 'store'])->name('admin.club-resources.store');
+    Route::get('/club-resources/trash', [ClubResourceController::class, 'trash'])->name('admin.club-resources.trash');
     Route::get('/club-resources/{id}', [ClubResourceController::class, 'show'])->name('admin.club-resources.show');
     Route::get('/club-resources/{id}/edit', [ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
     Route::put('/club-resources/{id}', [ClubResourceController::class, 'update'])->name('admin.club-resources.update');
-    Route::patch('/club-resources/{id}/status', [ClubResourceController::class, 'updateStatus'])->name('admin.club-resources.update-status');
     Route::delete('/club-resources/{id}', [ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
     Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
     Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
+    Route::delete('/club-resources/{id}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('admin.club-resources.force-delete');
     
     // Quản lý quỹ
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
@@ -252,6 +253,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
         Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
         Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
+        
+        // Thùng rác bài viết
+        Route::get('/posts-trash', [AdminController::class, 'postsTrash'])->name('admin.posts.trash');
+        Route::post('/posts/{id}/restore', [AdminController::class, 'restorePost'])->name('admin.posts.restore');
+        Route::delete('/posts/{id}/force-delete', [AdminController::class, 'forceDeletePost'])->name('admin.posts.force-delete');
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');

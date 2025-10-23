@@ -4,7 +4,9 @@
 
 @section('content')
 <div class="content-header">
-    <h1>Quản lý Bài viết</h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Quản lý Bài viết</h1>
+    </div>
 </div>
 
 @if (session('success'))
@@ -70,6 +72,9 @@
                     <a href="{{ route('admin.posts.create') }}" class="btn btn-success">
                         <i class="fas fa-plus"></i> Tạo bài viết
                     </a>
+                    <a href="{{ route('admin.posts.trash') }}" class="btn btn-warning">
+                        <i class="fas fa-trash"></i> Thùng rác
+                    </a>
                 </div>
             </div>
         </form>
@@ -88,7 +93,6 @@
                         <th>Loại</th>
                         <th>Câu lạc bộ</th>
                         <th>Tác giả</th>
-                        <th>Nội dung</th>
                         <th>Trạng thái</th>
                         <th>Ngày tạo</th>
                         <th>Hành động</th>
@@ -100,7 +104,6 @@
                             <td>{{ ($posts->currentPage() - 1) * $posts->perPage() + $index + 1 }}</td>
                             <td>
                                 <strong>{{ $post->title }}</strong>
-                                <br><small class="text-muted">{{ $post->slug }}</small>
                             </td>
                             <td>
                                 <span class="badge bg-{{ $post->type === 'announcement' ? 'danger' : 'primary' }}">
@@ -109,7 +112,6 @@
                             </td>
                             <td>{{ $post->club->name ?? 'Không xác định' }}</td>
                             <td>{{ $post->user->name ?? 'Không xác định' }}</td>
-                            <td>{{ substr($post->content, 0, 50) }}{{ strlen($post->content) > 50 ? '...' : '' }}</td>
                             <td>
                                 @php
                                     $statusColors = [
@@ -168,16 +170,12 @@
                                             </button>
                                         </form>
                                     @endif
-                                    
-                                    <button class="btn btn-sm btn-info w-100" onclick="viewPost({{ $post->id }})">
-                                        <i class="fas fa-eye"></i> Xem
-                                    </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 Không tìm thấy bài viết nào
                             </td>
                         </tr>

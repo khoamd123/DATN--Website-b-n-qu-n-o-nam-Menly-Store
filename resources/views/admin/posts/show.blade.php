@@ -66,10 +66,6 @@
                     <p class="mt-1">{{ $post->title }}</p>
                 </div>
                 
-                <div class="mb-3">
-                    <strong>Slug:</strong>
-                    <p class="mt-1"><code>{{ $post->slug }}</code></p>
-                </div>
                 
                 <div class="mb-3">
                     <strong>Câu lạc bộ:</strong>
@@ -104,8 +100,19 @@
                         @elseif($post->status == 'deleted')
                             <span class="badge badge-danger">Đã xóa</span>
                         @endif
+                        
+                        @if($post->deleted_at)
+                            <span class="badge badge-warning ms-2">Trong thùng rác</span>
+                        @endif
                     </p>
                 </div>
+                
+                @if($post->deleted_at)
+                <div class="mb-3">
+                    <strong>Ngày xóa:</strong>
+                    <p class="mt-1 text-danger">{{ $post->deleted_at->format('d/m/Y H:i') }}</p>
+                </div>
+                @endif
                 
                 <div class="mb-3">
                     <strong>Ngày tạo:</strong>
@@ -147,38 +154,56 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-primary">
-                        <i class="fas fa-edit"></i> Chỉnh sửa
-                    </a>
-                    
-                    @if($post->status == 'published')
-                        <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                    @if($post->deleted_at)
+                        <!-- Bài viết đã bị xóa -->
+                        <form method="POST" action="{{ route('admin.posts.restore', $post->id) }}" class="d-inline">
                             @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="status" value="hidden">
-                            <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Bạn có chắc muốn ẩn bài viết này?')">
-                                <i class="fas fa-eye-slash"></i> Ẩn bài viết
+                            <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn khôi phục bài viết này?')">
+                                <i class="fas fa-undo"></i> Khôi phục bài viết
                             </button>
                         </form>
-                    @elseif($post->status == 'hidden')
+                        
+                        <form method="POST" action="{{ route('admin.posts.force-delete', $post->id) }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Bạn có chắc muốn xóa vĩnh viễn bài viết này? Hành động này không thể hoàn tác!')">
+                                <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                            </button>
+                        </form>
+                    @else
+                        <!-- Bài viết chưa bị xóa -->
+                        <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Chỉnh sửa
+                        </a>
+                        
+                        @if($post->status == 'published')
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="hidden">
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Bạn có chắc muốn ẩn bài viết này?')">
+                                    <i class="fas fa-eye-slash"></i> Ẩn bài viết
+                                </button>
+                            </form>
+                        @elseif($post->status == 'hidden')
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="published">
+                                <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn công khai bài viết này?')">
+                                    <i class="fas fa-eye"></i> Công khai
+                                </button>
+                            </form>
+                        @endif
+                        
                         <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
                             @csrf
                             @method('PATCH')
-                            <input type="hidden" name="status" value="published">
-                            <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn công khai bài viết này?')">
-                                <i class="fas fa-eye"></i> Công khai
+                            <input type="hidden" name="status" value="deleted">
+                            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác!')">
+                                <i class="fas fa-trash"></i> Xóa bài viết
                             </button>
                         </form>
                     @endif
-                    
-                    <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
-                        @csrf
-                        @method('PATCH')
-                        <input type="hidden" name="status" value="deleted">
-                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác!')">
-                            <i class="fas fa-trash"></i> Xóa bài viết
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>

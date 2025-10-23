@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -1183,10 +1184,13 @@ class AdminController extends Controller
                 $imagePath = str_replace('public/', '', $imagePath);
             }
 
+            // Process content to handle base64 images
+            $processedContent = $this->processContentImages($request->content);
+            
             $postData = [
                 'title' => $request->title,
                 'slug' => $slug,
-                'content' => $request->content,
+                'content' => $processedContent,
                 'club_id' => $request->club_id,
                 'user_id' => session('user_id') ?? 1,
                 'type' => $request->type,
@@ -1217,7 +1221,11 @@ class AdminController extends Controller
         }
 
         try {
-            $post = Post::whereIn('type', ['post', 'announcement'])->with(['club', 'user'])->findOrFail($id);
+            // Tìm bài viết bao gồm cả đã bị xóa
+            $post = Post::withTrashed()
+                ->whereIn('type', ['post', 'announcement'])
+                ->with(['club', 'user'])
+                ->findOrFail($id);
             
             return view('admin.posts.show', compact('post'));
         } catch (\Exception $e) {
@@ -1255,26 +1263,151 @@ class AdminController extends Controller
         }
 
         try {
-            $request->validate([
+            // Debug logging
+            \Log::info('Post update request:', [
+                'has_images' => $request->hasFile('images'),
+                'images_count' => $request->hasFile('images') ? count($request->file('images')) : 0,
+                'all_files' => $request->allFiles()
+            ]);
+            
+            // Clean up empty file uploads before validation
+            if ($request->hasFile('images')) {
+                $files = $request->file('images');
+                $validFiles = [];
+                foreach ($files as $index => $file) {
+                    \Log::info("Processing file {$index}:", [
+                        'file' => $file,
+                        'is_valid' => $file ? $file->isValid() : 'null',
+                        'size' => $file ? $file->getSize() : 'null',
+                        'mime_type' => $file ? $file->getMimeType() : 'null'
+                    ]);
+                    
+                    if ($file && $file->isValid() && $file->getSize() > 0) {
+                        // Additional check for image MIME type
+                        $mimeType = $file->getMimeType();
+                        if (in_array($mimeType, ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'])) {
+                            $validFiles[] = $file;
+                        }
+                    }
+                }
+                $request->merge(['images' => $validFiles]);
+                \Log::info('Valid files after filtering:', ['count' => count($validFiles)]);
+            }
+            
+            // Only validate images if they exist and are not empty
+            $validationRules = [
                 'title' => 'required|string|max:255',
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
                 'status' => 'required|in:published,hidden,deleted',
+                'delete_current_image' => 'nullable|boolean',
+            ];
+            
+            // Add image validation only if images are present
+            if ($request->hasFile('images') && count($request->file('images')) > 0) {
+                $validationRules['images'] = 'array|max:10';
+                $validationRules['images.*'] = 'file|mimes:jpeg,png,jpg,gif|max:2048';
+            }
+            
+            $request->validate($validationRules, [
+                'title.required' => 'Tiêu đề bài viết không được để trống.',
+                'title.max' => 'Tiêu đề bài viết không được vượt quá 255 ký tự.',
+                'content.required' => 'Nội dung bài viết không được để trống.',
+                'club_id.required' => 'Vui lòng chọn câu lạc bộ.',
+                'club_id.exists' => 'Câu lạc bộ không tồn tại.',
+                'type.required' => 'Vui lòng chọn loại bài viết.',
+                'type.in' => 'Loại bài viết không hợp lệ.',
+                'status.required' => 'Vui lòng chọn trạng thái bài viết.',
+                'status.in' => 'Trạng thái bài viết không hợp lệ.',
+                'images.array' => 'Hình ảnh phải là một mảng.',
+                'images.max' => 'Không được tải lên quá 10 hình ảnh.',
+                'images.*.image' => 'File phải là hình ảnh.',
+                'images.*.mimes' => 'Hình ảnh phải có định dạng jpeg, png, jpg hoặc gif.',
+                'images.*.max' => 'Kích thước hình ảnh không được vượt quá 2MB.',
             ]);
 
+            // Process content to handle base64 images
+            $processedContent = $this->processContentImages($request->content);
+
             $post = Post::whereIn('type', ['post', 'announcement'])->findOrFail($id);
-            $post->update([
+            
+            $updateData = [
                 'title' => $request->title,
-                'content' => $request->content,
+                'content' => $processedContent,
                 'club_id' => $request->club_id,
                 'type' => $request->type,
                 'status' => $request->status,
+            ];
+
+            // Handle current image deletion FIRST
+            if ($request->has('delete_current_image') && $request->delete_current_image) {
+                \Log::info('Deleting current image:', [
+                    'post_id' => $post->id,
+                    'current_image' => $post->image,
+                    'delete_flag' => $request->delete_current_image
+                ]);
+                
+                // Delete current image from storage
+                if ($post->image && Storage::exists('public/' . $post->image)) {
+                    Storage::delete('public/' . $post->image);
+                    \Log::info('Image deleted from storage:', ['path' => 'public/' . $post->image]);
+                }
+                $updateData['image'] = null;
+                \Log::info('Image set to null in updateData');
+            } else {
+                // Handle multiple image uploads only if not deleting current image
+                if ($request->hasFile('images')) {
+                    $imagePaths = [];
+                    $uploadedFiles = $request->file('images');
+                    
+                    // Filter out null values and validate each file
+                    $validFiles = array_filter($uploadedFiles, function($file) {
+                        return $file !== null && $file->isValid() && $file->getSize() > 0;
+                    });
+                    
+                    foreach ($validFiles as $image) {
+                        // Double check if it's a valid image
+                        if ($image->isValid() && in_array($image->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'])) {
+                            try {
+                                $imageName = time() . '_' . uniqid() . '_' . $image->getClientOriginalName();
+                                $imagePath = $image->storeAs('public/posts', $imageName);
+                                $imagePaths[] = str_replace('public/', '', $imagePath);
+                            } catch (\Exception $e) {
+                                \Log::error('Image upload failed:', [
+                                    'error' => $e->getMessage(),
+                                    'file' => $image->getClientOriginalName()
+                                ]);
+                                // Continue with other files
+                            }
+                        }
+                    }
+                    
+                    // If multiple images, use the first one as main image
+                    if (!empty($imagePaths)) {
+                        $updateData['image'] = $imagePaths[0];
+                    }
+                }
+            }
+
+            $post->update($updateData);
+            
+            \Log::info('Post updated successfully:', [
+                'post_id' => $post->id,
+                'new_image' => $post->fresh()->image,
+                'updateData' => $updateData
             ]);
 
             return redirect()->route('admin.posts')->with('success', 'Đã cập nhật bài viết thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi cập nhật bài viết: ' . $e->getMessage());
+            \Log::error('Post update error:', [
+                'error' => $e->getMessage(),
+                'post_id' => $id,
+                'request_data' => $request->all()
+            ]);
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật bài viết: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -1289,11 +1422,93 @@ class AdminController extends Controller
             'status' => 'required|in:published,hidden,deleted'
         ]);
         
-        $post->update([
-            'status' => $request->status
-        ]);
-        
-        return redirect()->back()->with('success', 'Cập nhật trạng thái bài viết thành công!');
+        if ($request->status === 'deleted') {
+            // Soft delete - chuyển vào thùng rác
+            $post->delete();
+            return redirect()->back()->with('success', 'Bài viết đã được chuyển vào thùng rác!');
+        } else {
+            // Cập nhật trạng thái bình thường
+            $post->update([
+                'status' => $request->status
+            ]);
+            return redirect()->back()->with('success', 'Cập nhật trạng thái bài viết thành công!');
+        }
+    }
+
+    /**
+     * Display trash management page
+     */
+    public function postsTrash(Request $request)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $query = Post::onlyTrashed()->with(['club', 'user']);
+
+            // Tìm kiếm
+            if ($request->has('search') && $request->search) {
+                $query->where(function($q) use ($request) {
+                    $q->where('title', 'like', '%' . $request->search . '%')
+                      ->orWhere('content', 'like', '%' . $request->search . '%');
+                });
+            }
+
+            // Lọc theo câu lạc bộ
+            if ($request->has('club_id') && $request->club_id) {
+                $query->where('club_id', $request->club_id);
+            }
+
+            // Lọc theo loại bài viết
+            if ($request->has('type') && $request->type) {
+                $query->where('type', $request->type);
+            }
+
+            $posts = $query->orderBy('deleted_at', 'desc')->paginate(10);
+            $clubs = Club::all();
+
+            return view('admin.posts.trash', compact('posts', 'clubs'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Có lỗi xảy ra khi tải danh sách thùng rác.');
+        }
+    }
+
+    /**
+     * Restore post from trash
+     */
+    public function restorePost($id)
+    {
+        try {
+            $post = Post::onlyTrashed()->findOrFail($id);
+            $post->restore();
+            
+            return redirect()->route('admin.posts')->with('success', 'Bài viết đã được khôi phục thành công!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi khôi phục bài viết.');
+        }
+    }
+
+    /**
+     * Permanently delete post
+     */
+    public function forceDeletePost($id)
+    {
+        try {
+            $post = Post::onlyTrashed()->findOrFail($id);
+            
+            // Xóa tất cả bình luận liên kết trước
+            $post->comments()->forceDelete();
+            
+            // Xóa bài viết
+            $post->forceDelete();
+            
+            return redirect()->route('admin.posts')->with('success', 'Bài viết đã được xóa vĩnh viễn!');
+        } catch (\Exception $e) {
+            \Log::error('Error force deleting post: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xóa vĩnh viễn bài viết: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -1395,5 +1610,33 @@ class AdminController extends Controller
         }
         
         return redirect()->back()->with('success', 'Cập nhật quyền người dùng thành công!');
+    }
+
+    /**
+     * Process content to extract base64 images and save them to storage
+     */
+    private function processContentImages($content)
+    {
+        // Find all base64 images in content
+        preg_match_all('/<img[^>]+src="data:image\/([^;]+);base64,([^"]+)"/', $content, $matches, PREG_SET_ORDER);
+        
+        foreach ($matches as $match) {
+            $imageType = $match[1];
+            $base64Data = $match[2];
+            
+            // Generate unique filename
+            $filename = 'post_' . time() . '_' . uniqid() . '.' . $imageType;
+            $filePath = 'posts/content/' . $filename;
+            
+            // Decode and save image
+            $imageData = base64_decode($base64Data);
+            Storage::put('public/' . $filePath, $imageData);
+            
+            // Replace base64 src with storage path
+            $newSrc = asset('storage/' . $filePath);
+            $content = str_replace($match[0], str_replace('data:image/' . $imageType . ';base64,' . $base64Data, $newSrc, $match[0]), $content);
+        }
+        
+        return $content;
     }
 }
