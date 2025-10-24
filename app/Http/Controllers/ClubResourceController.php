@@ -75,7 +75,7 @@ class ClubResourceController extends Controller
             'files' => 'nullable|array|max:10',
             'files.*' => 'file|mimes:doc,docx,xls,xlsx|max:20480', // 20MB per file
             'images' => 'nullable|array|max:10',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif,mp4,avi,mov|max:5120', // 5MB per file
+            'images.*' => 'file|mimes:jpeg,png,jpg,gif,mp4,avi,mov|max:102400', // 100MB per file
             'external_link' => 'nullable|url|max:500',
             'tags' => 'nullable|string'
         ], [
@@ -88,7 +88,7 @@ class ClubResourceController extends Controller
             'files.*.max' => 'Mỗi file không được vượt quá 20MB.',
             'images.max' => 'Tối đa 10 file.',
             'images.*.mimes' => 'File phải có định dạng: jpeg, png, jpg, gif, mp4, avi, mov.',
-            'images.*.max' => 'Mỗi file không được vượt quá 5MB.',
+            'images.*.max' => 'Mỗi file không được vượt quá 100MB.',
             'external_link.url' => 'Link không hợp lệ.'
         ]);
 
@@ -126,8 +126,15 @@ class ClubResourceController extends Controller
      */
     public function show($id)
     {
-        $resource = ClubResource::with(['club', 'user', 'images', 'files'])->findOrFail($id);
-        $resource->incrementViewCount();
+        // Tìm tài nguyên bao gồm cả những tài nguyên đã bị xóa
+        $resource = ClubResource::withTrashed()
+            ->with(['club', 'user', 'images', 'files'])
+            ->findOrFail($id);
+        
+        // Chỉ tăng view count nếu tài nguyên chưa bị xóa
+        if (!$resource->trashed()) {
+            $resource->incrementViewCount();
+        }
         
         return view('admin.club-resources.show', compact('resource'));
     }
@@ -161,7 +168,7 @@ class ClubResourceController extends Controller
             'deleted_files.*' => 'integer|exists:club_resource_files,id',
             'primary_file_id' => 'nullable|integer|exists:club_resource_files,id',
             'images' => 'nullable|array|max:10',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif,mp4,avi,mov|max:5120', // 5MB per file
+            'images.*' => 'file|mimes:jpeg,png,jpg,gif,mp4,avi,mov|max:102400', // 100MB per file
             'deleted_images' => 'nullable|array',
             'deleted_images.*' => 'integer|exists:club_resource_images,id',
             'primary_image_id' => 'nullable|integer|exists:club_resource_images,id',
@@ -175,7 +182,7 @@ class ClubResourceController extends Controller
             'primary_file_id.exists' => 'File chính không tồn tại.',
             'images.max' => 'Tối đa 10 file.',
             'images.*.mimes' => 'File phải có định dạng: jpeg, png, jpg, gif, mp4, avi, mov.',
-            'images.*.max' => 'Mỗi file không được vượt quá 5MB.',
+            'images.*.max' => 'Mỗi file không được vượt quá 100MB.',
             'deleted_images.*.exists' => 'Hình ảnh không tồn tại.',
             'primary_image_id.exists' => 'Hình ảnh chính không tồn tại.'
         ]);
@@ -218,14 +225,32 @@ class ClubResourceController extends Controller
     /**
      * Show trash (soft deleted resources)
      */
-    public function trash()
+    public function trash(Request $request)
     {
-        $resources = ClubResource::onlyTrashed()
-            ->with(['club', 'user'])
-            ->orderBy('deleted_at', 'desc')
-            ->paginate(20);
+        $query = ClubResource::onlyTrashed()->with(['club', 'user']);
         
-        return view('admin.club-resources.trash', compact('resources'));
+        // Search
+        if ($request->has('search') && $request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+        
+        // Filter by club
+        if ($request->has('club_id') && $request->club_id) {
+            $query->where('club_id', $request->club_id);
+        }
+        
+        // Filter by deleted days
+        if ($request->has('deleted_days') && $request->deleted_days) {
+            $query->where('deleted_at', '>=', now()->subDays($request->deleted_days));
+        }
+        
+        $resources = $query->orderBy('deleted_at', 'desc')->paginate(20);
+        $clubs = Club::where('status', 'active')->get();
+        
+        return view('admin.club-resources.trash', compact('resources', 'clubs'));
     }
 
     /**
@@ -546,5 +571,70 @@ class ClubResourceController extends Controller
         if ($request->hasFile('images')) {
             $this->handleImageAlbumUpload($resource, $request->file('images'));
         }
+    }
+
+    /**
+     * Restore all soft deleted resources
+     */
+    public function restoreAll()
+    {
+        $restoredCount = ClubResource::onlyTrashed()->count();
+        
+        if ($restoredCount > 0) {
+            ClubResource::onlyTrashed()->restore();
+            ClubResource::onlyTrashed()->update(['status' => 'active']);
+            
+            return redirect()->route('admin.club-resources.index')
+                ->with('success', "Đã khôi phục {$restoredCount} tài nguyên thành công!");
+        }
+        
+        return redirect()->route('admin.club-resources.trash')
+            ->with('info', 'Không có tài nguyên nào để khôi phục.');
+    }
+
+    /**
+     * Force delete all soft deleted resources
+     */
+    public function forceDeleteAll()
+    {
+        $resources = ClubResource::onlyTrashed()->get();
+        $deletedCount = $resources->count();
+        
+        if ($deletedCount > 0) {
+            foreach ($resources as $resource) {
+                // Delete associated files
+                if ($resource->file_path) {
+                    Storage::delete('public/' . $resource->file_path);
+                }
+                
+                if ($resource->thumbnail_path) {
+                    Storage::delete('public/' . $resource->thumbnail_path);
+                }
+                
+                // Delete associated images and files
+                foreach ($resource->images as $image) {
+                    if ($image->image_path) {
+                        Storage::delete('public/' . $image->image_path);
+                    }
+                    if ($image->thumbnail_path) {
+                        Storage::delete('public/' . $image->thumbnail_path);
+                    }
+                }
+                
+                foreach ($resource->files as $file) {
+                    if ($file->file_path) {
+                        Storage::delete('public/' . $file->file_path);
+                    }
+                }
+            }
+            
+            ClubResource::onlyTrashed()->forceDelete();
+            
+            return redirect()->route('admin.club-resources.index')
+                ->with('success', "Đã xóa vĩnh viễn {$deletedCount} tài nguyên thành công!");
+        }
+        
+        return redirect()->route('admin.club-resources.trash')
+            ->with('info', 'Không có tài nguyên nào để xóa.');
     }
 }

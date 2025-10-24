@@ -229,6 +229,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
     Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
     Route::delete('/club-resources/{id}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('admin.club-resources.force-delete');
+    Route::post('/club-resources/restore-all', [ClubResourceController::class, 'restoreAll'])->name('admin.club-resources.restore-all');
+    Route::delete('/club-resources/force-delete-all', [ClubResourceController::class, 'forceDeleteAll'])->name('admin.club-resources.force-delete-all');
     
     // Quản lý quỹ
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');

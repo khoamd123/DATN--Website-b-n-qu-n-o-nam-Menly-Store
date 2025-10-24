@@ -111,7 +111,7 @@
                                             <input type="file" class="form-control @error('images') is-invalid @enderror" 
                                                    id="images" name="images[]" accept="image/*,video/*" multiple onchange="previewImages(this)">
                                             <small class="form-text text-muted">
-                                                Hỗ trợ: JPG, PNG, GIF, MP4, AVI, MOV (Tối đa 5MB mỗi file, tối đa 10 file)
+                                                Hỗ trợ: JPG, PNG, GIF, MP4, AVI, MOV (Tối đa 100MB mỗi file, tối đa 10 file)
                                             </small>
                                             @error('images')
                                                 <div class="invalid-feedback">{{ $message }}</div>

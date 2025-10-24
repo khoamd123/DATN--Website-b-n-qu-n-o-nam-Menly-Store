@@ -10,15 +10,28 @@
                 <div class="card-header">
                     <h3 class="card-title">Chi tiết tài nguyên CLB</h3>
                     <div class="card-tools">
-                        <a href="{{ route('admin.club-resources.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
-                        </a>
-                        <a href="{{ route('admin.club-resources.edit', $resource->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Chỉnh sửa
-                        </a>
+                        @if($resource->trashed())
+                            <a href="{{ route('admin.club-resources.trash') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại thùng rác
+                            </a>
+                        @else
+                            <a href="{{ route('admin.club-resources.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại
+                            </a>
+                            <a href="{{ route('admin.club-resources.edit', $resource->id) }}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> Chỉnh sửa
+                            </a>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
+                    @if($resource->trashed())
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Lưu ý:</strong> Tài nguyên này đã bị xóa vào {{ $resource->deleted_at->format('d/m/Y H:i:s') }}. 
+                            Bạn có thể khôi phục hoặc xóa vĩnh viễn tài nguyên này.
+                        </div>
+                    @endif
                     <div class="row">
                         <div class="col-md-8">
                             <!-- Resource Information -->
@@ -52,7 +65,9 @@
                                         <tr>
                                             <td><strong>Trạng thái:</strong></td>
                                             <td>
-                                                @if($resource->status == 'active')
+                                                @if($resource->trashed())
+                                                    <span class="badge bg-danger">Đã xóa</span>
+                                                @elseif($resource->status == 'active')
                                                     <span class="badge bg-success">Hoạt động</span>
                                                 @elseif($resource->status == 'inactive')
                                                     <span class="badge bg-warning">Không hoạt động</span>
@@ -76,6 +91,12 @@
                                             <td><strong>Cập nhật lần cuối:</strong></td>
                                             <td>{{ $resource->updated_at->format('d/m/Y H:i:s') }}</td>
                                         </tr>
+                                        @if($resource->trashed())
+                                        <tr>
+                                            <td><strong>Ngày xóa:</strong></td>
+                                            <td>{{ $resource->deleted_at->format('d/m/Y H:i:s') }}</td>
+                                        </tr>
+                                        @endif
                                     </table>
                                 </div>
                             </div>
@@ -287,29 +308,51 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="d-grid gap-2">
-                                        <a href="{{ route('admin.club-resources.edit', $resource->id) }}" 
-                                           class="btn btn-warning">
-                                            <i class="fas fa-edit"></i> Chỉnh sửa
-                                        </a>
-                                        
-                                        @if($resource->file_path)
-                                            <a href="{{ route('admin.club-resources.download', $resource->id) }}" 
-                                               class="btn btn-success">
-                                                <i class="fas fa-download"></i> Tải xuống
+                                        @if($resource->trashed())
+                                            <!-- Actions for deleted resource -->
+                                            <form action="{{ route('admin.club-resources.restore', $resource->id) }}" 
+                                                  method="POST" class="d-inline w-100"
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn khôi phục tài nguyên này?')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-success w-100">
+                                                    <i class="fas fa-undo"></i> Khôi phục
+                                                </button>
+                                            </form>
+                                            
+                                            <form action="{{ route('admin.club-resources.force-delete', $resource->id) }}" 
+                                                  method="POST" class="d-inline w-100"
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài nguyên này? Hành động này không thể hoàn tác!')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger w-100">
+                                                    <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                                                </button>
+                                            </form>
+                                        @else
+                                            <!-- Actions for active resource -->
+                                            <a href="{{ route('admin.club-resources.edit', $resource->id) }}" 
+                                               class="btn btn-warning">
+                                                <i class="fas fa-edit"></i> Chỉnh sửa
                                             </a>
+                                            
+                                            @if($resource->file_path)
+                                                <a href="{{ route('admin.club-resources.download', $resource->id) }}" 
+                                                   class="btn btn-success">
+                                                    <i class="fas fa-download"></i> Tải xuống
+                                                </a>
+                                            @endif
+
+                                            <!-- Delete -->
+                                            <form action="{{ route('admin.club-resources.destroy', $resource->id) }}" 
+                                                  method="POST" class="d-inline w-100"
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài nguyên này?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger w-100">
+                                                    <i class="fas fa-trash"></i> Xóa tài nguyên
+                                                </button>
+                                            </form>
                                         @endif
-
-
-                                        <!-- Delete -->
-                                        <form action="{{ route('admin.club-resources.destroy', $resource->id) }}" 
-                                              method="POST" class="d-inline w-100"
-                                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài nguyên này?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger w-100">
-                                                <i class="fas fa-trash"></i> Xóa tài nguyên
-                                            </button>
-                                        </form>
                                     </div>
                                 </div>
                             </div>
