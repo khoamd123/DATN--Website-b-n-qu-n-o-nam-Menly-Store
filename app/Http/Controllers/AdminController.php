@@ -233,17 +233,21 @@ class AdminController extends Controller
     {
         $query = User::query();
         
+        
         // Tìm kiếm
-        if ($request->has('search') && $request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone', 'like', '%' . $request->search . '%');
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('phone', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('student_id', 'like', '%' . $searchTerm . '%');
             });
         }
         
         // Lọc theo quyền admin
-        if ($request->has('is_admin') && $request->is_admin !== '') {
+        if ($request->filled('is_admin')) {
             $query->where('is_admin', $request->is_admin);
         }
         
@@ -254,6 +258,8 @@ class AdminController extends Controller
         }
         
         $users = $query->orderBy('id', 'asc')->paginate(20);
+        
+        
         
         return view('admin.users.index', compact('users'));
     }
@@ -281,7 +287,7 @@ class AdminController extends Controller
         }
         
         // Lọc theo quyền admin
-        if ($request->has('is_admin') && $request->is_admin !== '') {
+        if ($request->filled('is_admin')) {
             $query->where('is_admin', $request->is_admin);
         }
         
@@ -371,12 +377,38 @@ class AdminController extends Controller
                 'student_id' => 'nullable|string|max:20',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:500',
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
             
-            $user->update($request->all());
+            $data = $request->except(['avatar']);
+            
+            // Xử lý upload ảnh đại diện
+            if ($request->hasFile('avatar')) {
+                $avatar = $request->file('avatar');
+                $avatarName = time() . '_' . $user->id . '.' . $avatar->getClientOriginalExtension();
+                $avatarPath = 'uploads/avatars/' . $avatarName;
+                
+                // Tạo thư mục nếu chưa tồn tại
+                $avatarDir = public_path('uploads/avatars');
+                if (!file_exists($avatarDir)) {
+                    mkdir($avatarDir, 0755, true);
+                }
+                
+                // Di chuyển file
+                $avatar->move($avatarDir, $avatarName);
+                
+                // Xóa ảnh cũ nếu có
+                if ($user->avatar && file_exists(public_path($user->avatar))) {
+                    unlink(public_path($user->avatar));
+                }
+                
+                $data['avatar'] = $avatarPath;
+            }
+            
+            $user->update($data);
             return redirect()->route('admin.users.show', $user->id)->with('success', 'Đã cập nhật thông tin người dùng thành công!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi cập nhật thông tin.');
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật thông tin: ' . $e->getMessage());
         }
     }
 

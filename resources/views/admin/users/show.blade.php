@@ -297,10 +297,28 @@
                 <h5 class="modal-title">Chỉnh sửa thông tin người dùng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ route('admin.users.update', $user->id) }}">
+            <form method="POST" action="{{ route('admin.users.update', $user->id) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh đại diện</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div>
+                                @if($user->avatar && file_exists(public_path($user->avatar)))
+                                    <img src="{{ asset($user->avatar) }}" alt="Avatar hiện tại" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+                                @else
+                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                                        {{ substr($user->name, 0, 1) }}
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="flex-grow-1">
+                                <input type="file" class="form-control" name="avatar" accept="image/*">
+                                <small class="text-muted">Chọn ảnh mới để thay đổi ảnh đại diện</small>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Tên</label>
                         <input type="text" class="form-control" name="name" value="{{ $user->name }}" required>

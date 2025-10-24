@@ -20,12 +20,12 @@
                 <input type="text" 
                        name="search" 
                        class="form-control" 
-                       placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+                       placeholder="Tìm kiếm theo tên, email, mã sinh viên..."
                        value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
-                <select name="is_admin" class="form-select">
-                    <option value="">Tất cả quyền</option>
+                <select name="is_admin" class="form-select" id="is_admin_filter">
+                    <option value="" {{ request('is_admin') === '' || request('is_admin') === null ? 'selected' : '' }}>Tất cả quyền</option>
                     <option value="1" {{ request('is_admin') == '1' ? 'selected' : '' }}>Admin</option>
                     <option value="0" {{ request('is_admin') == '0' ? 'selected' : '' }}>User thường</option>
                 </select>
@@ -60,6 +60,7 @@
     </div>
 </div>
 
+
 <!-- Danh sách người dùng -->
 <div class="card">
     <div class="card-body">
@@ -67,17 +68,13 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Ảnh đại diện</th>
                         <th>Tên</th>
                         <th>Email</th>
                         <th>Mã sinh viên</th>
-                        <th>Số điện thoại</th>
-                        <th>Địa chỉ</th>
                         <th>Role</th>
-                        <th>Vai trò CLB</th>
                         <th>Quyền Admin</th>
-                        <th>Ngày tạo</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -108,8 +105,6 @@
                                     <span class="badge bg-secondary">N/A</span>
                                 @endif
                             </td>
-                            <td>{{ $user->phone ?? 'N/A' }}</td>
-                            <td>{{ substr($user->address ?? 'N/A', 0, 30) }}{{ strlen($user->address ?? 'N/A') > 30 ? '...' : '' }}</td>
                             <td>
                                 @php
                                     $roleLabel = $user->is_admin ? 'Admin' : 'User';
@@ -118,30 +113,10 @@
                                 <span class="badge bg-{{ $roleColor }}">{{ $roleLabel }}</span>
                             </td>
                             <td>
-                                @php
-                                    $clubs = \App\Models\Club::all();
-                                    $clubRoles = [];
-                                    foreach($clubs as $club) {
-                                        $position = $user->getPositionInClub($club->id);
-                                        if($position) {
-                                            $clubRoles[] = $club->name . ': ' . $position;
-                                        }
-                                    }
-                                @endphp
-                                @if(count($clubRoles) > 0)
-                                    @foreach($clubRoles as $role)
-                                        <span class="badge bg-info me-1">{{ $role }}</span><br>
-                                    @endforeach
-                                @else
-                                    <span class="badge bg-light text-dark">Không có</span>
-                                @endif
-                            </td>
-                            <td>
                                 <span class="badge bg-{{ $user->is_admin ? 'danger' : 'secondary' }}">
                                     {{ $user->is_admin ? 'Có quyền' : 'Không có quyền' }}
                                 </span>
                             </td>
-                            <td>{{ $user->created_at ? $user->created_at->format('d/m/Y') : 'N/A' }}</td>
                             <td style="min-width: 120px; width: 120px;">
                                 <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('admin.users.show', $user->id) }}" 
@@ -160,7 +135,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 Không tìm thấy người dùng nào
                             </td>
                         </tr>

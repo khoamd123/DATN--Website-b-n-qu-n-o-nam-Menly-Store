@@ -22,6 +22,8 @@ Route::get('/', function () {
 
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
+
+
 Route::get('/admin/test-date-filter', [AdminController::class, 'testDateFilter'])->name('admin.test-date-filter');
 
 // Quick test routes
