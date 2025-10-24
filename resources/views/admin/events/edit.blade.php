@@ -66,17 +66,40 @@
 
                         <div class="mb-3">
                             <label class="form-label d-block">Ảnh sự kiện</label>
-                            @if($event->image)
-                                <div class="mb-2">
-                                    <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" class="img-thumbnail" style="max-height: 200px; object-fit: cover;">
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="remove_image">
-                                    <label class="form-check-label" for="remove_image">Xóa ảnh hiện tại</label>
+                            
+                            @if($event->images->count() > 0)
+                                <div class="mb-3">
+                                    <h6>Ảnh hiện tại:</h6>
+                                    <div class="row">
+                                        @foreach($event->images as $image)
+                                            <div class="col-md-3 mb-2">
+                                                <div class="position-relative">
+                                                    <img src="{{ $image->image_url }}" alt="{{ $image->alt_text }}" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover;">
+                                                    <div class="form-check position-absolute" style="top: 5px; left: 5px;">
+                                                        <input class="form-check-input" type="checkbox" name="remove_images[]" value="{{ $image->id }}" id="remove_image_{{ $image->id }}">
+                                                        <label class="form-check-label text-white" for="remove_image_{{ $image->id }}" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                                                            <i class="fas fa-trash"></i>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </div>
                             @endif
-                            <input type="file" class="form-control" name="image" accept="image/*" id="imageInput">
-                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB.</small>
+                            
+                            <div class="mb-2">
+                                <label class="form-label">Thêm ảnh mới:</label>
+                                <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imagesInput">
+                                <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
+                            </div>
+                            
+                            <div class="mt-2" id="imagesPreviewWrap" style="display:none;">
+                                <h6>Xem trước ảnh mới:</h6>
+                                <div class="row" id="imagesPreviewContainer">
+                                    <!-- Ảnh preview sẽ được thêm vào đây -->
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -171,26 +194,43 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('imageInput');
+    const input = document.getElementById('imagesInput');
+    const wrap = document.getElementById('imagesPreviewWrap');
+    const container = document.getElementById('imagesPreviewContainer');
+
     if (!input) return;
+
     input.addEventListener('change', function(e) {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const previewContainer = document.createElement('div');
-        previewContainer.style.marginTop = '8px';
-        previewContainer.style.border = '1px solid #e9ecef';
-        previewContainer.style.borderRadius = '8px';
-        previewContainer.style.overflow = 'hidden';
-        previewContainer.style.maxHeight = '260px';
-        const img = document.createElement('img');
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        previewContainer.appendChild(img);
-        input.parentElement.appendChild(previewContainer);
-        const reader = new FileReader();
-        reader.onload = function(ev) { img.src = ev.target.result; };
-        reader.readAsDataURL(file);
+        const files = e.target.files;
+        if (!files || files.length === 0) {
+            wrap.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        // Xóa preview cũ
+        container.innerHTML = '';
+
+        // Hiển thị preview cho từng ảnh
+        Array.from(files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 mb-2';
+                col.innerHTML = `
+                    <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                        <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
+                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                            Mới ${index + 1}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(col);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        wrap.style.display = 'block';
     });
 });
 </script>

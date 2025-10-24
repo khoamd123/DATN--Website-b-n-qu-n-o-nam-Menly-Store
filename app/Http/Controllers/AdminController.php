@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\EventImage;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
@@ -949,7 +950,7 @@ class AdminController extends Controller
         }
 
         try {
-            $events = Event::with(['club', 'creator'])->orderBy('created_at', 'desc')->paginate(20);
+            $events = Event::with(['club', 'creator', 'images'])->orderBy('created_at', 'desc')->paginate(20);
             $clubs = Club::all();
 
             return view('admin.events.index', compact('events', 'clubs'));
@@ -991,7 +992,7 @@ class AdminController extends Controller
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string',
-                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1013,16 +1014,11 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('events', 'public');
-            }
-
-            Event::create([
+            $event = Event::create([
                 'title' => $request->title,
                 'slug' => $slug,
                 'description' => $request->description,
-                'image' => $imagePath,
+                'image' => null, // Sẽ không sử dụng field image nữa, dùng event_images table
                 'club_id' => $request->club_id,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -1032,6 +1028,19 @@ class AdminController extends Controller
                 'status' => $request->status,
                 'created_by' => session('user_id'),
             ]);
+
+            // Xử lý upload nhiều ảnh
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
+                    EventImage::create([
+                        'event_id' => $event->id,
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($index + 1),
+                        'sort_order' => $index,
+                    ]);
+                }
+            }
 
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã tạo sự kiện thành công!');
         } catch (\Exception $e) {
@@ -1050,7 +1059,7 @@ class AdminController extends Controller
         }
 
         try {
-            $event = Event::findOrFail($id);
+            $event = Event::with('images')->findOrFail($id);
             $clubs = Club::all();
             return view('admin.events.edit', compact('event', 'clubs'));
         } catch (\Exception $e) {
@@ -1073,8 +1082,9 @@ class AdminController extends Controller
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string',
-                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-                'remove_image' => 'nullable|boolean',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'remove_images' => 'nullable|array',
+                'remove_images.*' => 'integer|exists:event_images,id',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1113,15 +1123,28 @@ class AdminController extends Controller
                 'status' => $request->status,
             ];
 
-            // Xử lý ảnh: xoá nếu tick, hoặc thay nếu upload mới
-            if ($request->boolean('remove_image')) {
-                $data['image'] = null;
-            }
-            if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('events', 'public');
+            $event->update($data);
+
+            // Xử lý xóa ảnh được chọn
+            if ($request->has('remove_images')) {
+                EventImage::whereIn('id', $request->remove_images)
+                    ->where('event_id', $event->id)
+                    ->delete();
             }
 
-            $event->update($data);
+            // Xử lý upload ảnh mới
+            if ($request->hasFile('images')) {
+                $existingImagesCount = $event->images()->count();
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
+                    EventImage::create([
+                        'event_id' => $event->id,
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($existingImagesCount + $index + 1),
+                        'sort_order' => $existingImagesCount + $index,
+                    ]);
+                }
+            }
 
             return redirect()->route('admin.events.show', $event->id)->with('success', 'Cập nhật sự kiện thành công!');
         } catch (\Exception $e) {
@@ -1140,7 +1163,7 @@ class AdminController extends Controller
         }
 
         try {
-            $event = Event::with(['club', 'creator'])->findOrFail($id);
+            $event = Event::with(['club', 'creator', 'images'])->findOrFail($id);
             return view('admin.events.show', compact('event'));
         } catch (\Exception $e) {
             return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện.');

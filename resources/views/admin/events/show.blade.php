@@ -143,15 +143,50 @@
                     </div>
                     </div>
 
-                    @if($event->image)
+                    @php
+                        $hasImages = $event->images && $event->images->count() > 0;
+                        $hasOldImage = !empty($event->image);
+                        $totalImages = ($hasImages ? $event->images->count() : 0) + ($hasOldImage ? 1 : 0);
+                    @endphp
+                    
+                    @if($hasImages || $hasOldImage)
                     <hr>
                     <div class="mt-3">
-                        <h6 class="mb-2"><i class="fas fa-image"></i> Thông tin hình ảnh sự kiện</h6>
-                        <div style="max-width: 280px;">
-                            <div style="width: 100%; height: 160px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
-                                <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;">
+                        <h6 class="mb-3"><i class="fas fa-images"></i> Hình ảnh sự kiện ({{ $totalImages }} ảnh)</h6>
+                        
+                        @if($hasImages)
+                            <div class="alert alert-info">
+                                <strong>Hình ảnh của sự kiện:</strong> {{ $event->images->count() }} ảnh
                             </div>
-                        </div>
+                            <div class="row">
+                                @foreach($event->images as $index => $image)
+                                    <div class="col-md-4 col-lg-3 mb-3">
+                                        <div class="position-relative" style="border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; background: #f8f9fa;">
+                                            <img src="{{ $image->image_url }}" alt="{{ $image->alt_text }}" style="width: 100%; height: 160px; object-fit: cover; display: block;" onerror="this.style.border='2px solid red'; this.alt='Image failed to load: {{ $image->image_url }}';">
+                                            <div class="position-absolute" style="top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                                {{ $index + 1 }}
+                                            </div>
+                                            <div class="position-absolute" style="bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 4px; border-radius: 2px; font-size: 10px;">
+                                                {{ $image->image_path }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                        
+                        @if($hasOldImage)
+                            <div class="row">
+                                <div class="col-md-4 col-lg-3 mb-3">
+                                    <div class="position-relative" style="border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; background: #f8f9fa;">
+                                        <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 160px; object-fit: cover; display: block;">
+                                        <div class="position-absolute" style="top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                            {{ $hasImages ? $event->images->count() + 1 : 1 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     @endif
                 </div>

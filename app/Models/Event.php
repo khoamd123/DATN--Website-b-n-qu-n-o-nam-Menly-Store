@@ -38,4 +38,30 @@ class Event extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /**
+     * Get the images for the event
+     */
+    public function images()
+    {
+        return $this->hasMany(EventImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the main image for the event (first image or the old image field)
+     */
+    public function getMainImageAttribute()
+    {
+        $firstImage = $this->images()->first();
+        if ($firstImage) {
+            return $firstImage->image_url;
+        }
+        
+        // Fallback to old image field
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        
+        return null;
+    }
 }
