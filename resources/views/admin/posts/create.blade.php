@@ -9,7 +9,6 @@
     transition: all 0.3s ease;
 }
 
-
 /* Image reordering styles */
 .ck-editor__editable figure.image {
     cursor: move;
@@ -32,6 +31,85 @@
 
 .drop-indicator.show {
     opacity: 1;
+}
+
+/* Image resize styles */
+.ck-editor__editable figure.image {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.ck-editor__editable figure.image:hover {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.ck-editor__editable figure.image .resize-handles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.ck-editor__editable figure.image:hover .resize-handles {
+    pointer-events: all;
+}
+
+.resize-handle {
+    position: absolute;
+    background: #007bff;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+}
+
+.resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+.resize-handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.resize-handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.resize-handle.w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+.resize-handle.e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+
+/* Image size controls */
+.image-size-controls {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    display: none;
+}
+
+.ck-editor__editable figure.image:hover .image-size-controls {
+    display: block;
+}
+
+.size-btn {
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 2px 6px;
+    margin: 0 2px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.size-btn:hover {
+    background: white;
+    color: black;
 }
 
 </style>
@@ -98,7 +176,7 @@
                                 </div>
                             </div>
                             <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> Bạn có thể kéo thả hình ảnh trực tiếp vào vùng soạn thảo hoặc sử dụng nút "Thêm vào nội dung" ở dưới
+                                <i class="fas fa-info-circle"></i> Bạn có thể kéo thả hình ảnh trực tiếp vào vùng soạn thảo hoặc sử dụng nút "Thêm vào nội dung" ở dưới. Sau khi thêm ảnh, hover vào ảnh để chỉnh kích thước.
                             </small>
                         </div>
                 
@@ -218,7 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
             let draggedImage = null;
             let dropIndicator = null;
             
-            
             // Add image reordering functionality
             editorElement.addEventListener('dragstart', function(e) {
                 if (e.target.tagName === 'FIGURE' && e.target.classList.contains('image')) {
@@ -324,7 +401,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error initializing CKEditor:', error);
         });
 
-
     // Global variables for selected images
     window.selectedImages = [];
     window.editor = null;
@@ -403,9 +479,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const reader = new FileReader();
             
             reader.onload = function(e) {
-                const imageHtml = `<figure class="image">
+                const imageHtml = `<figure class="image" data-image-id="${Date.now()}">
                     <img src="${e.target.result}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <figcaption style="text-align: center; font-style: italic; color: #666; margin-top: 8px;">${file.name}</figcaption>
+                    <div class="resize-handles">
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                        <div class="resize-handle n"></div>
+                        <div class="resize-handle s"></div>
+                        <div class="resize-handle w"></div>
+                        <div class="resize-handle e"></div>
+                    </div>
+                    <div class="image-size-controls">
+                        <button class="size-btn" onclick="setImageSize(this, '25%')">25%</button>
+                        <button class="size-btn" onclick="setImageSize(this, '50%')">50%</button>
+                        <button class="size-btn" onclick="setImageSize(this, '75%')">75%</button>
+                        <button class="size-btn" onclick="setImageSize(this, '100%')">100%</button>
+                    </div>
                 </figure>`;
                 
                 window.editor.model.change(writer => {
@@ -417,6 +509,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     const lastPosition = writer.createPositionAt(root, 'end');
                     window.editor.model.insertContent(modelFragment, lastPosition);
                 });
+                
+                // Add resize functionality after image is inserted
+                setTimeout(() => {
+                    addImageResizeFunctionality();
+                }, 100);
                 
                 showSuccessMessage(`Hình ảnh "${file.name}" đã được thêm vào nội dung!`);
                 
@@ -435,9 +532,25 @@ document.addEventListener('DOMContentLoaded', function() {
             window.selectedImages.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const imageHtml = `<figure class="image">
+                    const imageHtml = `<figure class="image" data-image-id="${Date.now()}">
                         <img src="${e.target.result}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <figcaption style="text-align: center; font-style: italic; color: #666; margin-top: 8px;">${file.name}</figcaption>
+                        <div class="resize-handles">
+                            <div class="resize-handle nw"></div>
+                            <div class="resize-handle ne"></div>
+                            <div class="resize-handle sw"></div>
+                            <div class="resize-handle se"></div>
+                            <div class="resize-handle n"></div>
+                            <div class="resize-handle s"></div>
+                            <div class="resize-handle w"></div>
+                            <div class="resize-handle e"></div>
+                        </div>
+                        <div class="image-size-controls">
+                            <button class="size-btn" onclick="setImageSize(this, '25%')">25%</button>
+                            <button class="size-btn" onclick="setImageSize(this, '50%')">50%</button>
+                            <button class="size-btn" onclick="setImageSize(this, '75%')">75%</button>
+                            <button class="size-btn" onclick="setImageSize(this, '100%')">100%</button>
+                        </div>
                     </figure>`;
                     
                     window.editor.model.change(writer => {
@@ -454,6 +567,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (addedCount === window.selectedImages.length) {
                         showSuccessMessage(`Đã thêm ${addedCount} hình ảnh vào nội dung!`);
                         
+                        // Add resize functionality after all images are inserted
+                        setTimeout(() => {
+                            addImageResizeFunctionality();
+                        }, 100);
+                        
                         // Clear all selected images after adding to editor
                         window.selectedImages = [];
                         displaySelectedImages();
@@ -461,6 +579,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
                 reader.readAsDataURL(file);
             });
+        }
+    };
+
+    // Image resize functionality
+    window.addImageResizeFunctionality = function() {
+        const editorElement = window.editor.ui.getEditableElement();
+        const images = editorElement.querySelectorAll('figure.image');
+        
+        images.forEach(image => {
+            // Add resize handles if not already present
+            if (!image.querySelector('.resize-handles')) {
+                const resizeHandles = document.createElement('div');
+                resizeHandles.className = 'resize-handles';
+                resizeHandles.innerHTML = `
+                    <div class="resize-handle nw"></div>
+                    <div class="resize-handle ne"></div>
+                    <div class="resize-handle sw"></div>
+                    <div class="resize-handle se"></div>
+                    <div class="resize-handle n"></div>
+                    <div class="resize-handle s"></div>
+                    <div class="resize-handle w"></div>
+                    <div class="resize-handle e"></div>
+                `;
+                image.appendChild(resizeHandles);
+            }
+            
+            // Add size controls if not already present
+            if (!image.querySelector('.image-size-controls')) {
+                const sizeControls = document.createElement('div');
+                sizeControls.className = 'image-size-controls';
+                sizeControls.innerHTML = `
+                    <button class="size-btn" onclick="setImageSize(this, '25%')">25%</button>
+                    <button class="size-btn" onclick="setImageSize(this, '50%')">50%</button>
+                    <button class="size-btn" onclick="setImageSize(this, '75%')">75%</button>
+                    <button class="size-btn" onclick="setImageSize(this, '100%')">100%</button>
+                `;
+                image.appendChild(sizeControls);
+            }
+        });
+    };
+
+    // Set image size function
+    window.setImageSize = function(button, size) {
+        const image = button.closest('figure.image');
+        const img = image.querySelector('img');
+        
+        if (img) {
+            img.style.width = size;
+            img.style.height = 'auto';
+            showSuccessMessage(`Đã thay đổi kích thước ảnh thành ${size}`);
         }
     };
 
@@ -484,8 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     };
 
-
 });
 </script>
 @endsection
-
