@@ -61,7 +61,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả sự kiện</label>
-                            <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+                            <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..." id="description"></textarea>
                         </div>
 
                         <div class="mb-3">
@@ -173,6 +173,50 @@
     </div>
 @push('scripts')
 <script>
+// Sử dụng CKEditor từ CDN đã được load trong layout
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded');
+    
+    // Kiểm tra ClassicEditor
+    console.log('ClassicEditor available:', typeof ClassicEditor);
+    
+    if (typeof ClassicEditor === 'undefined') {
+        console.error('ClassicEditor is not loaded!');
+        return;
+    }
+    
+    // Tìm textarea
+    const textarea = document.querySelector('#description');
+    console.log('Textarea found:', textarea);
+    
+    if (!textarea) {
+        console.error('Textarea with id "description" not found');
+        return;
+    }
+    
+    console.log('Creating CKEditor instance...');
+    
+    ClassicEditor
+        .create(textarea, {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'link', 'blockQuote', '|',
+                    'undo', 'redo'
+                ]
+            }
+        })
+        .then(editor => {
+            console.log('✅ CKEditor created successfully!', editor);
+        })
+        .catch(error => {
+            console.error('❌ Error creating CKEditor:', error);
+        });
+});
+
+// Preview images
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
@@ -186,10 +230,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Xóa preview cũ
         container.innerHTML = '';
 
-        // Hiển thị preview cho từng ảnh
         Array.from(files).forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(ev) {

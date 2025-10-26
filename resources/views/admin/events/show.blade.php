@@ -381,7 +381,7 @@
                             <i class="fas fa-plus me-2"></i>Tạo sự kiện mới
                         </a>
                         
-                        <a href="{{ route('admin.events.index') }}" class="btn btn-outline-secondary btn-lg">
+                        <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary btn-lg">
                             <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
                         </a>
                     </div>

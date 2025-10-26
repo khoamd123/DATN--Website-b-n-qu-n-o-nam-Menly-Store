@@ -193,25 +193,28 @@
 
 @push('scripts')
 <script>
-// Hàm khởi tạo CKEditor
-function initCKEditor() {
-    console.log('Checking for ClassicEditor...');
+// Sử dụng CKEditor từ CDN đã được load trong layout
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - Edit Page');
+    
+    // Kiểm tra ClassicEditor
+    console.log('ClassicEditor available:', typeof ClassicEditor);
     
     if (typeof ClassicEditor === 'undefined') {
-        console.log('ClassicEditor not yet available, retrying...');
-        setTimeout(initCKEditor, 100);
+        console.error('ClassicEditor is not loaded!');
         return;
     }
     
-    console.log('✅ ClassicEditor is available!');
-    
+    // Tìm textarea
     const textarea = document.querySelector('#description');
+    console.log('Textarea found:', textarea);
+    
     if (!textarea) {
-        console.error('❌ Textarea #description not found!');
+        console.error('Textarea with id "description" not found');
         return;
     }
     
-    console.log('Initializing CKEditor on textarea...');
+    console.log('Creating CKEditor instance...');
     
     ClassicEditor
         .create(textarea, {
@@ -220,42 +223,21 @@ function initCKEditor() {
                     'heading', '|',
                     'bold', 'italic', 'underline', '|',
                     'bulletedList', 'numberedList', '|',
-                    'outdent', 'indent', '|',
-                    'blockQuote', 'insertTable', '|',
-                    'undo', 'redo', '|',
-                    'link', '|',
-                    'fontSize', 'fontColor', 'fontBackgroundColor', '|',
-                    'alignment', '|',
-                    'horizontalLine', 'specialCharacters'
-                ]
-            },
-            language: 'vi',
-            table: {
-                contentToolbar: [
-                    'tableColumn',
-                    'tableRow',
-                    'mergeTableCells'
+                    'link', 'blockQuote', '|',
+                    'undo', 'redo'
                 ]
             }
         })
         .then(editor => {
-            console.log('✅ CKEditor initialized successfully!');
-            window.editor = editor;
+            console.log('✅ CKEditor created successfully!', editor);
         })
         .catch(error => {
-            console.error('❌ Error initializing CKEditor:', error);
+            console.error('❌ Error creating CKEditor:', error);
         });
-}
+});
 
-// Bắt đầu khởi tạo sau khi DOM ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCKEditor);
-} else {
-    // DOM đã sẵn sàng
-    initCKEditor();
-}
-
-    // Xử lý preview ảnh
+// Preview images
+document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
     const container = document.getElementById('imagesPreviewContainer');
@@ -270,10 +252,8 @@ if (document.readyState === 'loading') {
             return;
         }
 
-        // Xóa preview cũ
         container.innerHTML = '';
 
-        // Hiển thị preview cho từng ảnh
         Array.from(files).forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(ev) {
