@@ -29,140 +29,298 @@
         </div>
     @endif
 
-    <div class="d-flex flex-row flex-nowrap gap-3 align-items-start">
-        <!-- Thông tin sự kiện -->
-        <div class="flex-grow-1" style="min-width: 0;">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin sự kiện</h5>
+    <div class="row">
+        <!-- Thông tin sự kiện chính -->
+        <div class="col-lg-8">
+            <!-- Header sự kiện -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-gradient-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ $event->title }}</h4>
+                        @php
+                            $statusColors = [
+                                'draft' => 'secondary',
+                                'pending' => 'warning',
+                                'approved' => 'info',
+                                'ongoing' => 'success',
+                                'completed' => 'primary',
+                                'cancelled' => 'danger'
+                            ];
+                            $statusLabels = [
+                                'draft' => 'Bản nháp',
+                                'pending' => 'Chờ duyệt',
+                                'approved' => 'Đã duyệt',
+                                'ongoing' => 'Đang diễn ra',
+                                'completed' => 'Hoàn thành',
+                                'cancelled' => 'Đã hủy'
+                            ];
+                        @endphp
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                            {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
+                        </span>
+                        @if($event->status === 'cancelled')
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small class="text-danger d-block">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Lý do hủy:</strong> 
+                                </small>
+                                <small class="text-dark">
+                                    {{ $event->cancellation_reason ?? 'Sự kiện đã bị hủy bởi quản trị viên' }}
+                                </small>
+                            </div>
+                        @endif
+                    </div>
                 </div>
                 <div class="card-body">
-                    <h4>{{ $event->title }}</h4>
-                    <p class="text-muted">{{ $event->description }}</p>
+                    @if($event->description)
+                        <div class="event-description mb-4">
+                            <div class="description-header">
+                                <div class="description-icon">
+                                    <i class="fas fa-align-left"></i>
+                                </div>
+                                <h5 class="description-title">Mô tả sự kiện</h5>
+                            </div>
+                            <div class="description-content">
+                                <div class="description-text">
+                                    {!! $event->description !!}
+                                </div>
+                                <div class="description-footer">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Thông tin chi tiết về sự kiện
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                     
-                    <div class="row mt-4">
+                    
+                    <!-- Lý do hủy sự kiện -->
+                    @if($event->status === 'cancelled')
+                        <div class="cancellation-info mb-4">
+                            <div class="cancellation-header">
+                                <div class="cancellation-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <h5 class="cancellation-title">Lý do hủy sự kiện</h5>
+                            </div>
+                            <div class="cancellation-content">
+                                <div class="cancellation-text">
+                                    {{ $event->cancellation_reason ?? 'Sự kiện đã bị hủy bởi quản trị viên. Vui lòng liên hệ để biết thêm thông tin chi tiết.' }}
+                                </div>
+                                <div class="cancellation-footer">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Hủy lúc: 
+                                        @if(isset($event->cancelled_at) && $event->cancelled_at)
+                                            {{ $event->cancelled_at->format('d/m/Y H:i') }}
+                                        @else
+                                            {{ $event->updated_at->format('d/m/Y H:i') }}
+                                        @endif
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        Bởi: {{ $event->creator->name ?? 'Admin' }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    
+                    <!-- Thông tin thời gian -->
+                    <div class="row mb-4">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Thời gian bắt đầu:</strong><br>
-                                <span class="text-primary">{{ $event->start_time ? \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') : 'N/A' }}</span>
+                            <div class="info-card">
+                                <div class="info-icon bg-primary">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Thời gian bắt đầu</h6>
+                                    <p class="info-value">{{ $event->start_time ? \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Thời gian kết thúc:</strong><br>
-                                <span class="text-primary">{{ $event->end_time ? \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') : 'N/A' }}</span>
+                            <div class="info-card">
+                                <div class="info-icon bg-danger">
+                                    <i class="fas fa-stop"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Thời gian kết thúc</h6>
+                                    <p class="info-value">{{ $event->end_time ? \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Thông tin chi tiết -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon bg-info">
+                                    <i class="fas fa-{{ $event->mode === 'offline' ? 'map-marker-alt' : ($event->mode === 'online' ? 'video' : 'users') }}"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Hình thức</h6>
+                                    @php
+                                        $modeLabels = [
+                                            'offline' => 'Tại chỗ',
+                                            'online' => 'Trực tuyến',
+                                            'hybrid' => 'Kết hợp'
+                                        ];
+                                    @endphp
+                                    <p class="info-value">{{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon bg-warning">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Địa điểm</h6>
+                                    <p class="info-value">{{ $event->location ?? 'Chưa xác định' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin bổ sung -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon bg-success">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Số lượng tối đa</h6>
+                                    <p class="info-value">{{ $event->max_participants ?? 'Không giới hạn' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-icon bg-secondary">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Câu lạc bộ</h6>
+                                    <p class="info-value">{{ $event->club->name ?? 'N/A' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin người tạo -->
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Chế độ:</strong><br>
-                                @php
-                                    $modeLabels = [
-                                        'offline' => 'Tại chỗ',
-                                        'online' => 'Trực tuyến',
-                                        'hybrid' => 'Kết hợp'
-                                    ];
-                                @endphp
-                                <span class="badge bg-info">{{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}</span>
+                            <div class="info-card">
+                                <div class="info-icon bg-dark">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Người tạo</h6>
+                                    <p class="info-value">{{ $event->creator->name ?? 'N/A' }}</p>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Địa điểm:</strong><br>
-                                <span>{{ $event->location ?? 'N/A' }}</span>
+                            <div class="info-card">
+                                <div class="info-icon bg-light text-dark">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="info-content">
+                                    <h6 class="info-label">Cập nhật lần cuối</h6>
+                                    <p class="info-value">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Số lượng tối đa:</strong><br>
-                                <span>{{ $event->max_participants ?? 'Không giới hạn' }}</span>
+            <!-- Hình ảnh sự kiện -->
+            @php
+                $hasImages = $event->images && $event->images->count() > 0;
+                $hasOldImage = !empty($event->image);
+                $totalImages = ($hasImages ? $event->images->count() : 0) + ($hasOldImage ? 1 : 0);
+            @endphp
+            
+            @if($hasImages || $hasOldImage)
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-images me-2"></i>Hình ảnh sự kiện 
+                        <span class="badge bg-primary ms-2">{{ $totalImages }} ảnh</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if($hasImages)
+                        <div class="row g-3">
+                            @foreach($event->images as $index => $image)
+                                <div class="col-md-4 col-lg-3">
+                                    <div class="image-gallery-item">
+                                        <div class="image-container">
+                                            <img src="{{ $image->image_url }}" 
+                                                 alt="{{ $image->alt_text }}" 
+                                                 class="img-fluid rounded"
+                                                 data-bs-toggle="modal" 
+                                                 data-bs-target="#imageModal{{ $index }}"
+                                                 style="cursor: pointer; transition: transform 0.3s ease;">
+                                            <div class="image-overlay">
+                                                <div class="image-number">{{ $index + 1 }}</div>
+                                                <div class="image-actions">
+                                                    <button class="btn btn-sm btn-light" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#imageModal{{ $index }}">
+                                                        <i class="fas fa-expand"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                    
+                    @if($hasOldImage)
+                        <div class="row g-3">
+                            <div class="col-md-4 col-lg-3">
+                                <div class="image-gallery-item">
+                                    <div class="image-container">
+                                        <img src="{{ asset('storage/' . $event->image) }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="img-fluid rounded"
+                                             data-bs-toggle="modal" 
+                                             data-bs-target="#imageModalOld"
+                                             style="cursor: pointer; transition: transform 0.3s ease;">
+                                        <div class="image-overlay">
+                                            <div class="image-number">{{ $hasImages ? $event->images->count() + 1 : 1 }}</div>
+                                            <div class="image-actions">
+                                                <button class="btn btn-sm btn-light" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#imageModalOld">
+                                                    <i class="fas fa-expand"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Trạng thái:</strong><br>
-                                @php
-                                    $statusColors = [
-                                        'draft' => 'secondary',
-                                        'pending' => 'warning',
-                                        'approved' => 'info',
-                                        'ongoing' => 'success',
-                                        'completed' => 'primary',
-                                        'cancelled' => 'danger'
-                                    ];
-                                    $statusLabels = [
-                                        'draft' => 'Bản nháp',
-                                        'pending' => 'Chờ duyệt',
-                                        'approved' => 'Đã duyệt',
-                                        'ongoing' => 'Đang diễn ra',
-                                        'completed' => 'Hoàn thành',
-                                        'cancelled' => 'Đã hủy'
-                                    ];
-                                @endphp
-                                <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
-                                    {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Câu lạc bộ:</strong><br>
-                                <span class="text-primary">{{ $event->club->name ?? 'N/A' }}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Người tạo:</strong><br>
-                                <span>{{ $event->creator->name ?? 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Ngày tạo:</strong><br>
-                                <span class="text-muted">{{ $event->created_at ? $event->created_at->format('d/m/Y H:i:s') : 'N/A' }}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <strong>Cập nhật lần cuối:</strong><br>
-                                <span class="text-muted">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i:s') : 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-
-                    @if($event->image)
-                    <hr>
-                    <div class="mt-3">
-                        <h6 class="mb-2"><i class="fas fa-image"></i> Thông tin hình ảnh sự kiện</h6>
-                        <div style="max-width: 280px;">
-                            <div style="width: 100%; height: 160px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
-                                <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;">
-                            </div>
-                        </div>
-                    </div>
                     @endif
                 </div>
             </div>
+            @endif
         </div>
 
-        <!-- Thống kê và hành động -->
-        <div class="flex-shrink-0" style="width: 360px; max-width: 100%;">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Thống kê</h5>
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Thống kê -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-gradient-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê sự kiện</h5>
                 </div>
                 <div class="card-body">
                     @php
@@ -170,50 +328,625 @@
                         $commentsCount = \App\Models\EventComment::where('event_id', $event->id)->count();
                     @endphp
                     
-                    <div class="text-center">
-                        <h3 class="text-primary">{{ $registrationsCount }}</h3>
-                        <small class="text-muted">Đăng ký tham gia</small>
-                    </div>
-                    
-                    <div class="text-center mt-3">
-                        <h3 class="text-success">{{ $commentsCount }}</h3>
-                        <small class="text-muted">Bình luận</small>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon bg-primary">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <h3 class="stat-number text-primary">{{ $registrationsCount }}</h3>
+                                <p class="stat-label">Đăng ký</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon bg-success">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <h3 class="stat-number text-success">{{ $commentsCount }}</h3>
+                                <p class="stat-label">Bình luận</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-cogs"></i> Hành động</h5>
+            <!-- Hành động -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Hành động</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         @if($event->status === 'pending')
                             <form method="POST" action="{{ route('admin.events.approve', $event->id) }}">
                                 @csrf
-                                <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                    <i class="fas fa-check"></i> Duyệt sự kiện
-                                </button>
-                            </form>
-                            
-                            <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}">
-                                @csrf
-                                <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn hủy sự kiện này?')">
-                                    <i class="fas fa-times"></i> Hủy sự kiện
+                                <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                    <i class="fas fa-check me-2"></i>Duyệt sự kiện
                                 </button>
                             </form>
                         @endif
                         
-                        <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Tạo sự kiện mới
+                        @if(in_array($event->status, ['pending', 'approved', 'ongoing']))
+                            <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
+                                <i class="fas fa-times me-2"></i>Hủy sự kiện
+                            </button>
+                        @endif
+                        
+                        <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-edit me-2"></i>Chỉnh sửa
                         </a>
                         
-                        <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
+                        <a href="{{ route('admin.events.create') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>Tạo sự kiện mới
+                        </a>
+                        
+                        <a href="{{ route('admin.events.index') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
                         </a>
                     </div>
                 </div>
             </div>
+
+            <!-- Thông tin nhanh -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin nhanh</h5>
+                </div>
+                <div class="card-body">
+                    <div class="quick-info">
+                        <div class="quick-info-item">
+                            <i class="fas fa-hashtag text-muted"></i>
+                            <span>ID: <strong>{{ $event->id }}</strong></span>
+                        </div>
+                        <div class="quick-info-item">
+                            <i class="fas fa-calendar-plus text-muted"></i>
+                            <span>Tạo: <strong>{{ $event->created_at ? $event->created_at->format('d/m/Y') : 'N/A' }}</strong></span>
+                        </div>
+                        <div class="quick-info-item">
+                            <i class="fas fa-clock text-muted"></i>
+                            <span>Cập nhật: <strong>{{ $event->updated_at ? $event->updated_at->format('d/m/Y') : 'N/A' }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+/* Event Description */
+.event-description {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    padding: 0;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Cancellation Info */
+.cancellation-info {
+    background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+    border-radius: 15px;
+    padding: 0;
+    border: 1px solid #feb2b2;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cancellation-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
+}
+
+.cancellation-header {
+    background: linear-gradient(135deg, #f56565, #e53e3e);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.cancellation-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(30px, -30px);
+}
+
+.cancellation-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+}
+
+.cancellation-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.cancellation-content {
+    padding: 1.5rem;
+    position: relative;
+}
+
+.cancellation-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: #2d3748;
+    margin-bottom: 1rem;
+    text-align: justify;
+    position: relative;
+    padding-left: 1rem;
+    border-left: 4px solid #f56565;
+}
+
+.cancellation-text::before {
+    content: '"';
+    position: absolute;
+    top: -10px;
+    left: -5px;
+    font-size: 3rem;
+    color: #f56565;
+    opacity: 0.3;
+    font-family: serif;
+    line-height: 1;
+}
+
+.cancellation-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 1px solid #feb2b2;
+    background: rgba(245, 101, 101, 0.05);
+    margin: 0 -1.5rem -1.5rem -1.5rem;
+    padding: 1rem 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.cancellation-footer small {
+    font-weight: 500;
+    color: #718096 !important;
+}
+
+/* Responsive cho cancellation info */
+@media (max-width: 768px) {
+    .cancellation-header {
+        padding: 1rem;
+    }
+    
+    .cancellation-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-right: 0.75rem;
+    }
+    
+    .cancellation-title {
+        font-size: 1.1rem;
+    }
+    
+    .cancellation-content {
+        padding: 1rem;
+    }
+    
+    .cancellation-text {
+        font-size: 1rem;
+        padding-left: 0.75rem;
+    }
+    
+    .cancellation-text::before {
+        font-size: 2.5rem;
+        top: -8px;
+        left: -3px;
+    }
+    
+    .cancellation-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+.event-description:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+.description-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.description-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(30px, -30px);
+}
+
+.description-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+}
+
+.description-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.description-content {
+    padding: 1.5rem;
+    position: relative;
+}
+
+.description-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    text-align: justify;
+    position: relative;
+    padding-left: 1rem;
+    border-left: 4px solid #007bff;
+}
+
+.description-text::before {
+    content: '"';
+    position: absolute;
+    top: -10px;
+    left: -5px;
+    font-size: 3rem;
+    color: #007bff;
+    opacity: 0.3;
+    font-family: serif;
+    line-height: 1;
+}
+
+.description-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+    background: rgba(0,123,255,0.05);
+    margin: 0 -1.5rem -1.5rem -1.5rem;
+    padding: 1rem 1.5rem;
+}
+
+.description-footer small {
+    font-weight: 500;
+    color: #6c757d !important;
+}
+
+/* Responsive cho description */
+@media (max-width: 768px) {
+    .description-header {
+        padding: 1rem;
+    }
+    
+    .description-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-right: 0.75rem;
+    }
+    
+    .description-title {
+        font-size: 1.1rem;
+    }
+    
+    .description-content {
+        padding: 1rem;
+    }
+    
+    .description-text {
+        font-size: 1rem;
+        padding-left: 0.75rem;
+    }
+    
+    .description-text::before {
+        font-size: 2.5rem;
+        top: -8px;
+        left: -3px;
+    }
+}
+
+/* Info Cards */
+.info-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.info-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.info-content {
+    flex: 1;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: #212529;
+    margin-bottom: 0;
+    font-weight: 500;
+}
+
+/* Image Gallery */
+.image-gallery-item {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.image-container {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.image-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.image-container img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.image-container:hover img {
+    transform: scale(1.05);
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-container:hover .image-overlay {
+    opacity: 1;
+}
+
+.image-number {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.image-actions {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+/* Statistics */
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    font-weight: 500;
+}
+
+/* Quick Info */
+.quick-info-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.quick-info-item:last-child {
+    border-bottom: none;
+}
+
+.quick-info-item i {
+    width: 20px;
+    margin-right: 0.75rem;
+    font-size: 1rem;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+}
+
+.bg-gradient-secondary {
+    background: linear-gradient(135deg, #6c757d, #545b62);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .info-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .info-icon {
+        margin-right: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        padding: 0.5rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+}
+</style>
+@endpush
+
+<!-- Modal hủy sự kiện -->
+<div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="cancelEventModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Hủy sự kiện
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cảnh báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Hành động này không thể hoàn tác.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cancellation_reason" class="form-label">
+                            Lý do hủy sự kiện <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control @error('cancellation_reason') is-invalid @enderror" 
+                                  id="cancellation_reason" 
+                                  name="cancellation_reason" 
+                                  rows="4" 
+                                  placeholder="Vui lòng nhập lý do hủy sự kiện..." 
+                                  required>{{ old('cancellation_reason') }}</textarea>
+                        @error('cancellation_reason')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            Lý do hủy sẽ được hiển thị cho tất cả người dùng và không thể chỉnh sửa sau khi lưu.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Đóng
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận hủy sự kiện
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

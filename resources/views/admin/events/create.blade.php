@@ -66,11 +66,11 @@
 
                         <div class="mb-3">
                             <label class="form-label">Ảnh sự kiện</label>
-                            <input type="file" class="form-control" name="image" accept="image/*" id="imageInput">
-                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB.</small>
-                            <div class="mt-2" id="imagePreviewWrap" style="display:none;">
-                                <div style="width: 100%; max-height: 260px; overflow:hidden; border-radius: 8px; border: 1px solid #e9ecef; background:#f8f9fa;">
-                                    <img id="imagePreview" alt="Xem trước ảnh" style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                            <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imagesInput">
+                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
+                            <div class="mt-2" id="imagesPreviewWrap" style="display:none;">
+                                <div class="row" id="imagesPreviewContainer">
+                                    <!-- Ảnh preview sẽ được thêm vào đây -->
                                 </div>
                             </div>
                         </div>
@@ -174,23 +174,41 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('imageInput');
-    const wrap = document.getElementById('imagePreviewWrap');
-    const img = document.getElementById('imagePreview');
+    const input = document.getElementById('imagesInput');
+    const wrap = document.getElementById('imagesPreviewWrap');
+    const container = document.getElementById('imagesPreviewContainer');
 
     input?.addEventListener('change', function(e) {
-        const file = e.target.files && e.target.files[0];
-        if (!file) {
+        const files = e.target.files;
+        if (!files || files.length === 0) {
             wrap.style.display = 'none';
-            img.src = '';
+            container.innerHTML = '';
             return;
         }
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            img.src = ev.target.result;
-            wrap.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+
+        // Xóa preview cũ
+        container.innerHTML = '';
+
+        // Hiển thị preview cho từng ảnh
+        Array.from(files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 mb-2';
+                col.innerHTML = `
+                    <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                        <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                            ${index + 1}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(col);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        wrap.style.display = 'block';
     });
 });
 </script>

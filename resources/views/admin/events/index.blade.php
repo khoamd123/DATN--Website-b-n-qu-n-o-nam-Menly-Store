@@ -128,8 +128,9 @@
                     @enderror
                 </div>
                 <div class="col-12">
-                    <label for="image" class="form-label">Ảnh sự kiện</label>
-                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                    <label for="images" class="form-label">Ảnh sự kiện</label>
+                    <input type="file" class="form-control" id="images" name="images[]" accept="image/*" multiple>
+                    <small class="text-muted">Có thể chọn nhiều ảnh cùng lúc. Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh.</small>
                 </div>
                 <div class="col-12">
                     <div class="d-flex gap-2">
@@ -293,10 +294,17 @@
                             <td>
                                 <div style="width: 78px;">
                                     <div style="width: 76px; height: 56px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
-                                        @if(!empty($event->image))
-                                            <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;"/>
+                                        @php
+                                            $hasImages = $event->images && $event->images->count() > 0;
+                                            $hasOldImage = !empty($event->image);
+                                        @endphp
+                                        
+                                        @if($hasImages)
+                                            <img src="{{ $event->images->first()->image_url }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;" title="{{ $event->images->count() }} images" onerror="this.style.border='2px solid red'; this.alt='Image failed to load';"/>
+                                        @elseif($hasOldImage)
+                                            <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover; display:block;" title="Old image field" onerror="this.style.border='2px solid red'; this.alt='Image failed to load';"/>
                                         @else
-                                            <i class="fas fa-image" style="color:#adb5bd; font-size: 18px;"></i>
+                                            <i class="fas fa-image" style="color:#adb5bd; font-size: 18px;" title="No images"></i>
                                         @endif
                                     </div>
                                 </div>
@@ -305,6 +313,15 @@
                                 <strong>{{ $event->title }}</strong>
                                 <br><small class="text-muted">{{ Str::limit($event->description, 60) }}</small>
                                 <br><small class="text-info">Slug: {{ $event->slug }}</small>
+                                @if($event->status === 'cancelled' && $event->cancellation_reason)
+                                    <br>
+                                    <div class="alert alert-danger alert-sm mb-0 mt-1 p-2">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
+                                        </small>
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <strong>{{ $event->club->name ?? 'Không xác định' }}</strong>
@@ -410,7 +427,14 @@
         
         <!-- Phân trang -->
         @if($events->hasPages())
-            <div class="d-flex justify-content-center mt-4">
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        Hiển thị <strong>{{ $events->firstItem() }}</strong> - <strong>{{ $events->lastItem() }}</strong> 
+                        trong tổng <strong>{{ $events->total() }}</strong> kết quả
+                    </span>
+                </div>
                 {{ $events->appends(request()->query())->links() }}
             </div>
         @endif

@@ -382,6 +382,118 @@
                 margin-left: 0;
             }
         }
+        
+        /* Pagination Styles - Standard web interface */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .pagination-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        
+        .pagination-info i {
+            color: #6c757d;
+        }
+        
+        /* Standard Bootstrap Pagination Override */
+        .pagination {
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex;
+            gap: 0.25rem;
+            list-style: none;
+            align-items: center;
+        }
+        
+        .pagination .page-item {
+            margin: 0;
+        }
+        
+        .pagination .page-link {
+            position: relative;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            margin: 0;
+            line-height: 1.25;
+            color: #0d6efd;
+            text-decoration: none;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+            font-size: 0.875rem;
+            min-width: 38px;
+            text-align: center;
+        }
+        
+        .pagination .page-link:hover {
+            z-index: 2;
+            color: #0a58ca;
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .pagination .page-item.active .page-link {
+            z-index: 3;
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+            border-color: #dee2e6;
+            opacity: 0.5;
+        }
+        
+        /* Hide sr-only and fix text */
+        .pagination .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Ensure text displays properly in pagination links */
+        .pagination .page-link span,
+        .pagination .page-link::before,
+        .pagination .page-link::after {
+            display: inline-block;
+        }
+        
+        @media (max-width: 768px) {
+            .pagination-wrapper {
+                flex-direction: column;
+            }
+            
+            .pagination-info {
+                justify-content: center;
+            }
+            
+            .pagination {
+                justify-content: center;
+            }
+        }
     </style>
     
     @yield('styles')
@@ -613,6 +725,9 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- CKEditor 5 -->
+    <script src="https://cdn.ckeditor.com/ckeditor5/34.0.0/classic/ckeditor.js"></script>
     
     @yield('scripts')
 </body>

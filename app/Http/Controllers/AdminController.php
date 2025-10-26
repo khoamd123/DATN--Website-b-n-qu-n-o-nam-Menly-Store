@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\EventImage;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
 use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
@@ -72,6 +75,7 @@ class AdminController extends Controller
         $eventsLastMonth = Event::where('created_at', '>=', now()->subMonth())->count();
         $postsLastMonth = Post::where('type', 'post')->where('created_at', '>=', now()->subMonth())->count();
         
+
         // Người dùng mới trong khoảng thời gian được chọn
         if ($dateFilter) {
             $newUsers = User::whereBetween('created_at', [$startDate, $endDate])
@@ -115,6 +119,8 @@ class AdminController extends Controller
                 ->limit(5)
                 ->get();
         }
+
+
             
         // Top 5 CLB hoạt động mạnh nhất (dựa trên số bài viết + sự kiện)
         $topClubs = Club::withCount([
@@ -1001,7 +1007,7 @@ class AdminController extends Controller
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
         }
-        
+    
         // Lọc theo khoảng thời gian
         if ($request->has('date_range') || $request->has('start_date') || $request->has('end_date')) {
             $dateFilter = $this->getDateFilter($request);
@@ -1009,6 +1015,7 @@ class AdminController extends Controller
         }
         
         $events = $query->orderBy('start_time', 'asc')->paginate(20);
+
         $clubs = Club::where('status', 'active')->get();
         
         return view('admin.plans-schedule.index', compact('events', 'clubs'));
@@ -1025,7 +1032,7 @@ class AdminController extends Controller
         }
 
         try {
-            $events = Event::with(['club', 'creator'])->orderBy('created_at', 'desc')->paginate(20);
+            $events = Event::with(['club', 'creator', 'images'])->orderBy('created_at', 'desc')->paginate(20);
             $clubs = Club::all();
 
             return view('admin.events.index', compact('events', 'clubs'));
@@ -1066,8 +1073,8 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string',
-                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1089,16 +1096,11 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('events', 'public');
-            }
-
-            Event::create([
+            $event = Event::create([
                 'title' => $request->title,
                 'slug' => $slug,
                 'description' => $request->description,
-                'image' => $imagePath,
+                'image' => null, // Sẽ không sử dụng field image nữa, dùng event_images table
                 'club_id' => $request->club_id,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -1108,6 +1110,19 @@ class AdminController extends Controller
                 'status' => $request->status,
                 'created_by' => session('user_id'),
             ]);
+
+            // Xử lý upload nhiều ảnh
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
+                    EventImage::create([
+                        'event_id' => $event->id,
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($index + 1),
+                        'sort_order' => $index,
+                    ]);
+                }
+            }
 
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã tạo sự kiện thành công!');
         } catch (\Exception $e) {
@@ -1126,7 +1141,7 @@ class AdminController extends Controller
         }
 
         try {
-            $event = Event::findOrFail($id);
+            $event = Event::with('images')->findOrFail($id);
             $clubs = Club::all();
             return view('admin.events.edit', compact('event', 'clubs'));
         } catch (\Exception $e) {
@@ -1148,9 +1163,10 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string',
-                'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-                'remove_image' => 'nullable|boolean',
+                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'remove_images' => 'nullable|array',
+                'remove_images.*' => 'integer|exists:event_images,id',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1189,15 +1205,28 @@ class AdminController extends Controller
                 'status' => $request->status,
             ];
 
-            // Xử lý ảnh: xoá nếu tick, hoặc thay nếu upload mới
-            if ($request->boolean('remove_image')) {
-                $data['image'] = null;
-            }
-            if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('events', 'public');
+            $event->update($data);
+
+            // Xử lý xóa ảnh được chọn
+            if ($request->has('remove_images')) {
+                EventImage::whereIn('id', $request->remove_images)
+                    ->where('event_id', $event->id)
+                    ->delete();
             }
 
-            $event->update($data);
+            // Xử lý upload ảnh mới
+            if ($request->hasFile('images')) {
+                $existingImagesCount = $event->images()->count();
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
+                    EventImage::create([
+                        'event_id' => $event->id,
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($existingImagesCount + $index + 1),
+                        'sort_order' => $existingImagesCount + $index,
+                    ]);
+                }
+            }
 
             return redirect()->route('admin.events.show', $event->id)->with('success', 'Cập nhật sự kiện thành công!');
         } catch (\Exception $e) {
@@ -1216,10 +1245,24 @@ class AdminController extends Controller
         }
 
         try {
-            $event = Event::with(['club', 'creator'])->findOrFail($id);
+            $event = Event::with(['club', 'creator', 'images'])->findOrFail($id);
+            
+            // Nếu sự kiện bị hủy, đảm bảo có lý do hủy
+            if ($event->status === 'cancelled') {
+                // Kiểm tra xem có trường cancellation_reason không
+                if (!isset($event->cancellation_reason) || empty($event->cancellation_reason)) {
+                    // Thêm lý do mặc định nếu chưa có
+                    $event->cancellation_reason = 'Sự kiện đã bị hủy bởi quản trị viên';
+                }
+                if (!isset($event->cancelled_at) || empty($event->cancelled_at)) {
+                    $event->cancelled_at = $event->updated_at;
+                }
+            }
+            
             return view('admin.events.show', compact('event'));
         } catch (\Exception $e) {
-            return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện.');
+            \Log::error('Error showing event: ' . $e->getMessage());
+            return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện: ' . $e->getMessage());
         }
     }
 
@@ -1245,7 +1288,7 @@ class AdminController extends Controller
     /**
      * Hủy sự kiện
      */
-    public function eventsCancel($id)
+    public function eventsCancel(Request $request, $id)
     {
         // Kiểm tra đăng nhập admin
         if (!session('logged_in') || !session('is_admin')) {
@@ -1253,11 +1296,57 @@ class AdminController extends Controller
         }
 
         try {
+            // Kiểm tra dữ liệu đầu vào
+            if (!$request->has('cancellation_reason') || empty(trim($request->cancellation_reason))) {
+                return back()->with('error', 'Vui lòng nhập lý do hủy sự kiện.');
+            }
+
+            $cancellationReason = trim($request->cancellation_reason);
+            if (strlen($cancellationReason) < 5) {
+                return back()->with('error', 'Lý do hủy sự kiện phải có ít nhất 5 ký tự.');
+            }
+
             $event = Event::findOrFail($id);
-            $event->update(['status' => 'cancelled']);
+            
+            // Kiểm tra trạng thái sự kiện
+            if (!in_array($event->status, ['pending', 'approved', 'ongoing'])) {
+                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+
+            // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
+            $updateData = [
+                'status' => 'cancelled',
+                'updated_at' => now()
+            ];
+            
+            // Kiểm tra và thêm các trường mới nếu có
+            try {
+                $columns = DB::select("SHOW COLUMNS FROM events LIKE 'cancellation_reason'");
+                if (count($columns) > 0) {
+                    $updateData['cancellation_reason'] = $cancellationReason;
+                }
+                
+                $columns = DB::select("SHOW COLUMNS FROM events LIKE 'cancelled_at'");
+                if (count($columns) > 0) {
+                    $updateData['cancelled_at'] = now();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Columns check failed: ' . $e->getMessage());
+            }
+            
+            DB::table('events')->where('id', $id)->update($updateData);
+
+            // Log để debug
+            \Log::info('Event cancelled', [
+                'event_id' => $id,
+                'cancellation_reason' => $cancellationReason,
+                'updated_at' => now()
+            ]);
+
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện.');
+            \Log::error('Cancel event error:', ['message' => $e->getMessage()]);
+            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
         }
     }
 
