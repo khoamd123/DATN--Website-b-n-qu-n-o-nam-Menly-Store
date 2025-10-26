@@ -20,8 +20,14 @@ class PermissionController extends Controller
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
-        $users = User::with('clubMembers.club')->get();
-        $clubs = Club::with('leader', 'activeMembers')->get();
+        // Chỉ lấy clubMembers có status = 'approved'
+        $users = User::with(['clubMembers' => function($query) {
+            $query->where('status', 'approved');
+        }, 'clubMembers.club'])->get();
+        
+        $clubs = Club::with(['leader', 'clubMembers' => function($query) {
+            $query->where('status', 'approved');
+        }])->get();
         $permissions = Permission::all();
 
         return view('admin.permissions.detailed', compact('users', 'clubs', 'permissions'));

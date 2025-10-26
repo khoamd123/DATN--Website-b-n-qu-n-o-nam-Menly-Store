@@ -21,7 +21,7 @@ class UpdateClubMembersTable extends Migration
             
             // Thêm cột status nếu chưa có
             if (!Schema::hasColumn('club_members', 'status')) {
-                $table->enum('status', ['active', 'pending', 'inactive'])->default('active');
+                $table->enum('status', ['active', 'pending', 'inactive', 'approved', 'rejected'])->default('active');
             }
             
             // Thêm cột joined_at nếu chưa có

@@ -14,6 +14,7 @@ use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -769,7 +770,11 @@ class AdminController extends Controller
     public function clubMembers($clubId)
     {
         $club = Club::with(['owner', 'clubMembers.user'])->findOrFail($clubId);
-        $members = $club->clubMembers()->with('user')->orderBy('position', 'asc')->get();
+        $members = $club->clubMembers()
+            ->where('status', 'approved') // Chỉ lấy members đã duyệt
+            ->with('user')
+            ->orderBy('position', 'asc')
+            ->get();
         
         return view('admin.clubs.members-simple', compact('club', 'members'));
     }
@@ -782,14 +787,323 @@ class AdminController extends Controller
         $club = Club::findOrFail($id);
         
         $request->validate([
-            'status' => 'required|in:pending,approved,rejected,active,inactive'
+            'status' => 'required|in:pending,approved,rejected,active,inactive',
+            'rejection_reason' => 'required_if:status,rejected|nullable|string|max:1000',
         ]);
         
-        $club->update([
-            'status' => $request->status
-        ]);
+        $data = ['status' => $request->status];
+
+        if ($request->status === 'rejected') {
+            $data['rejection_reason'] = $request->rejection_reason;
+        } else {
+            // Xóa lý do từ chối cũ nếu trạng thái không phải là 'rejected'
+            $data['rejection_reason'] = null;
+        }
+
+        $club->update($data);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
+    }
+
+    /**
+     * Show the form for creating a new club.
+     */
+    public function createClub()
+    {
+        $users = User::where('is_admin', false)->get(); 
+        $fields = Field::all(); 
+        
+        return view('admin.clubs.create', compact('users', 'fields'));
+    }
+
+    /**
+     * Display the specified club.
+     */
+    public function showClub($club)
+    {
+        $club = Club::with([
+            'field',
+            'owner',
+            'clubMembers.user' => function($query) {
+                $query->select('id', 'name', 'email', 'avatar');
+            },
+            'posts',
+            'events'
+        ])->findOrFail($club);
+
+        // Lấy ID của các thành viên đã có trong CLB
+        $existingMemberIds = $club->clubMembers->pluck('user_id')->all();
+
+        // Lấy danh sách người dùng chưa phải là thành viên của CLB này
+        $addableUsers = User::whereNotIn('id', $existingMemberIds)
+                            ->where('is_admin', false) // Tùy chọn: không thêm admin làm thành viên
+                            ->orderBy('name')->get();
+
+        // Define status labels and colors
+        $statusLabels = [
+            'pending' => 'Chờ duyệt',
+            'approved' => 'Đã duyệt',
+            'rejected' => 'Đã từ chối',
+            'active' => 'Hoạt động',
+            'inactive' => 'Tạm dừng'
+        ];
+
+        $statusColors = [
+            'pending' => 'warning',
+            'approved' => 'success',
+            'rejected' => 'danger',
+            'active' => 'primary',
+            'inactive' => 'secondary'
+        ];
+
+        // Debug: Log số lượng members
+        \Log::info('Club Members Count', [
+            'club_id' => $club->id,
+            'total_members' => $club->clubMembers->count(),
+            'approved_members' => $club->clubMembers->where('status', 'approved')->count(),
+            'members' => $club->clubMembers->map(function($m) {
+                return ['id' => $m->id, 'user_id' => $m->user_id, 'status' => $m->status];
+            })->toArray()
+        ]);
+
+        return view('admin.clubs.show', compact('club', 'addableUsers', 'statusLabels', 'statusColors'));
+    }
+
+    /**
+     * Store a newly created club in storage.
+     */
+    public function storeClub(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:clubs,name',
+            'description' => 'nullable|string',
+            'field_id' => 'required|exists:fields,id',
+            'user_id' => 'required|exists:users,id', 
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        $logoPath = null;
+        if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
+            $logoPath = $request->file('logo')->store('club_logos', 'public');
+        }
+
+        Club::create([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+            'field_id' => $request->field_id,
+            'owner_id' => $request->user_id, 
+            'logo' => $logoPath ?? 'images/default_club_logo.png',
+            'status' => 'pending', 
+        ]);
+
+        return redirect()->route('admin.clubs')->with('success', 'Tạo câu lạc bộ mới thành công!');
+    }
+
+    /**
+     * Remove the specified club from storage.
+     */
+    public function deleteClubFull(Request $request, $id)
+    {
+        $request->validate([
+            'deletion_reason' => 'required|string|max:1000',
+        ]);
+
+        $club = Club::findOrFail($id);
+        
+        // Kiểm tra điều kiện: chỉ cho phép xóa nếu câu lạc bộ đang ở trạng thái 'inactive' (tạm dừng)
+        if ($club->status !== 'inactive') {
+            return redirect()->back()->with('error', 'Không thể xóa câu lạc bộ khi chưa tạm dừng. Vui lòng chuyển trạng thái sang "Tạm dừng" trước khi xóa.');
+        }
+
+        // Lưu lý do xóa trước khi xóa
+        $club->update(['deletion_reason' => $request->deletion_reason]);
+
+        // Xóa các bản ghi liên quan trước để tránh lỗi ràng buộc khóa ngoại
+        
+        // 1. Xóa thành viên câu lạc bộ
+        $club->clubMembers()->forceDelete();
+
+        // 2. Xóa bài viết/tài liệu của câu lạc bộ
+        $club->posts()->forceDelete();
+
+        // 3. Xóa các đánh giá thành viên sự kiện liên quan đến câu lạc bộ này
+        EventMemberEvaluation::where('club_id', $club->id)->delete();
+
+        // 4. Xóa sự kiện của câu lạc bộ
+        $club->events()->delete();
+
+        // 5. Xóa các giao dịch quỹ và các mục quỹ liên quan (Fund and FundItem)
+        $funds = \App\Models\Fund::where('club_id', $club->id)->get();
+        foreach ($funds as $fund) {
+            // Xóa tất cả FundItems liên quan đến quỹ này
+            $fund->items()->delete(); 
+            // Sau đó xóa quỹ
+            $fund->delete(); 
+        }
+
+        // 6. Xóa quyền người dùng liên quan đến câu lạc bộ
+        \App\Models\UserPermissionsClub::where('club_id', $club->id)->delete();
+
+        // Cuối cùng, xóa câu lạc bộ
+        $club->delete();
+
+        return redirect()->route('admin.clubs')->with('success', 'Xóa câu lạc bộ thành công!');
+    }
+
+    /**
+     * Show the form for editing the specified club.
+     */
+    public function editClub(Club $club)
+    {
+        $users = User::where('is_admin', false)->get(); // Get all non-admin users for leader selection
+        $fields = Field::all(); // Get all fields for field selection
+        
+        return view('admin.clubs.edit', compact('club', 'users', 'fields'));
+    }
+
+    /**
+     * Update the specified club in storage.
+     */
+    public function updateClub(Request $request, Club $club)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:clubs,name,' . $club->id,
+            'description' => 'nullable|string',
+            'field_id' => 'required|exists:fields,id',
+            'leader_id' => 'nullable|exists:users,id',
+            'status' => 'required|in:pending,approved,active,inactive,rejected',
+        ]);
+
+        $oldLeaderId = $club->leader_id;
+
+        $club->update([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name), // Update slug if name changes
+            'description' => $request->description,
+            'field_id' => $request->field_id,
+            'leader_id' => $request->leader_id,
+            'status' => $request->status,
+        ]);
+
+        // Synchronize leader_id with club_members table
+
+        // If a new leader is selected
+        if ($request->leader_id) {
+            // Ensure the new leader is a 'chunhiem' in club_members
+            ClubMember::updateOrCreate(
+                ['club_id' => $club->id, 'user_id' => $request->leader_id],
+                ['role_in_club' => 'chunhiem', 'status' => 'approved', 'joined_at' => now()]
+            );
+        }
+
+        // If the leader has changed or been removed
+        if ($oldLeaderId && $oldLeaderId !== $request->leader_id) {
+            // Find the old leader's ClubMember record
+            $oldLeaderMember = ClubMember::where('club_id', $club->id)
+                                         ->where('user_id', $oldLeaderId)
+                                         ->first();
+            if ($oldLeaderMember && $oldLeaderMember->role_in_club === 'chunhiem') {
+                // Demote the old leader to a regular member if they are not the new leader
+                $oldLeaderMember->update(['role_in_club' => 'thanhvien']);
+            }
+        }
+
+        return redirect()->route('admin.clubs.show', $club->id)
+                         ->with('success', 'Cập nhật câu lạc bộ thành công!');
+    }
+
+    /**
+     * Add a new member to a club.
+     */
+    public function addMember(Request $request, Club $club)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role_in_club' => 'required|string|in:chunhiem,thanhvien', // Adjust roles as needed
+        ]);
+
+        // Kiểm tra xem người dùng đã là thành viên chưa
+        $isMember = ClubMember::where('club_id', $club->id)
+                              ->where('user_id', $request->user_id)
+                              ->exists();
+
+        if ($isMember) {
+            return back()->with('error', 'Người dùng này đã là thành viên của câu lạc bộ.');
+        }
+
+        // Thêm thành viên mới với trạng thái đã duyệt
+        $club->clubMembers()->create($request->all() + ['status' => 'approved', 'joined_at' => now()]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã thêm thành viên mới vào câu lạc bộ thành công!');
+    }
+
+    /**
+     * Approve a pending club member.
+     */
+    public function approveMember(Request $request, Club $club, ClubMember $member)
+    {
+        if ($member->club_id !== $club->id) {
+            return back()->with('error', 'Thành viên không thuộc câu lạc bộ này.');
+        }
+
+        $member->update(['status' => 'approved', 'joined_at' => now()]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã duyệt thành viên ' . $member->user->name . '.');
+    }
+
+    /**
+     * Reject a pending club member.
+     */
+    public function rejectMember(Request $request, Club $club, ClubMember $member)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        if ($member->club_id !== $club->id || $member->status !== 'pending') {
+            return back()->with('error', 'Không thể từ chối thành viên này.');
+        }
+
+        // Cập nhật trạng thái và lý do từ chối thay vì xóa
+        $member->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã từ chối yêu cầu tham gia của ' . $member->user->name . '.');
+    }
+
+    /**
+     * Remove a member from a club.
+     */
+    public function removeMember(Request $request, Club $club, ClubMember $member)
+    {
+        $request->validate(['deletion_reason' => 'required|string|max:500']);
+
+        if ($member->club_id !== $club->id) {
+            return back()->with('error', 'Thành viên không thuộc câu lạc bộ này.');
+        }
+
+        if ($member->user_id === $club->owner_id) {
+            return back()->with('error', 'Không thể xóa chủ sở hữu câu lạc bộ.');
+        }
+
+        $member->forceDelete(); // Or $member->delete() if you use soft deletes on club_members
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã xóa thành viên ' . $member->user->name . ' khỏi câu lạc bộ.');
+    }
+
+    /**
+     * Handle bulk actions for members (approve/reject).
+     */
+    public function bulkUpdateMembers(Request $request, Club $club)
+    {
+        // This is a placeholder. You'll need to implement the logic based on your `handleBulkAction` JavaScript function.
+        // For example:
+        // $memberIds = $request->input('member_ids', []);
+        // $action = $request->input('action');
+        return back()->with('info', 'Chức năng xử lý hàng loạt đang được phát triển.');
     }
 
     /**

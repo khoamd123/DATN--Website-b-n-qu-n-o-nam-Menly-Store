@@ -36,7 +36,7 @@
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin câu lạc bộ</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.clubs.store') }}">
+                    <form method="POST" action="{{ route('admin.clubs.store') }}" enctype="multipart/form-data">
                         @csrf
                         
                         <div class="mb-3">
@@ -65,17 +65,22 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Trưởng câu lạc bộ</label>
-                                    <select class="form-select" name="leader_id">
-                                        <option value="">Chưa chọn</option>
+                                    <label class="form-label">Chủ sở hữu <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="user_id" required>
+                                        <option value="">Chọn chủ sở hữu</option>
                                         @foreach($users as $user)
-                                            <option value="{{ $user->id }}" {{ old('leader_id') == $user->id ? 'selected' : '' }}>
+                                            <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
                                                 {{ $user->name }} ({{ $user->email }})
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Logo câu lạc bộ</label>
+                            <input type="file" class="form-control" name="logo">
                         </div>
 
                         <div class="d-flex gap-2">

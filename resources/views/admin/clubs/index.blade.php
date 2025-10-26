@@ -54,7 +54,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Logo</th>
                         <th>Tên CLB</th>
                         <th>Lĩnh vực</th>
@@ -99,18 +99,23 @@
                                 <br><small class="text-muted">Chủ sở hữu</small>
                             </td>
                             <td>
-                                <span class="badge bg-info">{{ $club->clubMembers->count() }}</span>
-                                <br><small class="text-muted">{{ $club->clubMembers->where('position', 'leader')->count() }} trưởng</small>
-                                @if($club->leader)
+                                @php
+                                    $leaders = $club->clubMembers?->filter(function($member) {
+                                        return $member->role_in_club === 'chunhiem';
+                                    }) ?? collect();
+                                    $approvedMembers = $club->clubMembers?->filter(function($member) {
+                                        return $member->status === 'approved';
+                                    }) ?? collect();
+                                @endphp
+                                <span class="badge bg-info">{{ $approvedMembers->count() }}</span>
+                                @if($club->leader) {{-- This now correctly uses the new leader relationship --}}
                                     <br><small class="text-success">
                                         <i class="fas fa-crown"></i> {{ $club->leader->name }}
                                     </small>
-                                @elseif($club->clubMembers->where('position', 'leader')->count() > 0)
-                                    <br><small class="text-warning">
-                                        <i class="fas fa-users"></i> 
-                                        @foreach($club->clubMembers->where('position', 'leader') as $leader)
-                                            {{ $leader->user->name }}@if(!$loop->last), @endif
-                                        @endforeach
+                                @elseif($leaders->count() > 0)
+                                    <br><small class="text-success">
+                                        <i class="fas fa-crown"></i> 
+                                        {{ $leaders->first()->user->name ?? '' }}
                                     </small>
                                 @else
                                     <br><small class="text-danger">
@@ -143,6 +148,9 @@
                             <td>{{ $club->created_at->format('d/m/Y') }}</td>
             <td style="min-width: 160px; width: 160px;">
                 <div class="d-flex flex-column gap-1">
+                    <a href="{{ route('admin.clubs.show', $club->id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-eye"></i> Chi tiết
+                    </a>
                     <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
                         <i class="fas fa-users"></i> Thành viên
                     </a>
@@ -164,14 +172,11 @@
                                             </form>
                                             
                                             <!-- Form Từ chối -->
-                                            <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="rejected">
-                                                <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn từ chối câu lạc bộ này?')">
-                                                    <i class="fas fa-times"></i> Từ chối
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-danger w-100" 
+                                                    data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
+                                                    data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
+                                                <i class="fas fa-times"></i> Từ chối
+                                            </button>
                                         @endif
                                         
                                         @if($club->status === 'approved')
@@ -202,6 +207,14 @@
                                             </button>
                                         @endif
                                     </form>
+
+                                    <button type="button" class="btn btn-sm btn-danger w-100"
+                                            data-bs-toggle="modal" data-bs-target="#deleteClubModal"
+                                            data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}"
+                                            {{ $club->status !== 'inactive' ? 'disabled' : '' }}
+                                            title="{{ $club->status !== 'inactive' ? 'Chỉ có thể xóa câu lạc bộ đã tạm dừng' : 'Xóa câu lạc bộ' }}">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -224,4 +237,94 @@
         @endif
     </div>
 </div>
+
+<!-- Modal Từ chối Câu lạc bộ -->
+<div class="modal fade" id="rejectClubModal" tabindex="-1" aria-labelledby="rejectClubModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectClubModalLabel">Lý do từ chối câu lạc bộ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="rejectClubForm" method="POST" action="">
+        @csrf
+        @method('PATCH')
+        <div class="modal-body">
+          <p>Bạn sắp từ chối câu lạc bộ: <strong id="clubNameToReject"></strong></p>
+          <input type="hidden" name="status" value="rejected">
+          <div class="mb-3">
+            <label for="rejectionReason" class="form-label">Vui lòng nhập lý do từ chối <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Xóa Câu lạc bộ -->
+<div class="modal fade" id="deleteClubModal" tabindex="-1" aria-labelledby="deleteClubModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteClubModalLabel">Lý do xóa câu lạc bộ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="deleteClubForm" method="POST" action="">
+        @csrf
+        @method('DELETE')
+        <div class="modal-body">
+          <p>Bạn sắp xóa vĩnh viễn câu lạc bộ: <strong id="clubNameToDelete"></strong>. Hành động này không thể hoàn tác.</p>
+          <div class="mb-3">
+            <label for="deletionReason" class="form-label">Vui lòng nhập lý do xóa <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="deletionReason" name="deletion_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận xóa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var rejectClubModal = document.getElementById('rejectClubModal');
+    rejectClubModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var clubId = button.getAttribute('data-club-id');
+        var clubName = button.getAttribute('data-club-name');
+
+        var modalTitle = rejectClubModal.querySelector('.modal-title');
+        var clubNameElement = rejectClubModal.querySelector('#clubNameToReject');
+        var form = rejectClubModal.querySelector('#rejectClubForm');
+
+        clubNameElement.textContent = clubName;
+        form.action = `/admin/clubs/${clubId}/status`; // Cập nhật action của form
+    });
+
+    var deleteClubModal = document.getElementById('deleteClubModal');
+    deleteClubModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var clubId = button.getAttribute('data-club-id');
+        var clubName = button.getAttribute('data-club-name');
+
+        var clubNameElement = deleteClubModal.querySelector('#clubNameToDelete');
+        var form = deleteClubModal.querySelector('#deleteClubForm');
+
+        clubNameElement.textContent = clubName;
+        // Cập nhật action của form xóa
+        // Lưu ý: route('admin.clubs.delete') sẽ được render bởi Blade
+        form.action = '{{ url("admin/clubs") }}/' + clubId;
+    });
+});
+</script>
 @endsection

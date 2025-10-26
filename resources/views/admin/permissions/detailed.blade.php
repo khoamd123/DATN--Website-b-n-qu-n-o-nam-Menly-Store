@@ -141,26 +141,18 @@
                 <thead>
                     <tr>
                         <th>Người dùng</th>
-                        <th>CLB</th>
-                        <th>Vị trí</th>
-                        <th>Quyền hiện tại</th>
+                        <th>Vị trí trong CLB</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($users as $user)
                         @php
-                            $userClubs = $user->clubMembers()->with('club')->get();
+                            // Chỉ lấy clubMembers có status = 'approved'
+                            $userClubs = $user->clubMembers()->where('status', 'approved')->with('club')->get();
                         @endphp
                         
                         @if($userClubs->count() > 0)
-                            {{-- Hiển thị các CLB mà user đã tham gia --}}
-                            @foreach($userClubs as $clubMember)
-                                @php
-                                    $club = $clubMember->club;
-                                    $position = $clubMember->position;
-                                    $userPermissions = $user->getClubPermissions($club->id);
-                                @endphp
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -174,78 +166,51 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <strong>{{ $club->name }}</strong>
-                                    <br><small class="text-muted">{{ $club->description }}</small>
-                                </td>
-                                <td>
                                     @if($user->isAdmin())
-                                        @if($position)
-                                            <span class="badge bg-danger">Admin - Trưởng CLB</span>
-                                            <br><small class="text-muted">Vị trí CLB: 
+                                        <span class="badge bg-danger">Admin Hệ Thống</span>
+                                        <br><small class="text-muted">Quyền: Tất cả CLB</small>
+                                    @else
+                                        @foreach($userClubs as $clubMember)
+                                            @php
+                                                $club = $clubMember->club;
+                                                $position = $clubMember->position ?? $clubMember->role_in_club;
+                                            @endphp
+                                            <div class="mb-2">
+                                                <strong>{{ $club->name }}:</strong> 
                                                 @switch($position)
-                                                    @case('leader') Trưởng CLB @break
-                                                    @case('vice_president') Phó CLB @break
-                                                    @case('officer') Cán sự @break
-                                                    @case('member') Thành viên @break
-                                                    @default {{ $position }} @break
+                                                    @case('leader')
+                                                    @case('chunhiem')
+                                                        <span class="badge bg-danger">Trưởng CLB</span>
+                                                        @break
+                                                    @case('vice_president')
+                                                    @case('phonhiem')
+                                                        <span class="badge bg-warning">Phó CLB</span>
+                                                        @break
+                                                    @case('officer')
+                                                        <span class="badge bg-info">Cán sự</span>
+                                                        @break
+                                                    @case('member')
+                                                    @case('thanhvien')
+                                                        <span class="badge bg-success">Thành viên</span>
+                                                        @break
+                                                    @default
+                                                        <span class="badge bg-secondary">{{ $position }}</span>
                                                 @endswitch
-                                            </small>
-                                        @else
-                                            <span class="badge bg-danger">Admin Hệ Thống</span>
-                                            <br><small class="text-muted">Quyền: Tất cả CLB</small>
-                                        @endif
-                                    @elseif($position)
-                                        @switch($position)
-                                            @case('leader')
-                                                <span class="badge bg-danger">Trưởng CLB</span>
-                                                @break
-                                            @case('vice_president')
-                                                <span class="badge bg-warning">Phó CLB</span>
-                                                @break
-                                            @case('officer')
-                                                <span class="badge bg-info">Cán sự</span>
-                                                @break
-                                            @case('member')
-                                                <span class="badge bg-success">Thành viên</span>
-                                                @break
-                                            @default
-                                                <span class="badge bg-secondary">{{ $position }}</span>
-                                        @endswitch
-                                    @else
-                                        <span class="badge bg-secondary">Chưa tham gia</span>
-                                        <br><small class="text-muted">Có thể thêm vào CLB</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($user->isAdmin())
-                                        <span class="badge bg-danger">Admin - Tất cả quyền</span>
-                                    @elseif($userPermissions)
-                                        @foreach($userPermissions as $perm)
-                                            <span class="badge bg-primary me-1">{{ $perm }}</span>
+                                            </div>
                                         @endforeach
-                                    @else
-                                        <span class="text-muted">Không có quyền</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if(!$user->isAdmin())
-                                        @if($position)
-                                            <button class="btn btn-sm btn-outline-primary" 
-                                                    onclick="editPermissions({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
-                                                <i class="fas fa-edit"></i> Sửa quyền
-                                            </button>
-                                        @else
-                                            <button class="btn btn-sm btn-success" 
-                                                    onclick="addToClub({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
-                                                <i class="fas fa-plus"></i> Thêm vào CLB
-                                            </button>
-                                        @endif
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="editPermissions({{ $user->id }}, '{{ $user->name }}', {{ $userClubs->pluck('club.id')->toJson() }})">
+                                            <i class="fas fa-edit"></i> Sửa quyền
+                                        </button>
                                     @else
                                         <span class="text-muted">Admin - Không thể sửa</span>
                                     @endif
                                 </td>
                             </tr>
-                            @endforeach
                         @else
                             {{-- Hiển thị user chưa tham gia CLB nào --}}
                             <tr>
@@ -291,8 +256,13 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <strong>Người dùng:</strong> <span id="modalUserName"></span><br>
-                    <strong>CLB:</strong> <span id="modalClubName"></span>
+                    <strong>Người dùng:</strong> <span id="modalUserName"></span>
+                </div>
+                <div class="mb-3">
+                    <label for="clubSelect" class="form-label">Chọn CLB:</label>
+                    <select class="form-select" id="clubSelect">
+                        <option value="">Chọn CLB</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Chọn quyền:</label>
@@ -327,16 +297,45 @@
 let currentUserId = null;
 let currentClubId = null;
 
-function editPermissions(userId, clubId, userName, clubName) {
+function editPermissions(userId, userName, clubIds) {
     currentUserId = userId;
-    currentClubId = clubId;
     
     document.getElementById('modalUserName').textContent = userName;
-    document.getElementById('modalClubName').textContent = clubName;
     
-    // Debug: Log available permissions
-    console.log('Available permissions:', document.querySelectorAll('.permission-checkbox').length);
+    // Tạo dropdown chọn CLB
+    const clubSelect = document.getElementById('clubSelect');
+    clubSelect.innerHTML = '<option value="">Chọn CLB</option>';
     
+    // Lấy danh sách CLB từ user
+    clubIds.forEach(clubId => {
+        // Tìm CLB trong danh sách $clubs
+        const club = {{ $clubs->pluck('name', 'id')->toJson() }};
+        if (club[clubId]) {
+            const option = document.createElement('option');
+            option.value = clubId;
+            option.textContent = club[clubId];
+            clubSelect.appendChild(option);
+        }
+    });
+    
+    // Reset club ID và load permissions khi chọn CLB
+    currentClubId = null;
+    clubSelect.onchange = function() {
+        currentClubId = this.value;
+        if (currentClubId) {
+            loadPermissions(userId, currentClubId);
+        }
+    };
+    
+    // Reset checkboxes
+    document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('editPermissionsModal'));
+    modal.show();
+}
+
+function loadPermissions(userId, clubId) {
     // Reset checkboxes
     document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
     
@@ -360,13 +359,15 @@ function editPermissions(userId, clubId, userName, clubName) {
         .catch(error => {
             console.error('Error loading permissions:', error);
         });
-    
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('editPermissionsModal'));
-    modal.show();
 }
 
 function savePermissions() {
+    // Kiểm tra đã chọn CLB chưa
+    if (!currentClubId) {
+        alert('Vui lòng chọn CLB trước khi lưu quyền!');
+        return;
+    }
+    
     const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
         .map(cb => cb.value);
     

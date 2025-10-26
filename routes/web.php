@@ -313,14 +313,22 @@ Route::prefix('admin')->group(function () {
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
     Route::get('/settings', [AdminController::class, 'settings'])->name('admin.settings');
     
-            // Quản lý câu lạc bộ
+            // Quản lý câu lạc bộ - Routes của Huy
             Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
-            Route::get('/clubs/create', [AdminController::class, 'clubsCreate'])->name('admin.clubs.create');
-            Route::post('/clubs', [AdminController::class, 'clubsStore'])->name('admin.clubs.store');
-            Route::get('/clubs/{id}/edit', [AdminController::class, 'clubsEdit'])->name('admin.clubs.edit');
-            Route::put('/clubs/{id}', [AdminController::class, 'clubsUpdate'])->name('admin.clubs.update');
+            Route::get('/clubs/create', [AdminController::class, 'createClub'])->name('admin.clubs.create');
+            Route::post('/clubs', [AdminController::class, 'storeClub'])->name('admin.clubs.store');
+            Route::get('/clubs/{club}', [AdminController::class, 'showClub'])->name('admin.clubs.show');
+            Route::get('/clubs/{club}/edit', [AdminController::class, 'editClub'])->name('admin.clubs.edit');
+            Route::put('/clubs/{club}', [AdminController::class, 'updateClub'])->name('admin.clubs.update');
             Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
-            Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
+            Route::delete('/clubs/{id}', [AdminController::class, 'deleteClubFull'])->name('admin.clubs.delete');
+            
+            // Club Members
+            Route::post('/clubs/{club}/members', [AdminController::class, 'addMember'])->name('admin.clubs.members.add');
+            Route::post('/clubs/{club}/members/{member}/approve', [AdminController::class, 'approveMember'])->name('admin.clubs.members.approve');
+            Route::delete('/clubs/{club}/members/{member}/reject', [AdminController::class, 'rejectMember'])->name('admin.clubs.members.reject');
+            Route::delete('/clubs/{club}/members/{member}/remove', [AdminController::class, 'removeMember'])->name('admin.clubs.members.remove');
+            Route::post('/clubs/{club}/members/bulk-update', [AdminController::class, 'bulkUpdateMembers'])->name('admin.clubs.members.bulk-update');
     
     // Tài nguyên CLB
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
@@ -333,9 +341,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
     Route::post('/fund-management', [AdminController::class, 'fundManagementStore'])->name('admin.fund-management.store');
     
-    // Quản lý câu lạc bộ
-    Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
-    Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+    // Quản lý câu lạc bộ - Đã di chuyển lên trên
     
     // Tài nguyên CLB - CRUD (của Nam)
     Route::get('/club-resources', [App\Http\Controllers\ClubResourceController::class, 'index'])->name('admin.club-resources.index');

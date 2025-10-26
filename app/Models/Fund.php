@@ -17,7 +17,7 @@ class Fund extends Model
         'source',
         'status',
         'club_id',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
@@ -25,28 +25,41 @@ class Fund extends Model
         'current_amount' => 'decimal:2',
     ];
 
-    // Relationships
+    /**
+     * Quỹ thuộc về CLB nào
+     */
     public function club()
     {
         return $this->belongsTo(Club::class);
     }
 
+    /**
+     * Người tạo quỹ
+     */
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Giao dịch của quỹ
+     */
     public function transactions()
     {
         return $this->hasMany(FundTransaction::class);
     }
 
+    /**
+     * Yêu cầu từ quỹ
+     */
     public function requests()
     {
         return $this->hasMany(FundRequest::class);
     }
 
-    // Helper methods
+    /**
+     * Tính tổng thu nhập (income)
+     */
     public function getTotalIncome()
     {
         return $this->transactions()
@@ -55,34 +68,14 @@ class Fund extends Model
             ->sum('amount');
     }
 
+    /**
+     * Tính tổng chi tiêu (expense)
+     */
     public function getTotalExpense()
     {
         return $this->transactions()
             ->where('type', 'expense')
             ->where('status', 'approved')
             ->sum('amount');
-    }
-
-    public function updateCurrentAmount()
-    {
-        $this->current_amount = $this->initial_amount + $this->getTotalIncome() - $this->getTotalExpense();
-        $this->save();
-    }
-
-    // Accessor: Tự động lấy tên quỹ từ CLB
-    public function getDisplayNameAttribute()
-    {
-        // Nếu có tên riêng, dùng tên riêng
-        if ($this->name) {
-            return $this->name;
-        }
-        
-        // Nếu có CLB, dùng tên CLB
-        if ($this->club) {
-            return 'Quỹ của ' . $this->club->name;
-        }
-        
-        // Mặc định
-        return 'Quỹ chung hệ thống';
     }
 }
