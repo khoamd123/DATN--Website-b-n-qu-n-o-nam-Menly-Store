@@ -64,6 +64,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/clubs/{id}/members', [App\Http\Controllers\AdminController::class, 'clubMembers'])->name('admin.clubs.members');
     Route::patch('/clubs/{id}/status', [App\Http\Controllers\AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
     Route::delete('/clubs/{id}', [App\Http\Controllers\AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
+
+    // Quản lý thành viên trong CLB
+    Route::prefix('clubs/{club}/members')->name('admin.clubs.members.')->group(function () {
+        Route::post('/add', [AdminController::class, 'addMember'])->name('add');
+        Route::post('/{member}/approve', [AdminController::class, 'approveMember'])->name('approve');
+        Route::delete('/{member}/reject', [AdminController::class, 'rejectMember'])->name('reject');
+        Route::delete('/{member}/remove', [AdminController::class, 'removeMember'])->name('remove');
+        Route::post('/bulk-update', [AdminController::class, 'bulkUpdateMembers'])->name('bulk-update');
+    });
     
     // Tài liệu học tập
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
