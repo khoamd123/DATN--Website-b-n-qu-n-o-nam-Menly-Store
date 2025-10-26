@@ -994,7 +994,7 @@ class AdminController extends Controller
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
-                'images.*' => 'nullable|file|mimes:jpg,jpeg,png,webp,mp4,mov,avi,wmv,flv,webm|max:10240',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
@@ -1031,21 +1031,14 @@ class AdminController extends Controller
                 'created_by' => session('user_id'),
             ]);
 
-            // Xử lý upload nhiều media (ảnh hoặc video)
+            // Xử lý upload nhiều ảnh
             if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $index => $file) {
-                    $filePath = $file->store('events', 'public');
-                    
-                    // Xác định loại media dựa trên MIME type
-                    $mimeType = $file->getMimeType();
-                    $isVideo = strpos($mimeType, 'video/') !== false;
-                    $mediaType = $isVideo ? 'video' : 'image';
-                    
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
                     EventImage::create([
                         'event_id' => $event->id,
-                        'image_path' => $filePath,
-                        'media_type' => $mediaType,
-                        'alt_text' => $request->title . ' - ' . ($isVideo ? 'Video' : 'Ảnh') . ' ' . ($index + 1),
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($index + 1),
                         'sort_order' => $index,
                     ]);
                 }
@@ -1091,7 +1084,7 @@ class AdminController extends Controller
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
-                'images.*' => 'nullable|file|mimes:jpg,jpeg,png,webp,mp4,mov,avi,wmv,flv,webm|max:10240',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'remove_images' => 'nullable|array',
                 'remove_images.*' => 'integer|exists:event_images,id',
                 'start_time' => 'required|date',
@@ -1141,21 +1134,15 @@ class AdminController extends Controller
                     ->delete();
             }
 
-            // Xử lý upload media mới (ảnh hoặc video)
+            // Xử lý upload ảnh mới
             if ($request->hasFile('images')) {
                 $existingImagesCount = $event->images()->count();
-                foreach ($request->file('images') as $index => $file) {
-                    $filePath = $file->store('events', 'public');
-                    
-                    // Xác định loại media dựa trên MIME type
-                    $mimeType = $file->getMimeType();
-                    $isVideo = strpos($mimeType, 'video/') !== false;
-                    
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('events', 'public');
                     EventImage::create([
                         'event_id' => $event->id,
-                        'image_path' => $filePath,
-                        'media_type' => $isVideo ? 'video' : 'image',
-                        'alt_text' => $request->title . ' - ' . ($isVideo ? 'Video' : 'Ảnh') . ' ' . ($existingImagesCount + $index + 1),
+                        'image_path' => $imagePath,
+                        'alt_text' => $request->title . ' - Ảnh ' . ($existingImagesCount + $index + 1),
                         'sort_order' => $existingImagesCount + $index,
                     ]);
                 }

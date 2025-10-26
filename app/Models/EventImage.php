@@ -12,7 +12,6 @@ class EventImage extends Model
     protected $fillable = [
         'event_id',
         'image_path',
-        'media_type',
         'alt_text',
         'sort_order',
     ];

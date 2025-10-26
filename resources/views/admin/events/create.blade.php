@@ -2,7 +2,6 @@
 
 @section('title', 'Tạo sự kiện mới')
 
-
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
@@ -62,16 +61,13 @@
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả sự kiện</label>
-                            <textarea class="form-control" name="description" id="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+                            <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Media sự kiện <small>(Ảnh/Video)</small></label>
-                            <input type="file" class="form-control" name="images[]" accept="image/*,video/*" multiple id="imagesInput">
-                            <small class="text-muted">
-                                <strong>Hỗ trợ:</strong> Ảnh (JPG, JPEG, PNG, WEBP) hoặc Video (MP4, MOV, AVI, WMV, FLV, WEBM). 
-                                Tối đa 10MB mỗi file. Có thể chọn nhiều file cùng lúc.
-                            </small>
+                            <label class="form-label">Ảnh sự kiện</label>
+                            <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imagesInput">
+                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
                             <div class="mt-2" id="imagesPreviewWrap" style="display:none;">
                                 <div class="row" id="imagesPreviewContainer">
                                     <!-- Ảnh preview sẽ được thêm vào đây -->
@@ -177,69 +173,7 @@
     </div>
 @push('scripts')
 <script>
-// Hàm khởi tạo CKEditor
-function initCKEditor() {
-    console.log('Checking for ClassicEditor...');
-    
-    if (typeof ClassicEditor === 'undefined') {
-        console.log('ClassicEditor not yet available, retrying...');
-        setTimeout(initCKEditor, 100);
-        return;
-    }
-    
-    console.log('✅ ClassicEditor is available!');
-    
-    const textarea = document.querySelector('#description');
-    if (!textarea) {
-        console.error('❌ Textarea #description not found!');
-        return;
-    }
-    
-    console.log('Initializing CKEditor on textarea...');
-    
-    ClassicEditor
-        .create(textarea, {
-            toolbar: {
-                items: [
-                    'heading', '|',
-                    'bold', 'italic', 'underline', '|',
-                    'bulletedList', 'numberedList', '|',
-                    'outdent', 'indent', '|',
-                    'blockQuote', 'insertTable', '|',
-                    'undo', 'redo', '|',
-                    'link', '|',
-                    'fontSize', 'fontColor', 'fontBackgroundColor', '|',
-                    'alignment', '|',
-                    'horizontalLine', 'specialCharacters'
-                ]
-            },
-            language: 'vi',
-            table: {
-                contentToolbar: [
-                    'tableColumn',
-                    'tableRow',
-                    'mergeTableCells'
-                ]
-            }
-        })
-        .then(editor => {
-            console.log('✅ CKEditor initialized successfully!');
-            window.editor = editor;
-        })
-        .catch(error => {
-            console.error('❌ Error initializing CKEditor:', error);
-        });
-}
-
-// Bắt đầu khởi tạo sau khi DOM ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCKEditor);
-} else {
-    // DOM đã sẵn sàng
-    initCKEditor();
-}
-
-    // Xử lý preview ảnh
+document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
     const container = document.getElementById('imagesPreviewContainer');
@@ -255,44 +189,20 @@ if (document.readyState === 'loading') {
         // Xóa preview cũ
         container.innerHTML = '';
 
-        // Hiển thị preview cho từng file
+        // Hiển thị preview cho từng ảnh
         Array.from(files).forEach((file, index) => {
-            const isVideo = file.type.startsWith('video/');
-            const isImage = file.type.startsWith('image/');
-            
-            // Kiểm tra loại file
-            if (!isVideo && !isImage) {
-                console.error('File không hợp lệ:', file.name);
-                return;
-            }
-            
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 mb-2';
-                
-                if (isImage) {
-                    // Preview ảnh
-                    col.innerHTML = `
-                        <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
-                            <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
-                            <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
-                                <i class="fas fa-image"></i> ${index + 1}
-                            </div>
+                col.innerHTML = `
+                    <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                        <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                            ${index + 1}
                         </div>
-                    `;
-                } else if (isVideo) {
-                    // Preview video
-                    col.innerHTML = `
-                        <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
-                            <video src="${ev.target.result}" style="width: 100%; height: 150px; object-fit: cover; display: block;" controls></video>
-                            <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
-                                <i class="fas fa-video"></i> ${index + 1}
-                            </div>
-                        </div>
-                    `;
-                }
-                
+                    </div>
+                `;
                 container.appendChild(col);
             };
             reader.readAsDataURL(file);
