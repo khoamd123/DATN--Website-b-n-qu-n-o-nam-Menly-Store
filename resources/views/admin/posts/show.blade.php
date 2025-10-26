@@ -95,6 +95,8 @@
                     <p class="mt-1">
                         @if($post->status == 'published')
                             <span class="badge badge-success">Công khai</span>
+                        @elseif($post->status == 'members_only')
+                            <span class="badge badge-info">Chỉ thành viên CLB</span>
                         @elseif($post->status == 'hidden')
                             <span class="badge badge-secondary">Ẩn</span>
                         @elseif($post->status == 'deleted')
@@ -179,6 +181,31 @@
                             <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
                                 @csrf
                                 @method('PATCH')
+                                <input type="hidden" name="status" value="members_only">
+                                <button type="submit" class="btn btn-info w-100" onclick="return confirm('Bạn có chắc muốn chuyển bài viết này thành chỉ thành viên CLB?')">
+                                    <i class="fas fa-users"></i> Chỉ thành viên CLB
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="hidden">
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Bạn có chắc muốn ẩn bài viết này?')">
+                                    <i class="fas fa-eye-slash"></i> Ẩn bài viết
+                                </button>
+                            </form>
+                        @elseif($post->status == 'members_only')
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="published">
+                                <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn công khai bài viết này?')">
+                                    <i class="fas fa-eye"></i> Công khai
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
                                 <input type="hidden" name="status" value="hidden">
                                 <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Bạn có chắc muốn ẩn bài viết này?')">
                                     <i class="fas fa-eye-slash"></i> Ẩn bài viết
@@ -191,6 +218,14 @@
                                 <input type="hidden" name="status" value="published">
                                 <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn có chắc muốn công khai bài viết này?')">
                                     <i class="fas fa-eye"></i> Công khai
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="members_only">
+                                <button type="submit" class="btn btn-info w-100" onclick="return confirm('Bạn có chắc muốn chuyển bài viết này thành chỉ thành viên CLB?')">
+                                    <i class="fas fa-users"></i> Chỉ thành viên CLB
                                 </button>
                             </form>
                         @endif
