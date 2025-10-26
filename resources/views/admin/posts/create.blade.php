@@ -99,7 +99,8 @@
                             <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
                             <select class="form-select" name="status" required>
                                 <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>Công khai</option>
-                            <option value="hidden" {{ old('status') == 'hidden' ? 'selected' : '' }}>Ẩn</option>
+                                <option value="members_only" {{ old('status') == 'members_only' ? 'selected' : '' }}>Chỉ thành viên CLB</option>
+                                <option value="hidden" {{ old('status') == 'hidden' ? 'selected' : '' }}>Ẩn</option>
                                 <option value="deleted" {{ old('status') == 'deleted' ? 'selected' : '' }}>Đã xóa</option>
                         </select>
                     </div>

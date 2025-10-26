@@ -115,11 +115,13 @@
                                     @php
                                         $statusColors = [
                                             'published' => 'success',
+                                            'members_only' => 'info',
                                             'hidden' => 'warning',
                                             'deleted' => 'danger'
                                         ];
                                         $statusLabels = [
                                             'published' => 'Đã xuất bản',
+                                            'members_only' => 'Chỉ thành viên CLB',
                                             'hidden' => 'Ẩn',
                                             'deleted' => 'Đã xóa'
                                         ];

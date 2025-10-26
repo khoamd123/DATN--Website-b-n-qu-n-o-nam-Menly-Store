@@ -120,6 +120,10 @@ Route::get('/student/contact', function () {
     return view('student.contact', compact('user'));
 })->name('student.contact.index');
 
+// Student Posts Routes
+Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
+Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+
 Route::get('/student/club-management', function () {
     $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
     if (!$user) return 'User not found';

@@ -768,7 +768,7 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'file_path' => 'nullable|string|max:255',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,members_only,hidden,deleted',
             ]);
 
             // Tạo slug từ title
@@ -836,7 +836,7 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'file_path' => 'nullable|string|max:255',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,members_only,hidden,deleted',
             ]);
 
             $document = Post::where('type', 'document')->findOrFail($id);
@@ -1158,7 +1158,7 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,members_only,hidden,deleted',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
             
@@ -1303,7 +1303,7 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,members_only,hidden,deleted',
                 'delete_current_image' => 'nullable|boolean',
             ];
             
@@ -1422,7 +1422,7 @@ class AdminController extends Controller
         $post = Post::findOrFail($id);
         
         $request->validate([
-            'status' => 'required|in:published,hidden,deleted'
+            'status' => 'required|in:published,members_only,hidden,deleted'
         ]);
         
         if ($request->status === 'deleted') {
