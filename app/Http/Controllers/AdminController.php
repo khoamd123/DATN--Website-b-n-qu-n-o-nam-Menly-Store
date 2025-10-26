@@ -8,8 +8,11 @@ use App\Models\Event;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
+use App\Models\ClubMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class AdminController extends Controller
 {
@@ -404,7 +407,7 @@ class AdminController extends Controller
 
         try {
             $notifications = \App\Models\Notification::orderBy('created_at', 'desc')->paginate(20);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $notifications = collect();
         }
 
@@ -503,7 +506,7 @@ class AdminController extends Controller
     public function clubsStore(Request $request)
     {
         // Debug: Log request data
-        \Log::info('ClubsStore called', [
+        Log::info('ClubsStore called', [
             'request_data' => $request->all(),
             'user_id' => session('user_id'),
             'is_admin' => session('is_admin')
@@ -564,7 +567,7 @@ class AdminController extends Controller
             }
 
             // Debug: Log data trước khi tạo
-            \Log::info('Creating club with data:', [
+            Log::info('Creating club with data:', [
                 'name' => $request->name,
                 'slug' => $clubSlug,
                 'description' => $request->description,
@@ -595,7 +598,7 @@ class AdminController extends Controller
                 ]);
             }
 
-            \Log::info('Club created successfully:', ['club_id' => $club->id, 'leader_id' => $request->leader_id]);
+            Log::info('Club created successfully:', ['club_id' => $club->id, 'leader_id' => $request->leader_id]);
 
             return redirect()->route('admin.clubs')->with('success', 'Đã tạo câu lạc bộ thành công!');
         } catch (\Exception $e) {
@@ -676,7 +679,7 @@ class AdminController extends Controller
         $club = Club::findOrFail($id);
         
         // Debug: Log request data
-        \Log::info('UpdateClubStatus called', [
+        Log::info('UpdateClubStatus called', [
             'club_id' => $id,
             'club_name' => $club->name,
             'old_status' => $club->status,
@@ -692,7 +695,7 @@ class AdminController extends Controller
             'status' => $request->status
         ]);
         
-        \Log::info('Club status updated successfully', [
+        Log::info('Club status updated successfully', [
             'club_id' => $id,
             'new_status' => $club->fresh()->status
         ]);
@@ -874,7 +877,7 @@ class AdminController extends Controller
         $clubs = Club::where('status', 'active')->get();
         
         // Thống kê quỹ
-        $totalFunds = $funds->sum(function($fund) {
+        $totalFunds = collect($funds->items())->sum(function($fund) {
             // Giả định content chứa số tiền
             preg_match('/\d+/', $fund->content, $matches);
             return isset($matches[0]) ? (int)$matches[0] : 0;
@@ -1160,7 +1163,7 @@ class AdminController extends Controller
             ]);
             
             // Debug logging
-            \Log::info('Creating post with data:', $request->all());
+            Log::info('Creating post with data:', $request->all());
 
             // Tạo slug từ title
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
@@ -1198,11 +1201,11 @@ class AdminController extends Controller
                 'image' => $imagePath,
             ];
             
-            \Log::info('Post data to create:', $postData);
+            Log::info('Post data to create:', $postData);
             
             $post = Post::create($postData);
             
-            \Log::info('Post created successfully with ID: ' . $post->id);
+            Log::info('Post created successfully with ID: ' . $post->id);
 
             return redirect()->route('admin.posts')->with('success', 'Đã tạo bài viết thành công!');
         } catch (\Exception $e) {
@@ -1264,7 +1267,7 @@ class AdminController extends Controller
 
         try {
             // Debug logging
-            \Log::info('Post update request:', [
+            Log::info('Post update request:', [
                 'has_images' => $request->hasFile('images'),
                 'images_count' => $request->hasFile('images') ? count($request->file('images')) : 0,
                 'all_files' => $request->allFiles()
@@ -1275,7 +1278,7 @@ class AdminController extends Controller
                 $files = $request->file('images');
                 $validFiles = [];
                 foreach ($files as $index => $file) {
-                    \Log::info("Processing file {$index}:", [
+                    Log::info("Processing file {$index}:", [
                         'file' => $file,
                         'is_valid' => $file ? $file->isValid() : 'null',
                         'size' => $file ? $file->getSize() : 'null',
@@ -1291,7 +1294,7 @@ class AdminController extends Controller
                     }
                 }
                 $request->merge(['images' => $validFiles]);
-                \Log::info('Valid files after filtering:', ['count' => count($validFiles)]);
+                Log::info('Valid files after filtering:', ['count' => count($validFiles)]);
             }
             
             // Only validate images if they exist and are not empty
@@ -1342,7 +1345,7 @@ class AdminController extends Controller
 
             // Handle current image deletion FIRST
             if ($request->has('delete_current_image') && $request->delete_current_image) {
-                \Log::info('Deleting current image:', [
+                Log::info('Deleting current image:', [
                     'post_id' => $post->id,
                     'current_image' => $post->image,
                     'delete_flag' => $request->delete_current_image
@@ -1351,10 +1354,10 @@ class AdminController extends Controller
                 // Delete current image from storage
                 if ($post->image && Storage::exists('public/' . $post->image)) {
                     Storage::delete('public/' . $post->image);
-                    \Log::info('Image deleted from storage:', ['path' => 'public/' . $post->image]);
+                    Log::info('Image deleted from storage:', ['path' => 'public/' . $post->image]);
                 }
                 $updateData['image'] = null;
-                \Log::info('Image set to null in updateData');
+                Log::info('Image set to null in updateData');
             } else {
                 // Handle multiple image uploads only if not deleting current image
                 if ($request->hasFile('images')) {
@@ -1374,7 +1377,7 @@ class AdminController extends Controller
                                 $imagePath = $image->storeAs('public/posts', $imageName);
                                 $imagePaths[] = str_replace('public/', '', $imagePath);
                             } catch (\Exception $e) {
-                                \Log::error('Image upload failed:', [
+                                Log::error('Image upload failed:', [
                                     'error' => $e->getMessage(),
                                     'file' => $image->getClientOriginalName()
                                 ]);
@@ -1392,7 +1395,7 @@ class AdminController extends Controller
 
             $post->update($updateData);
             
-            \Log::info('Post updated successfully:', [
+            Log::info('Post updated successfully:', [
                 'post_id' => $post->id,
                 'new_image' => $post->fresh()->image,
                 'updateData' => $updateData
@@ -1402,7 +1405,7 @@ class AdminController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            \Log::error('Post update error:', [
+            Log::error('Post update error:', [
                 'error' => $e->getMessage(),
                 'post_id' => $id,
                 'request_data' => $request->all()
@@ -1506,7 +1509,7 @@ class AdminController extends Controller
             
             return redirect()->route('admin.posts')->with('success', 'Bài viết đã được xóa vĩnh viễn!');
         } catch (\Exception $e) {
-            \Log::error('Error force deleting post: ' . $e->getMessage());
+            Log::error('Error force deleting post: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Có lỗi xảy ra khi xóa vĩnh viễn bài viết: ' . $e->getMessage());
         }
     }
