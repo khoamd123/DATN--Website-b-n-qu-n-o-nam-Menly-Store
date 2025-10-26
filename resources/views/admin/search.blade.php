@@ -262,7 +262,7 @@
                                     <td>
                                         <div>
                                             <strong>{{ $event->title }}</strong>
-                                            <br><small class="text-muted">{{ substr($event->description, 0, 50) }}{{ strlen($event->description) > 50 ? '...' : '' }}</small>
+                                            <br><small class="text-muted">{{ Str::limit(strip_tags($event->description), 50) }}</small>
                                         </div>
                                     </td>
                                     <td>

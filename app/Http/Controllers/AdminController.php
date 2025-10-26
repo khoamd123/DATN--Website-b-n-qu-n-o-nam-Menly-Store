@@ -10,6 +10,8 @@ use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
@@ -991,7 +993,7 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
                 'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
@@ -1081,7 +1083,7 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
                 'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'remove_images' => 'nullable|array',
                 'remove_images.*' => 'integer|exists:event_images,id',
@@ -1164,9 +1166,23 @@ class AdminController extends Controller
 
         try {
             $event = Event::with(['club', 'creator', 'images'])->findOrFail($id);
+            
+            // Nếu sự kiện bị hủy, đảm bảo có lý do hủy
+            if ($event->status === 'cancelled') {
+                // Kiểm tra xem có trường cancellation_reason không
+                if (!isset($event->cancellation_reason) || empty($event->cancellation_reason)) {
+                    // Thêm lý do mặc định nếu chưa có
+                    $event->cancellation_reason = 'Sự kiện đã bị hủy bởi quản trị viên';
+                }
+                if (!isset($event->cancelled_at) || empty($event->cancelled_at)) {
+                    $event->cancelled_at = $event->updated_at;
+                }
+            }
+            
             return view('admin.events.show', compact('event'));
         } catch (\Exception $e) {
-            return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện.');
+            \Log::error('Error showing event: ' . $e->getMessage());
+            return redirect()->route('admin.plans-schedule')->with('error', 'Không tìm thấy sự kiện: ' . $e->getMessage());
         }
     }
 
@@ -1192,7 +1208,7 @@ class AdminController extends Controller
     /**
      * Hủy sự kiện
      */
-    public function eventsCancel($id)
+    public function eventsCancel(Request $request, $id)
     {
         // Kiểm tra đăng nhập admin
         if (!session('logged_in') || !session('is_admin')) {
@@ -1200,11 +1216,45 @@ class AdminController extends Controller
         }
 
         try {
+            // Kiểm tra dữ liệu đầu vào
+            if (!$request->has('cancellation_reason') || empty(trim($request->cancellation_reason))) {
+                return back()->with('error', 'Vui lòng nhập lý do hủy sự kiện.');
+            }
+
+            $cancellationReason = trim($request->cancellation_reason);
+            if (strlen($cancellationReason) < 5) {
+                return back()->with('error', 'Lý do hủy sự kiện phải có ít nhất 5 ký tự.');
+            }
+
             $event = Event::findOrFail($id);
-            $event->update(['status' => 'cancelled']);
+            
+            // Kiểm tra trạng thái sự kiện
+            if (!in_array($event->status, ['pending', 'approved', 'ongoing'])) {
+                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+
+            // Sử dụng DB::table để cập nhật trực tiếp
+            $updateData = [
+                'status' => 'cancelled',
+                'updated_at' => now()
+            ];
+
+            // Kiểm tra và thêm các trường mới nếu có
+            if (Schema::hasColumn('events', 'cancellation_reason')) {
+                $updateData['cancellation_reason'] = $cancellationReason;
+            }
+            if (Schema::hasColumn('events', 'cancelled_at')) {
+                $updateData['cancelled_at'] = now();
+            }
+
+            DB::table('events')
+                ->where('id', $id)
+                ->update($updateData);
+
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện.');
+            \Log::error('Cancel event error:', ['message' => $e->getMessage()]);
+            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
         }
     }
 

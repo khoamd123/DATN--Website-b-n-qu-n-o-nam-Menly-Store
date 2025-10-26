@@ -2,6 +2,7 @@
 
 @section('title', 'Tạo sự kiện mới')
 
+
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
@@ -61,7 +62,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả sự kiện</label>
-                            <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+                            <textarea class="form-control" name="description" id="description" rows="4" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
                         </div>
 
                         <div class="mb-3">
@@ -173,7 +174,78 @@
     </div>
 @push('scripts')
 <script>
+// Hàm khởi tạo CKEditor
+function initCKEditor() {
+    console.log('Attempting to initialize CKEditor...');
+    
+    if (typeof ClassicEditor === 'undefined') {
+        console.error('ClassicEditor is not defined!');
+        return false;
+    }
+    
+    const textarea = document.querySelector('#description');
+    if (!textarea) {
+        console.error('Textarea #description not found!');
+        return false;
+    }
+    
+    console.log('Creating CKEditor instance...');
+    
+    ClassicEditor
+        .create(textarea, {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'blockQuote', 'insertTable', '|',
+                    'undo', 'redo', '|',
+                    'link', '|',
+                    'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                    'alignment', '|',
+                    'horizontalLine', 'specialCharacters'
+                ]
+            },
+            language: 'vi',
+            table: {
+                contentToolbar: [
+                    'tableColumn',
+                    'tableRow',
+                    'mergeTableCells'
+                ]
+            }
+        })
+        .then(editor => {
+            console.log('✅ CKEditor created successfully!', editor);
+            window.eventEditor = editor; // Lưu reference để debug
+        })
+        .catch(error => {
+            console.error('❌ Error creating CKEditor:', error);
+        });
+    
+    return true;
+}
+
+// Thử khởi tạo ngay lập tức
+if (!initCKEditor()) {
+    // Nếu không thành công, thử lại sau 1 giây
+    setTimeout(() => {
+        console.log('Retrying CKEditor initialization...');
+        if (!initCKEditor()) {
+            // Nếu vẫn không thành công, thử lại sau 2 giây nữa
+            setTimeout(() => {
+                console.log('Final retry for CKEditor initialization...');
+                initCKEditor();
+            }, 2000);
+        }
+    }, 1000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded');
+
+    // Xử lý preview ảnh
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
     const container = document.getElementById('imagesPreviewContainer');

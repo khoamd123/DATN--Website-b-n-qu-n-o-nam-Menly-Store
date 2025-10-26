@@ -612,6 +612,9 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- CKEditor 5 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ckeditor5/40.1.0/classic/ckeditor.js" onload="console.log('CKEditor loaded successfully')" onerror="console.error('Failed to load CKEditor from cdnjs')"></script>
+    
     @yield('scripts')
 </body>
 </html>

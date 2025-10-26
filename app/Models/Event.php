@@ -21,6 +21,14 @@ class Event extends Model
         'location',
         'max_participants',
         'status',
+        'cancellation_reason',
+        'cancelled_at',
+    ];
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     /**

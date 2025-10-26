@@ -61,7 +61,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả sự kiện</label>
-                            <textarea class="form-control" name="description" rows="4" placeholder="Mô tả chi tiết về sự kiện...">{{ old('description', $event->description) }}</textarea>
+                            <textarea class="form-control" name="description" id="description" rows="4" placeholder="Mô tả chi tiết về sự kiện...">{{ old('description', $event->description) }}</textarea>
                         </div>
 
                         <div class="mb-3">
@@ -190,10 +190,54 @@
         </div>
     </div>
 </div>
-@endsection
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing CKEditor...');
+    
+    // Đợi một chút để đảm bảo script đã load
+    setTimeout(function() {
+        if (typeof ClassicEditor !== 'undefined') {
+            console.log('CKEditor found, creating editor...');
+            
+            ClassicEditor
+                .create(document.querySelector('#description'), {
+                    toolbar: {
+                        items: [
+                            'heading', '|',
+                            'bold', 'italic', 'underline', '|',
+                            'bulletedList', 'numberedList', '|',
+                            'outdent', 'indent', '|',
+                            'blockQuote', 'insertTable', '|',
+                            'undo', 'redo', '|',
+                            'link', '|',
+                            'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                            'alignment', '|',
+                            'horizontalLine', 'specialCharacters'
+                        ]
+                    },
+                    language: 'vi',
+                    table: {
+                        contentToolbar: [
+                            'tableColumn',
+                            'tableRow',
+                            'mergeTableCells'
+                        ]
+                    }
+                })
+                .then(editor => {
+                    console.log('CKEditor created successfully!', editor);
+                })
+                .catch(error => {
+                    console.error('Error creating CKEditor:', error);
+                });
+        } else {
+            console.error('CKEditor not found!');
+        }
+    }, 500);
+
+    // Xử lý preview ảnh
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
     const container = document.getElementById('imagesPreviewContainer');
@@ -235,5 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+@endsection
 
 

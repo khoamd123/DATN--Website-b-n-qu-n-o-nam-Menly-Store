@@ -121,7 +121,13 @@
                             <td>{{ $event->id }}</td>
                             <td>
                                 <strong>{{ $event->title }}</strong>
-                                <br><small class="text-muted">{{ Str::limit($event->description, 50) }}</small>
+                                <br><small class="text-muted">{{ Str::limit(strip_tags($event->description), 50) }}</small>
+                                @if($event->status === 'cancelled' && $event->cancellation_reason)
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Lý do hủy: {{ Str::limit($event->cancellation_reason, 40) }}
+                                    </small>
+                                @endif
                             </td>
                             <td>{{ $event->club->name ?? 'Không xác định' }}</td>
                             <td>
@@ -182,12 +188,9 @@
                                             </button>
                                         </form>
                                         
-                                        <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn hủy sự kiện này?')">
-                                                <i class="fas fa-times"></i> Hủy
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelEventModal{{ $event->id }}">
+                                            <i class="fas fa-times"></i> Hủy
+                                        </button>
                                     @endif
                                     
                                     <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-sm btn-warning w-100">
@@ -218,4 +221,57 @@
         @endif
     </div>
 </div>
+
+<!-- Modals hủy sự kiện -->
+@foreach($events as $event)
+    @if(in_array($event->status, ['pending', 'approved', 'ongoing']))
+        <div class="modal fade" id="cancelEventModal{{ $event->id }}" tabindex="-1" aria-labelledby="cancelEventModalLabel{{ $event->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="cancelEventModalLabel{{ $event->id }}">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Hủy sự kiện
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}">
+                        @csrf
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Cảnh báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Hành động này không thể hoàn tác.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cancellation_reason{{ $event->id }}" class="form-label">
+                                    Lý do hủy sự kiện <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control @error('cancellation_reason') is-invalid @enderror" 
+                                          id="cancellation_reason{{ $event->id }}" 
+                                          name="cancellation_reason" 
+                                          rows="4" 
+                                          placeholder="Vui lòng nhập lý do hủy sự kiện..." 
+                                          required>{{ old('cancellation_reason') }}</textarea>
+                                @error('cancellation_reason')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">
+                                    Lý do hủy sẽ được hiển thị cho tất cả người dùng và không thể chỉnh sửa sau khi lưu.
+                                </small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Hủy bỏ
+                            </button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-check me-2"></i>Xác nhận hủy sự kiện
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+@endforeach
 @endsection
