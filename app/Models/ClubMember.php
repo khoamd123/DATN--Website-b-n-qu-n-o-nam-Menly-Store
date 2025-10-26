@@ -17,6 +17,7 @@ class ClubMember extends Model
         'status',
         'joined_at',
         'left_at',
+        'deletion_reason',
     ];
 
     /**

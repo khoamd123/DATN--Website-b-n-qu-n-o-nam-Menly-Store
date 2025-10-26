@@ -14,6 +14,19 @@
     </nav>
 </div>
 
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
 <div class="container-fluid">
     <div class="row">
         {{-- Cột thông tin chính --}}
@@ -55,6 +68,141 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Card Yêu cầu tham gia --}}
+            @php
+                // Giả sử thành viên chờ duyệt có status là 'pending'
+                $pendingMembers = $club->clubMembers->where('status', 'pending');
+            @endphp
+            @if($pendingMembers->isNotEmpty())
+            <div class="card mb-4 border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Yêu cầu tham gia ({{ $pendingMembers->count() }})</h5>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="handleBulkAction('approve')"><i class="fas fa-check-double me-1"></i>Duyệt mục đã chọn</button>
+                        <button class="btn btn-sm btn-danger" onclick="handleBulkAction('reject')"><i class="fas fa-times-circle me-1"></i>Từ chối mục đã chọn</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAllCheckbox" title="Chọn tất cả"></th>
+                                    <th>Thành viên</th>
+                                    <th>Ngày gửi yêu cầu</th>
+                                    <th class="text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($pendingMembers as $member)
+                                    <tr>
+                                        <td><input type="checkbox" class="member-checkbox" value="{{ $member->id }}"></td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ $member->user->avatar ?? '/images/avatar/avatar.png' }}" 
+                                                     alt="{{ $member->user->name }}" 
+                                                     class="rounded-circle me-2" 
+                                                     width="40" height="40"
+                                                     onerror="this.src='/images/avatar/avatar.png'">
+                                                <div>
+                                                    <strong>{{ $member->user->name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ $member->user->email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ $member->created_at->format('d/m/Y H:i') }}</td>
+                                        <td class="text-center">
+                                            {{-- Form duyệt thành viên --}}
+                                            <form action="{{ route('admin.clubs.members.approve', ['club' => $club->id, 'member' => $member->id]) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-success" title="Duyệt"><i class="fas fa-check"></i></button>
+                                            </form>
+                                            
+                                            {{-- Form từ chối thành viên --}}
+                                            <button type="button" class="btn btn-sm btn-danger" title="Từ chối"
+                                                    data-bs-toggle="modal" data-bs-target="#rejectMemberModal"
+                                                    data-member-id="{{ $member->id }}"
+                                                    data-member-name="{{ $member->user->name }}"
+                                                    data-action-url="{{ route('admin.clubs.members.reject', ['club' => $club->id, 'member' => $member->id]) }}">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- Card Quản lý thành viên --}}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {{-- Chỉ đếm thành viên đã được duyệt, giả sử status là 'approved' --}}
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thành viên đã duyệt ({{ $club->clubMembers->where('status', 'approved')->count() }})</h5>
+                    <div>
+                        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                            <i class="fas fa-user-plus me-1"></i> Thêm thành viên
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Thành viên</th>
+                                    <th>Vai trò</th>
+                                    <th>Ngày tham gia</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{-- Chỉ hiển thị thành viên đã được duyệt --}}
+                                @forelse($club->clubMembers->where('status', 'approved') as $member)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ $member->user->avatar ?? '/images/avatar/avatar.png' }}" 
+                                                     alt="{{ $member->user->name }}" 
+                                                     class="rounded-circle me-2" 
+                                                     width="40" height="40"
+                                                     onerror="this.src='/images/avatar/avatar.png'">
+                                                <div>
+                                                    <strong>{{ $member->user->name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ $member->user->email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ ucfirst($member->role_in_club) }}</span>
+                                        </td>
+                                        <td>{{ $member->created_at->format('d/m/Y') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning" title="Thay đổi vai trò" disabled><i class="fas fa-user-shield"></i></button>
+                                            {{-- Form xóa thành viên --}}
+                                            <button type="button" class="btn btn-sm btn-danger" title="Xóa thành viên"
+                                                    data-bs-toggle="modal" data-bs-target="#removeMemberModal"
+                                                    data-member-id="{{ $member->id }}"
+                                                    data-member-name="{{ $member->user->name }}"
+                                                    {{ $member->user_id == $club->owner_id ? 'disabled' : '' }}>
+                                                <i class="fas fa-user-times"></i></button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">Chưa có thành viên nào.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Cột thông tin phụ và hành động --}}
@@ -66,8 +214,8 @@
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Thành viên
-                            <span class="badge bg-primary rounded-pill">{{ $club->clubMembers?->count() ?? 0 }}</span>
+                            Thành viên đã duyệt
+                            <span class="badge bg-primary rounded-pill">{{ $club->clubMembers->where('status', 'approved')->count() }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Bài viết
@@ -76,6 +224,10 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Sự kiện
                             <span class="badge bg-success rounded-pill">{{ $club->events?->count() ?? 0 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Chờ duyệt
+                            <span class="badge bg-warning rounded-pill">{{ $pendingMembers->count() }}</span>
                         </li>
                     </ul>
                 </div>
@@ -87,11 +239,188 @@
                 </div>
                 <div class="card-body d-grid gap-2">
                     <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-warning"><i class="fas fa-edit me-1"></i> Chỉnh sửa</a>
-                    <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-info"><i class="fas fa-users me-1"></i> Quản lý thành viên</a>
                     <a href="{{ route('admin.clubs') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i> Quay lại danh sách</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Thêm thành viên -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addMemberModalLabel">Thêm thành viên mới vào CLB</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ route('admin.clubs.members.add', $club->id) }}">
+        @csrf
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="user_id" class="form-label">Chọn người dùng <span class="text-danger">*</span></label>
+            <select class="form-select" id="user_id" name="user_id" required>
+                <option value="" disabled selected>-- Chọn người dùng --</option>
+                @foreach($addableUsers as $user)
+                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                @endforeach
+            </select>
+            @if($addableUsers->isEmpty())
+                <div class="form-text text-muted">Tất cả người dùng đã là thành viên của câu lạc bộ này.</div>
+            @endif
+          </div>
+          <div class="mb-3">
+            <label for="role_in_club" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
+            <select class="form-select" id="role_in_club" name="role_in_club" required>
+                <option value="thanhvien" selected>Thành viên</option>
+                <option value="chunhiem">Chủ nhiệm</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary" {{ $addableUsers->isEmpty() ? 'disabled' : '' }}>Thêm thành viên</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Xóa thành viên -->
+<div class="modal fade" id="removeMemberModal" tabindex="-1" aria-labelledby="removeMemberModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="removeMemberModalLabel">Lý do xóa thành viên</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="removeMemberForm" method="POST" action="">
+        @csrf
+        @method('DELETE')
+        <div class="modal-body">
+          <p>Bạn sắp xóa thành viên: <strong id="memberNameToRemove"></strong> khỏi câu lạc bộ.</p>
+          <div class="mb-3">
+            <label for="memberDeletionReason" class="form-label">Vui lòng nhập lý do xóa <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="memberDeletionReason" name="deletion_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận xóa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Từ chối thành viên -->
+<div class="modal fade" id="rejectMemberModal" tabindex="-1" aria-labelledby="rejectMemberModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectMemberModalLabel">Lý do từ chối thành viên</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="rejectMemberForm" method="POST" action="">
+        @csrf
+        @method('DELETE')
+        <div class="modal-body">
+          <p>Bạn sắp từ chối yêu cầu tham gia của: <strong id="memberNameToReject"></strong>.</p>
+          <div class="mb-3">
+            <label for="memberRejectionReason" class="form-label">Vui lòng nhập lý do từ chối <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="memberRejectionReason" name="rejection_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const memberCheckboxes = document.querySelectorAll('.member-checkbox');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            memberCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+
+    var removeMemberModal = document.getElementById('removeMemberModal');
+    if(removeMemberModal) {
+        removeMemberModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var memberId = button.getAttribute('data-member-id');
+            var memberName = button.getAttribute('data-member-name');
+
+            var memberNameElement = removeMemberModal.querySelector('#memberNameToRemove');
+            var form = removeMemberModal.querySelector('#removeMemberForm');
+
+            memberNameElement.textContent = memberName;
+            form.action = '{{ url("admin/clubs/".$club->id."/members") }}/' + memberId + '/remove';
+        });
+    }
+
+    var rejectMemberModal = document.getElementById('rejectMemberModal');
+    if(rejectMemberModal) {
+        rejectMemberModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var memberName = button.getAttribute('data-member-name');
+            var actionUrl = button.getAttribute('data-action-url');
+
+            var memberNameElement = rejectMemberModal.querySelector('#memberNameToReject');
+            var form = rejectMemberModal.querySelector('#rejectMemberForm');
+
+            memberNameElement.textContent = memberName;
+            form.action = actionUrl;
+        });
+    }
+});
+
+function handleBulkAction(action) {
+    const selectedMembers = Array.from(document.querySelectorAll('.member-checkbox:checked')).map(cb => cb.value);
+
+    if (selectedMembers.length === 0) {
+        alert('Vui lòng chọn ít nhất một thành viên để thực hiện hành động.');
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('admin.clubs.members.bulk-update', $club->id) }}';
+    form.style.display = 'none';
+
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = '_token';
+    csrfToken.value = '{{ csrf_token() }}';
+    form.appendChild(csrfToken);
+
+    selectedMembers.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'member_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = action;
+    form.appendChild(actionInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 @endsection

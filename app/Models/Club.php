@@ -17,7 +17,9 @@ class Club extends Model
         'owner_id',
         'leader_id', // Added leader_id
         'max_members',
-        'status'
+        'status',
+        'rejection_reason',
+        'deletion_reason'
     ];
 
     /**

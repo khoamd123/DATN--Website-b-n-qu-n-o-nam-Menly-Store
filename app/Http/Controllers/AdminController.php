@@ -147,14 +147,22 @@ class AdminController extends Controller
     public function showClub($club)
     {
         $club = Club::with([
-            'field', 
-            'owner', 
-            'clubMembers', 
-            'posts', 
+            'field',
+            'owner',
+            'clubMembers.user', // Eager load user for efficiency
+            'posts',
             'events'
         ])->findOrFail($club);
 
-        return view('admin.clubs.show', compact('club'));
+        // Lấy ID của các thành viên đã có trong CLB
+        $existingMemberIds = $club->clubMembers->pluck('user_id')->all();
+
+        // Lấy danh sách người dùng chưa phải là thành viên của CLB này
+        $addableUsers = User::whereNotIn('id', $existingMemberIds)
+                            ->where('is_admin', false) // Tùy chọn: không thêm admin làm thành viên
+                            ->orderBy('name')->get();
+
+        return view('admin.clubs.show', compact('club', 'addableUsers'));
     }
 
     /**
@@ -191,14 +199,21 @@ class AdminController extends Controller
     /**
      * Remove the specified club from storage.
      */
-    public function deleteClub($id)
+    public function deleteClub(Request $request, $id)
     {
+        $request->validate([
+            'deletion_reason' => 'required|string|max:1000',
+        ]);
+
         $club = Club::findOrFail($id);
         
         // Kiểm tra điều kiện: chỉ cho phép xóa nếu câu lạc bộ đang ở trạng thái 'inactive' (tạm dừng)
         if ($club->status !== 'inactive') {
             return redirect()->back()->with('error', 'Không thể xóa câu lạc bộ khi chưa tạm dừng. Vui lòng chuyển trạng thái sang "Tạm dừng" trước khi xóa.');
         }
+
+        // Lưu lý do xóa trước khi xóa
+        $club->update(['deletion_reason' => $request->deletion_reason]);
 
         // Xóa các bản ghi liên quan trước để tránh lỗi ràng buộc khóa ngoại
         
@@ -248,12 +263,20 @@ class AdminController extends Controller
         $club = Club::findOrFail($id);
         
         $request->validate([
-            'status' => 'required|in:pending,approved,rejected,active,inactive'
+            'status' => 'required|in:pending,approved,rejected,active,inactive',
+            'rejection_reason' => 'required_if:status,rejected|nullable|string|max:1000',
         ]);
         
-        $club->update([
-            'status' => $request->status
-        ]);
+        $data = ['status' => $request->status];
+
+        if ($request->status === 'rejected') {
+            $data['rejection_reason'] = $request->rejection_reason;
+        } else {
+            // Xóa lý do từ chối cũ nếu trạng thái không phải là 'rejected'
+            $data['rejection_reason'] = null;
+        }
+
+        $club->update($data);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
     }
@@ -324,6 +347,99 @@ class AdminController extends Controller
 
         return redirect()->route('admin.clubs.show', $club->id)
                          ->with('success', 'Cập nhật câu lạc bộ thành công!');
+    }
+
+    /**
+     * Add a new member to a club.
+     */
+    public function addMember(Request $request, Club $club)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role_in_club' => 'required|string|in:chunhiem,thanhvien', // Adjust roles as needed
+        ]);
+
+        // Kiểm tra xem người dùng đã là thành viên chưa
+        $isMember = ClubMember::where('club_id', $club->id)
+                              ->where('user_id', $request->user_id)
+                              ->exists();
+
+        if ($isMember) {
+            return back()->with('error', 'Người dùng này đã là thành viên của câu lạc bộ.');
+        }
+
+        // Thêm thành viên mới với trạng thái đã duyệt
+        $club->clubMembers()->create($request->all() + ['status' => 'approved', 'joined_at' => now()]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã thêm thành viên mới vào câu lạc bộ thành công!');
+    }
+
+    /**
+     * Approve a pending club member.
+     */
+    public function approveMember(Request $request, Club $club, ClubMember $member)
+    {
+        if ($member->club_id !== $club->id) {
+            return back()->with('error', 'Thành viên không thuộc câu lạc bộ này.');
+        }
+
+        $member->update(['status' => 'approved', 'joined_at' => now()]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã duyệt thành viên ' . $member->user->name . '.');
+    }
+
+    /**
+     * Reject a pending club member.
+     */
+    public function rejectMember(Request $request, Club $club, ClubMember $member)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        if ($member->club_id !== $club->id || $member->status !== 'pending') {
+            return back()->with('error', 'Không thể từ chối thành viên này.');
+        }
+
+        // Cập nhật trạng thái và lý do từ chối thay vì xóa
+        $member->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã từ chối yêu cầu tham gia của ' . $member->user->name . '.');
+    }
+
+    /**
+     * Remove a member from a club.
+     */
+    public function removeMember(Request $request, Club $club, ClubMember $member)
+    {
+        $request->validate(['deletion_reason' => 'required|string|max:500']);
+
+        if ($member->club_id !== $club->id) {
+            return back()->with('error', 'Thành viên không thuộc câu lạc bộ này.');
+        }
+
+        if ($member->user_id === $club->owner_id) {
+            return back()->with('error', 'Không thể xóa chủ sở hữu câu lạc bộ.');
+        }
+
+        $member->forceDelete(); // Or $member->delete() if you use soft deletes on club_members
+
+        return redirect()->route('admin.clubs.show', $club->id)->with('success', 'Đã xóa thành viên ' . $member->user->name . ' khỏi câu lạc bộ.');
+    }
+
+    /**
+     * Handle bulk actions for members (approve/reject).
+     */
+    public function bulkUpdateMembers(Request $request, Club $club)
+    {
+        // This is a placeholder. You'll need to implement the logic based on your `handleBulkAction` JavaScript function.
+        // For example:
+        // $memberIds = $request->input('member_ids', []);
+        // $action = $request->input('action');
+        return back()->with('info', 'Chức năng xử lý hàng loạt đang được phát triển.');
     }
 
     /**
