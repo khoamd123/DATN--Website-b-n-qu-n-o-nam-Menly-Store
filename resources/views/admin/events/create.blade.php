@@ -176,20 +176,23 @@
 <script>
 // Hàm khởi tạo CKEditor
 function initCKEditor() {
-    console.log('Attempting to initialize CKEditor...');
+    console.log('Checking for ClassicEditor...');
     
     if (typeof ClassicEditor === 'undefined') {
-        console.error('ClassicEditor is not defined!');
-        return false;
+        console.log('ClassicEditor not yet available, retrying...');
+        setTimeout(initCKEditor, 100);
+        return;
     }
+    
+    console.log('✅ ClassicEditor is available!');
     
     const textarea = document.querySelector('#description');
     if (!textarea) {
-        console.error('Textarea #description not found!');
-        return false;
+        console.error('❌ Textarea #description not found!');
+        return;
     }
     
-    console.log('Creating CKEditor instance...');
+    console.log('Initializing CKEditor on textarea...');
     
     ClassicEditor
         .create(textarea, {
@@ -217,33 +220,21 @@ function initCKEditor() {
             }
         })
         .then(editor => {
-            console.log('✅ CKEditor created successfully!', editor);
-            window.eventEditor = editor; // Lưu reference để debug
+            console.log('✅ CKEditor initialized successfully!');
+            window.editor = editor;
         })
         .catch(error => {
-            console.error('❌ Error creating CKEditor:', error);
+            console.error('❌ Error initializing CKEditor:', error);
         });
-    
-    return true;
 }
 
-// Thử khởi tạo ngay lập tức
-if (!initCKEditor()) {
-    // Nếu không thành công, thử lại sau 1 giây
-    setTimeout(() => {
-        console.log('Retrying CKEditor initialization...');
-        if (!initCKEditor()) {
-            // Nếu vẫn không thành công, thử lại sau 2 giây nữa
-            setTimeout(() => {
-                console.log('Final retry for CKEditor initialization...');
-                initCKEditor();
-            }, 2000);
-        }
-    }, 1000);
+// Bắt đầu khởi tạo sau khi DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCKEditor);
+} else {
+    // DOM đã sẵn sàng
+    initCKEditor();
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
 
     // Xử lý preview ảnh
     const input = document.getElementById('imagesInput');

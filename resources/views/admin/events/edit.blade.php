@@ -193,49 +193,67 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing CKEditor...');
+// Hàm khởi tạo CKEditor
+function initCKEditor() {
+    console.log('Checking for ClassicEditor...');
     
-    // Đợi một chút để đảm bảo script đã load
-    setTimeout(function() {
-        if (typeof ClassicEditor !== 'undefined') {
-            console.log('CKEditor found, creating editor...');
-            
-            ClassicEditor
-                .create(document.querySelector('#description'), {
-                    toolbar: {
-                        items: [
-                            'heading', '|',
-                            'bold', 'italic', 'underline', '|',
-                            'bulletedList', 'numberedList', '|',
-                            'outdent', 'indent', '|',
-                            'blockQuote', 'insertTable', '|',
-                            'undo', 'redo', '|',
-                            'link', '|',
-                            'fontSize', 'fontColor', 'fontBackgroundColor', '|',
-                            'alignment', '|',
-                            'horizontalLine', 'specialCharacters'
-                        ]
-                    },
-                    language: 'vi',
-                    table: {
-                        contentToolbar: [
-                            'tableColumn',
-                            'tableRow',
-                            'mergeTableCells'
-                        ]
-                    }
-                })
-                .then(editor => {
-                    console.log('CKEditor created successfully!', editor);
-                })
-                .catch(error => {
-                    console.error('Error creating CKEditor:', error);
-                });
-        } else {
-            console.error('CKEditor not found!');
-        }
-    }, 500);
+    if (typeof ClassicEditor === 'undefined') {
+        console.log('ClassicEditor not yet available, retrying...');
+        setTimeout(initCKEditor, 100);
+        return;
+    }
+    
+    console.log('✅ ClassicEditor is available!');
+    
+    const textarea = document.querySelector('#description');
+    if (!textarea) {
+        console.error('❌ Textarea #description not found!');
+        return;
+    }
+    
+    console.log('Initializing CKEditor on textarea...');
+    
+    ClassicEditor
+        .create(textarea, {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'blockQuote', 'insertTable', '|',
+                    'undo', 'redo', '|',
+                    'link', '|',
+                    'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                    'alignment', '|',
+                    'horizontalLine', 'specialCharacters'
+                ]
+            },
+            language: 'vi',
+            table: {
+                contentToolbar: [
+                    'tableColumn',
+                    'tableRow',
+                    'mergeTableCells'
+                ]
+            }
+        })
+        .then(editor => {
+            console.log('✅ CKEditor initialized successfully!');
+            window.editor = editor;
+        })
+        .catch(error => {
+            console.error('❌ Error initializing CKEditor:', error);
+        });
+}
+
+// Bắt đầu khởi tạo sau khi DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCKEditor);
+} else {
+    // DOM đã sẵn sàng
+    initCKEditor();
+}
 
     // Xử lý preview ảnh
     const input = document.getElementById('imagesInput');
