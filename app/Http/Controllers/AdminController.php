@@ -68,7 +68,7 @@ class AdminController extends Controller
             ->limit(5)
             ->get();
         
-        // Sự kiện sắp diễn ra
+        // Sự kiện sắp diễn ra 
         $upcomingEvents = Event::with(['club'])
             ->where('start_time', '>', now())
             ->where('status', 'active')
@@ -935,7 +935,7 @@ class AdminController extends Controller
             $query->where('status', $request->status);
         }
         
-        $events = $query->orderBy('start_time', 'asc')->paginate(20);
+        $events = $query->orderBy('start_time', 'asc')->paginate(15);
         $clubs = Club::where('status', 'active')->get();
         
         return view('admin.plans-schedule.index', compact('events', 'clubs'));

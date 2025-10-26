@@ -14,7 +14,7 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-calendar-alt"></i>
             </div>
-            <p class="stats-number">{{ $events->total() }}</p>
+            <p class="stats-number">{{ \App\Models\Event::count() }}</p>
             <p class="stats-label">Tổng sự kiện</p>
         </div>
     </div>
@@ -23,7 +23,7 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-play"></i>
             </div>
-            <p class="stats-number">{{ $events->where('status', 'ongoing')->count() }}</p>
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'ongoing')->count() }}</p>
             <p class="stats-label">Đang diễn ra</p>
         </div>
     </div>
@@ -32,7 +32,7 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-clock"></i>
             </div>
-            <p class="stats-number">{{ $events->where('status', 'pending')->count() }}</p>
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'pending')->count() }}</p>
             <p class="stats-label">Chờ duyệt</p>
         </div>
     </div>
@@ -41,7 +41,7 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-ban"></i>
             </div>
-            <p class="stats-number">{{ $events->where('status', 'cancelled')->count() }}</p>
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'cancelled')->count() }}</p>
             <p class="stats-label">Đã hủy</p>
         </div>
     </div>
@@ -105,7 +105,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Tên sự kiện</th>
                         <th>Câu lạc bộ</th>
                         <th>Thời gian</th>
@@ -116,9 +116,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($events as $event)
+                    @forelse($events as $index => $event)
                         <tr>
-                            <td>{{ $event->id }}</td>
+                            <td>{{ ($events->currentPage() - 1) * $events->perPage() + $index + 1 }}</td>
                             <td>
                                 <strong>{{ $event->title }}</strong>
                                 <br><small class="text-muted">{{ Str::limit(strip_tags($event->description), 50) }}</small>
@@ -205,7 +205,8 @@
                     @empty
                         <tr>
                             <td colspan="8" class="text-center text-muted py-4">
-                                Không tìm thấy sự kiện nào
+                                <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                                <br>Không tìm thấy sự kiện nào
                             </td>
                         </tr>
                     @endforelse
@@ -213,10 +214,31 @@
             </table>
         </div>
         
-        <!-- Phân trang -->
+        <!-- Pagination -->
         @if($events->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $events->appends(request()->query())->links() }}
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        Hiển thị <strong>{{ $events->firstItem() }}</strong> - <strong>{{ $events->lastItem() }}</strong> 
+                        trong tổng <strong>{{ $events->total() }}</strong> kết quả
+                    </span>
+                </div>
+                <nav>
+                    <ul class="pagination">
+                        @foreach ($events->getUrlRange(1, $events->lastPage()) as $page => $url)
+                            @if ($page == $events->currentPage())
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ $page }}</span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </nav>
             </div>
         @endif
     </div>
@@ -274,4 +296,6 @@
         </div>
     @endif
 @endforeach
+
+
 @endsection
