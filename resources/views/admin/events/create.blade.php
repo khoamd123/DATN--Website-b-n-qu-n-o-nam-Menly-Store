@@ -66,9 +66,12 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Ảnh sự kiện</label>
-                            <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imagesInput">
-                            <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
+                            <label class="form-label">Media sự kiện <small>(Ảnh/Video)</small></label>
+                            <input type="file" class="form-control" name="images[]" accept="image/*,video/*" multiple id="imagesInput">
+                            <small class="text-muted">
+                                <strong>Hỗ trợ:</strong> Ảnh (JPG, JPEG, PNG, WEBP) hoặc Video (MP4, MOV, AVI, WMV, FLV, WEBM). 
+                                Tối đa 10MB mỗi file. Có thể chọn nhiều file cùng lúc.
+                            </small>
                             <div class="mt-2" id="imagesPreviewWrap" style="display:none;">
                                 <div class="row" id="imagesPreviewContainer">
                                     <!-- Ảnh preview sẽ được thêm vào đây -->
@@ -252,20 +255,44 @@ if (document.readyState === 'loading') {
         // Xóa preview cũ
         container.innerHTML = '';
 
-        // Hiển thị preview cho từng ảnh
+        // Hiển thị preview cho từng file
         Array.from(files).forEach((file, index) => {
+            const isVideo = file.type.startsWith('video/');
+            const isImage = file.type.startsWith('image/');
+            
+            // Kiểm tra loại file
+            if (!isVideo && !isImage) {
+                console.error('File không hợp lệ:', file.name);
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 mb-2';
-                col.innerHTML = `
-                    <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
-                        <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
-                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
-                            ${index + 1}
+                
+                if (isImage) {
+                    // Preview ảnh
+                    col.innerHTML = `
+                        <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                            <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                            <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                <i class="fas fa-image"></i> ${index + 1}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else if (isVideo) {
+                    // Preview video
+                    col.innerHTML = `
+                        <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                            <video src="${ev.target.result}" style="width: 100%; height: 150px; object-fit: cover; display: block;" controls></video>
+                            <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                <i class="fas fa-video"></i> ${index + 1}
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 container.appendChild(col);
             };
             reader.readAsDataURL(file);
