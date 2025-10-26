@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Clubs by Field:', clubsByField);
     
     // Kiểm tra và tạo biểu đồ thống kê theo tháng
-    if (monthlyStats && monthlyStats.length > 0) {
+    if (monthlyStats && monthlyStats.length > 0 && Array.isArray(monthlyStats)) {
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
         new Chart(monthlyCtx, {
         type: 'line',
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Kiểm tra và tạo biểu đồ CLB theo lĩnh vực
-    if (clubsByField && clubsByField.length > 0) {
+    if (clubsByField && clubsByField.length > 0 && Array.isArray(clubsByField)) {
         const fieldCtx = document.getElementById('fieldChart').getContext('2d');
         new Chart(fieldCtx, {
         type: 'doughnut',

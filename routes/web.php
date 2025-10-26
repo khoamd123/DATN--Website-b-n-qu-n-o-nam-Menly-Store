@@ -199,6 +199,93 @@ Route::prefix('admin')->group(function () {
             Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
             Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     
+            // Quản lý quỹ
+            Route::get('/funds', [App\Http\Controllers\FundController::class, 'index'])->name('admin.funds');
+            Route::get('/funds/create', [App\Http\Controllers\FundController::class, 'create'])->name('admin.funds.create');
+            Route::post('/funds', [App\Http\Controllers\FundController::class, 'store'])->name('admin.funds.store');
+            Route::get('/funds/{fund}', [App\Http\Controllers\FundController::class, 'show'])->name('admin.funds.show');
+            Route::get('/funds/{fund}/edit', [App\Http\Controllers\FundController::class, 'edit'])->name('admin.funds.edit');
+            Route::put('/funds/{fund}', [App\Http\Controllers\FundController::class, 'update'])->name('admin.funds.update');
+            Route::delete('/funds/{fund}', [App\Http\Controllers\FundController::class, 'destroy'])->name('admin.funds.destroy');
+            
+            // Quản lý giao dịch quỹ
+            Route::get('/funds/{fund}/transactions', [App\Http\Controllers\FundTransactionController::class, 'index'])->name('admin.funds.transactions');
+            Route::get('/funds/{fund}/transactions/create', [App\Http\Controllers\FundTransactionController::class, 'create'])->name('admin.funds.transactions.create');
+            Route::post('/funds/{fund}/transactions', [App\Http\Controllers\FundTransactionController::class, 'store'])->name('admin.funds.transactions.store');
+            Route::get('/funds/{fund}/transactions/{transaction}', [App\Http\Controllers\FundTransactionController::class, 'show'])->name('admin.funds.transactions.show');
+            Route::get('/funds/{fund}/transactions/{transaction}/edit', [App\Http\Controllers\FundTransactionController::class, 'edit'])->name('admin.funds.transactions.edit');
+            Route::put('/funds/{fund}/transactions/{transaction}', [App\Http\Controllers\FundTransactionController::class, 'update'])->name('admin.funds.transactions.update');
+            Route::post('/funds/{fund}/transactions/{transaction}/approve', [App\Http\Controllers\FundTransactionController::class, 'approve'])->name('admin.funds.transactions.approve');
+            Route::post('/funds/{fund}/transactions/{transaction}/reject', [App\Http\Controllers\FundTransactionController::class, 'reject'])->name('admin.funds.transactions.reject');
+            Route::post('/funds/{fund}/transactions/{transaction}/cancel', [App\Http\Controllers\FundTransactionController::class, 'cancel'])->name('admin.funds.transactions.cancel');
+            Route::delete('/funds/{fund}/transactions/{transaction}', [App\Http\Controllers\FundTransactionController::class, 'destroy'])->name('admin.funds.transactions.destroy');
+            Route::get('/funds/{fund}/transactions/{transaction}/invoice', [App\Http\Controllers\FundTransactionController::class, 'exportInvoice'])->name('admin.funds.transactions.invoice');
+        
+        // Route tạm để sửa số tiền
+        Route::get('/funds/{fund}/fix-amount', function($fundId) {
+            $fund = App\Models\Fund::find($fundId);
+            $fund->updateCurrentAmount();
+            return redirect()->route('admin.funds.show', $fundId)->with('success', 'Đã cập nhật số tiền!');
+        })->name('admin.funds.fix-amount');
+        
+        // Quản lý yêu cầu cấp kinh phí
+        Route::get('/fund-requests', [App\Http\Controllers\FundRequestController::class, 'index'])->name('admin.fund-requests');
+        Route::get('/fund-requests/create', [App\Http\Controllers\FundRequestController::class, 'create'])->name('admin.fund-requests.create');
+        Route::post('/fund-requests', [App\Http\Controllers\FundRequestController::class, 'store'])->name('admin.fund-requests.store');
+        Route::get('/fund-requests/{fundRequest}', [App\Http\Controllers\FundRequestController::class, 'show'])->name('admin.fund-requests.show');
+        Route::get('/fund-requests/{fundRequest}/edit', [App\Http\Controllers\FundRequestController::class, 'edit'])->name('admin.fund-requests.edit');
+        Route::put('/fund-requests/{fundRequest}', [App\Http\Controllers\FundRequestController::class, 'update'])->name('admin.fund-requests.update');
+        Route::post('/fund-requests/{fundRequest}/approve', [App\Http\Controllers\FundRequestController::class, 'approve'])->name('admin.fund-requests.approve');
+        Route::post('/fund-requests/{fundRequest}/reject', [App\Http\Controllers\FundRequestController::class, 'reject'])->name('admin.fund-requests.reject');
+        Route::delete('/fund-requests/{fundRequest}', [App\Http\Controllers\FundRequestController::class, 'destroy'])->name('admin.fund-requests.destroy');
+        
+        // Duyệt hàng loạt
+        Route::get('/fund-requests/batch-approval', [App\Http\Controllers\FundRequestController::class, 'batchApproval'])->name('admin.fund-requests.batch-approval');
+        Route::post('/fund-requests/batch-approval/process', [App\Http\Controllers\FundRequestController::class, 'processBatchApproval'])->name('admin.fund-requests.batch-approval.process');
+        
+        // Test route để debug
+        Route::get('/test-auth', function() {
+            return [
+                'auth_id' => Auth::id(),
+                'auth_user' => Auth::user(),
+                'users_count' => App\Models\User::count(),
+                'first_user' => App\Models\User::first()
+            ];
+        });
+        
+        // Route để reset trạng thái yêu cầu về pending
+        Route::get('/fund-requests/{fundRequest}/reset-status', function($fundRequestId) {
+            $fundRequest = App\Models\FundRequest::find($fundRequestId);
+            if ($fundRequest) {
+                $fundRequest->update(['status' => 'pending']);
+                return redirect()->route('admin.fund-requests.show', $fundRequestId)->with('success', 'Đã reset trạng thái về "Chờ duyệt"');
+            }
+            return redirect()->back()->with('error', 'Không tìm thấy yêu cầu');
+        })->name('admin.fund-requests.reset-status');
+        
+        // Test route cho batch approval
+        Route::get('/test-batch-approval', function() {
+            return 'Batch approval route is working!';
+        });
+        
+        // Test route để tạo yêu cầu đơn giản
+        Route::get('/test-create-request', function() {
+            try {
+                $fundRequest = App\Models\FundRequest::create([
+                    'title' => 'Test Request',
+                    'description' => 'Test description',
+                    'requested_amount' => 1000000,
+                    'event_id' => 1,
+                    'club_id' => 1,
+                    'created_by' => 1,
+                    'status' => 'pending'
+                ]);
+                return 'Fund request created successfully with ID: ' . $fundRequest->id;
+            } catch (\Exception $e) {
+                return 'Error: ' . $e->getMessage();
+            }
+        });
+    
     // Phân quyền
     Route::get('/permissions', [AdminController::class, 'permissionsSimple'])->name('admin.permissions');
     Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');

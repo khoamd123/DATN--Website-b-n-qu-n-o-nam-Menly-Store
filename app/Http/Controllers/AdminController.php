@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
+use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 
@@ -27,17 +28,6 @@ class AdminController extends Controller
         $dateFilter = $this->getDateFilter($request);
         $startDate = $dateFilter ? $dateFilter['start'] : null;
         $endDate = $dateFilter ? $dateFilter['end'] : null;
-        
-        // Debug: Log date filter
-        \Log::info('Dashboard Date Filter', [
-            'date_range' => $request->get('date_range'),
-            'start_date' => $request->get('start_date'),
-            'end_date' => $request->get('end_date'),
-            'computed_start' => $startDate ? $startDate->format('Y-m-d H:i:s') : 'null',
-            'computed_end' => $endDate ? $endDate->format('Y-m-d H:i:s') : 'null',
-            'has_filter' => $dateFilter !== null,
-            'current_time' => now()->format('Y-m-d H:i:s')
-        ]);
 
         try {
             // Thống kê tổng quan - với try catch để tránh lỗi
@@ -75,15 +65,6 @@ class AdminController extends Controller
             $eventsInPeriod = $totalEvents;
             $postsInPeriod = $totalPosts;
         }
-        
-        // Debug: Log statistics
-        \Log::info('Dashboard Statistics', [
-            'users_in_period' => $usersInPeriod,
-            'clubs_in_period' => $clubsInPeriod,
-            'events_in_period' => $eventsInPeriod,
-            'posts_in_period' => $postsInPeriod,
-            'has_filter' => $dateFilter !== null
-        ]);
         
         // Thống kê tăng trưởng (so với tháng trước)
         $usersLastMonth = User::where('created_at', '>=', now()->subMonth())->count();
@@ -231,8 +212,7 @@ class AdminController extends Controller
      */
     public function users(Request $request)
     {
-        $query = User::query();
-        
+        $query = User::with(['clubs']); // Eager load clubs để tránh N+1 query
         
         // Tìm kiếm
         if ($request->filled('search')) {
@@ -258,8 +238,6 @@ class AdminController extends Controller
         }
         
         $users = $query->orderBy('id', 'asc')->paginate(20);
-        
-        
         
         return view('admin.users.index', compact('users'));
     }
@@ -319,18 +297,16 @@ class AdminController extends Controller
             'role' => 'required|in:user,club_manager,executive_board,admin'
         ]);
         
-        // Nếu set là admin, thì role cũng phải là admin
-        if ($request->is_admin && $request->role !== 'admin') {
-            return redirect()->back()->with('error', 'Người dùng admin phải có role là admin.');
-        }
+        // Đồng bộ hóa: Nếu role là admin thì is_admin phải là true
+        $isAdmin = $request->role === 'admin' ? true : $request->is_admin;
         
-        // Nếu role là admin, thì is_admin cũng phải là true
-        if ($request->role === 'admin' && !$request->is_admin) {
-            return redirect()->back()->with('error', 'Người dùng có role admin phải có quyền admin.');
+        // Nếu is_admin được chọn nhưng role không phải admin, tự động cập nhật role
+        if ($isAdmin && $request->role !== 'admin') {
+            return redirect()->back()->with('error', 'Người dùng có quyền admin phải có role là admin.');
         }
         
         $user->update([
-            'is_admin' => $request->is_admin,
+            'is_admin' => $isAdmin,
             'role' => $request->role
         ]);
         
@@ -384,25 +360,35 @@ class AdminController extends Controller
             
             // Xử lý upload ảnh đại diện
             if ($request->hasFile('avatar')) {
-                $avatar = $request->file('avatar');
-                $avatarName = time() . '_' . $user->id . '.' . $avatar->getClientOriginalExtension();
-                $avatarPath = 'uploads/avatars/' . $avatarName;
-                
-                // Tạo thư mục nếu chưa tồn tại
-                $avatarDir = public_path('uploads/avatars');
-                if (!file_exists($avatarDir)) {
-                    mkdir($avatarDir, 0755, true);
+                try {
+                    $avatar = $request->file('avatar');
+                    
+                    // Validate file type
+                    if (!in_array($avatar->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif'])) {
+                        return back()->with('error', 'Chỉ chấp nhận file ảnh định dạng JPG, JPEG, PNG, GIF');
+                    }
+                    
+                    $avatarName = time() . '_' . $user->id . '.' . $avatar->getClientOriginalExtension();
+                    $avatarPath = 'uploads/avatars/' . $avatarName;
+                    
+                    // Tạo thư mục nếu chưa tồn tại
+                    $avatarDir = public_path('uploads/avatars');
+                    if (!file_exists($avatarDir)) {
+                        mkdir($avatarDir, 0755, true);
+                    }
+                    
+                    // Di chuyển file
+                    $avatar->move($avatarDir, $avatarName);
+                    
+                    // Xóa ảnh cũ nếu có
+                    if ($user->avatar && file_exists(public_path($user->avatar))) {
+                        @unlink(public_path($user->avatar));
+                    }
+                    
+                    $data['avatar'] = $avatarPath;
+                } catch (\Exception $e) {
+                    return back()->with('error', 'Lỗi upload ảnh đại diện: ' . $e->getMessage());
                 }
-                
-                // Di chuyển file
-                $avatar->move($avatarDir, $avatarName);
-                
-                // Xóa ảnh cũ nếu có
-                if ($user->avatar && file_exists(public_path($user->avatar))) {
-                    unlink(public_path($user->avatar));
-                }
-                
-                $data['avatar'] = $avatarPath;
             }
             
             $user->update($data);
@@ -622,13 +608,6 @@ class AdminController extends Controller
      */
     public function clubsStore(Request $request)
     {
-        // Debug: Log request data
-        \Log::info('ClubsStore called', [
-            'request_data' => $request->all(),
-            'user_id' => session('user_id'),
-            'is_admin' => session('is_admin')
-        ]);
-
         // Kiểm tra đăng nhập admin
         if (!session('logged_in') || !session('is_admin')) {
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
@@ -683,16 +662,6 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            // Debug: Log data trước khi tạo
-            \Log::info('Creating club with data:', [
-                'name' => $request->name,
-                'slug' => $clubSlug,
-                'description' => $request->description,
-                'field_id' => $fieldId,
-                'leader_id' => $request->leader_id,
-                'status' => 'pending'
-            ]);
-
             $club = Club::create([
                 'name' => $request->name,
                 'slug' => $clubSlug,
@@ -715,7 +684,18 @@ class AdminController extends Controller
                 ]);
             }
 
-            \Log::info('Club created successfully:', ['club_id' => $club->id, 'leader_id' => $request->leader_id]);
+            // Tự động tạo quỹ cho CLB
+            $fundCreatorId = session('user_id') ?? 1;
+            \App\Models\Fund::create([
+                'name' => null, // Name sẽ được tự động từ accessor
+                'description' => 'Quỹ hoạt động của ' . $club->name,
+                'initial_amount' => 0,
+                'current_amount' => 0,
+                'source' => 'Nhà trường',
+                'status' => 'active',
+                'club_id' => $club->id,
+                'created_by' => $fundCreatorId,
+            ]);
 
             return redirect()->route('admin.clubs')->with('success', 'Đã tạo câu lạc bộ thành công!');
         } catch (\Exception $e) {
@@ -795,26 +775,12 @@ class AdminController extends Controller
     {
         $club = Club::findOrFail($id);
         
-        // Debug: Log request data
-        \Log::info('UpdateClubStatus called', [
-            'club_id' => $id,
-            'club_name' => $club->name,
-            'old_status' => $club->status,
-            'new_status' => $request->status,
-            'request_data' => $request->all()
-        ]);
-        
         $request->validate([
             'status' => 'required|in:pending,approved,rejected,active,inactive'
         ]);
         
         $club->update([
             'status' => $request->status
-        ]);
-        
-        \Log::info('Club status updated successfully', [
-            'club_id' => $id,
-            'new_status' => $club->fresh()->status
         ]);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
@@ -982,31 +948,8 @@ class AdminController extends Controller
      */
     public function fundManagement(Request $request)
     {
-        // Tạm thời sử dụng bảng posts với type = 'fund' để quản lý quỹ
-        $query = Post::where('type', 'fund')->with(['club', 'user']);
-        
-        if ($request->has('search') && $request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('content', 'like', '%' . $request->search . '%');
-            });
-        }
-        
-        if ($request->has('club_id') && $request->club_id) {
-            $query->where('club_id', $request->club_id);
-        }
-        
-        $funds = $query->orderBy('created_at', 'desc')->paginate(20);
-        $clubs = Club::where('status', 'active')->get();
-        
-        // Thống kê quỹ
-        $totalFunds = $funds->sum(function($fund) {
-            // Giả định content chứa số tiền
-            preg_match('/\d+/', $fund->content, $matches);
-            return isset($matches[0]) ? (int)$matches[0] : 0;
-        });
-        
-        return view('admin.fund-management.index', compact('funds', 'clubs', 'totalFunds'));
+        // Redirect to new fund management system
+        return redirect()->route('admin.funds');
     }
 
     /**

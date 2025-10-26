@@ -518,7 +518,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.fund-management*') ? 'active' : '' }}" href="{{ route('admin.fund-management') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }}" href="{{ route('admin.funds') }}">
                         <i class="fas fa-coins"></i>
                         Quản lý quỹ
                     </a>
