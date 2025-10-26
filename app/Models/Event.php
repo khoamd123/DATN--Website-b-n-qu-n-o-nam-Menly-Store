@@ -31,11 +31,6 @@ class Event extends Model
         'cancelled_at' => 'datetime',
     ];
 
-    protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
-    ];
-
     /**
      * Get the club that owns the event
      */
