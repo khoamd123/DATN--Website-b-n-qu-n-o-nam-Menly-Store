@@ -1233,23 +1233,35 @@ class AdminController extends Controller
                 return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
             }
 
-            // Sử dụng DB::table để cập nhật trực tiếp
+            // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
             $updateData = [
                 'status' => 'cancelled',
                 'updated_at' => now()
             ];
-
+            
             // Kiểm tra và thêm các trường mới nếu có
-            if (Schema::hasColumn('events', 'cancellation_reason')) {
-                $updateData['cancellation_reason'] = $cancellationReason;
+            try {
+                $columns = DB::select("SHOW COLUMNS FROM events LIKE 'cancellation_reason'");
+                if (count($columns) > 0) {
+                    $updateData['cancellation_reason'] = $cancellationReason;
+                }
+                
+                $columns = DB::select("SHOW COLUMNS FROM events LIKE 'cancelled_at'");
+                if (count($columns) > 0) {
+                    $updateData['cancelled_at'] = now();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Columns check failed: ' . $e->getMessage());
             }
-            if (Schema::hasColumn('events', 'cancelled_at')) {
-                $updateData['cancelled_at'] = now();
-            }
+            
+            DB::table('events')->where('id', $id)->update($updateData);
 
-            DB::table('events')
-                ->where('id', $id)
-                ->update($updateData);
+            // Log để debug
+            \Log::info('Event cancelled', [
+                'event_id' => $id,
+                'cancellation_reason' => $cancellationReason,
+                'updated_at' => now()
+            ]);
 
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
         } catch (\Exception $e) {

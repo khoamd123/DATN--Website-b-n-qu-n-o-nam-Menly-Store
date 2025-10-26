@@ -59,11 +59,13 @@
                             {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
                         </span>
                         @if($event->status === 'cancelled')
-                            <div class="mt-2">
-                                <small class="text-danger">
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small class="text-danger d-block">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
                                     <strong>Lý do hủy:</strong> 
-                                    {{ Str::limit($event->cancellation_reason ?? 'Sự kiện đã bị hủy bởi quản trị viên', 50) }}
+                                </small>
+                                <small class="text-dark">
+                                    {{ $event->cancellation_reason ?? 'Sự kiện đã bị hủy bởi quản trị viên' }}
                                 </small>
                             </div>
                         @endif
@@ -363,7 +365,9 @@
                                     <i class="fas fa-check me-2"></i>Duyệt sự kiện
                                 </button>
                             </form>
-                            
+                        @endif
+                        
+                        @if(in_array($event->status, ['pending', 'approved', 'ongoing']))
                             <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
                                 <i class="fas fa-times me-2"></i>Hủy sự kiện
                             </button>
@@ -936,10 +940,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Hủy bỏ
+                        <i class="fas fa-times me-2"></i>Đóng
                     </button>
                     <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-check me-2"></i>Xác nhận hủy sự kiện
+                        <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận hủy sự kiện
                     </button>
                 </div>
             </form>

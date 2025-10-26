@@ -313,6 +313,15 @@
                                 <strong>{{ $event->title }}</strong>
                                 <br><small class="text-muted">{{ Str::limit($event->description, 60) }}</small>
                                 <br><small class="text-info">Slug: {{ $event->slug }}</small>
+                                @if($event->status === 'cancelled' && $event->cancellation_reason)
+                                    <br>
+                                    <div class="alert alert-danger alert-sm mb-0 mt-1 p-2">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
+                                        </small>
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <strong>{{ $event->club->name ?? 'Không xác định' }}</strong>
