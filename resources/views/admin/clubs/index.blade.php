@@ -67,9 +67,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($clubs as $club)
+                    @forelse($clubs as $index => $club)
                         <tr>
-                            <td>{{ $club->id }}</td>
+                            <td>{{ ($clubs->currentPage() - 1) * $clubs->perPage() + $index + 1 }}</td>
                             <td>
                                 @php
                                     $logoPath = $club->logo ? public_path($club->logo) : null;
@@ -100,26 +100,28 @@
                             </td>
                             <td>
                                 @php
-                                    $leaders = $club->clubMembers?->filter(function($member) {
-                                        return $member->role_in_club === 'chunhiem';
-                                    }) ?? collect();
-                                    $approvedMembers = $club->clubMembers?->filter(function($member) {
-                                        return $member->status === 'approved';
-                                    }) ?? collect();
+                                    // Sử dụng dữ liệu từ controller (query trực tiếp từ DB)
+                                    $approvedMembersCount = isset($club->approved_members_count) ? $club->approved_members_count : 0;
+                                    $officersCount = isset($club->officers_count) ? $club->officers_count : 0;
+                                    $leadersCount = isset($club->leaders_count) ? $club->leaders_count : 0;
                                 @endphp
-                                <span class="badge bg-info">{{ $approvedMembers->count() }}</span>
+                                <span class="badge bg-info">{{ $approvedMembersCount }}</span>
                                 @if($club->leader) {{-- This now correctly uses the new leader relationship --}}
                                     <br><small class="text-success">
                                         <i class="fas fa-crown"></i> {{ $club->leader->name }}
                                     </small>
-                                @elseif($leaders->count() > 0)
+                                @elseif($leadersCount > 0)
                                     <br><small class="text-success">
-                                        <i class="fas fa-crown"></i> 
-                                        {{ $leaders->first()->user->name ?? '' }}
+                                        <i class="fas fa-crown"></i> Có trưởng
                                     </small>
                                 @else
                                     <br><small class="text-danger">
                                         <i class="fas fa-exclamation-triangle"></i> Chưa có trưởng
+                                    </small>
+                                @endif
+                                @if($officersCount > 0)
+                                    <br><small class="text-warning">
+                                        <i class="fas fa-star"></i> {{ $officersCount }} Cán sự
                                     </small>
                                 @endif
                             </td>
@@ -151,62 +153,71 @@
                     <a href="{{ route('admin.clubs.show', $club->id) }}" class="btn btn-sm btn-primary">
                         <i class="fas fa-eye"></i> Chi tiết
                     </a>
-                    <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
-                        <i class="fas fa-users"></i> Thành viên
-                    </a>
                     <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-sm btn-warning">
                         <i class="fas fa-edit"></i> Chỉnh sửa
                     </a>
-                                    <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                        @csrf
-                                        @method('PATCH')
-                                        @if($club->status === 'pending')
-                                            <!-- Form Duyệt -->
-                                            <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="approved">
-                                                <button type="submit" class="btn btn-sm btn-success w-100">
-                                                    <i class="fas fa-check"></i> Duyệt
-                                                </button>
-                                            </form>
-                                            
-                                            <!-- Form Từ chối -->
-                                            <button type="button" class="btn btn-sm btn-danger w-100" 
-                                                    data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
-                                                    data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
-                                                <i class="fas fa-times"></i> Từ chối
+                                    @if($club->status === 'pending')
+                                        <!-- Form Duyệt -->
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="approved">
+                                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                                <i class="fas fa-check"></i> Duyệt
                                             </button>
-                                        @endif
+                                        </form>
                                         
-                                        @if($club->status === 'approved')
+                                        <!-- Form Từ chối -->
+                                        <button type="button" class="btn btn-sm btn-danger w-100" 
+                                                data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
+                                                data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
+                                            <i class="fas fa-times"></i> Từ chối
+                                        </button>
+                                    @endif
+                                    
+                                    @if($club->status === 'approved')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
                                             <input type="hidden" name="status" value="active">
                                             <button type="submit" class="btn btn-sm btn-primary w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt
                                             </button>
-                                        @endif
-                                        
-                                        @if(in_array($club->status, ['active', 'approved']))
+                                        </form>
+                                    @endif
+                                    
+                                    @if(in_array($club->status, ['active', 'approved']))
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
                                             <input type="hidden" name="status" value="inactive">
                                             <button type="submit" class="btn btn-sm btn-warning w-100" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
                                                 <i class="fas fa-pause"></i> Tạm dừng
                                             </button>
-                                        @endif
-                                        
-                                        @if($club->status === 'inactive')
+                                        </form>
+                                    @endif
+                                    
+                                    @if($club->status === 'inactive')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
                                             <input type="hidden" name="status" value="active">
                                             <button type="submit" class="btn btn-sm btn-success w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt lại
                                             </button>
-                                        @endif
-                                        
-                                        @if($club->status === 'rejected')
+                                        </form>
+                                    @endif
+                                    
+                                    @if($club->status === 'rejected')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
                                             <input type="hidden" name="status" value="pending">
                                             <button type="submit" class="btn btn-sm btn-info w-100">
                                                 <i class="fas fa-undo"></i> Khôi phục
                                             </button>
-                                        @endif
-                                    </form>
+                                        </form>
+                                    @endif
 
                                     <button type="button" class="btn btn-sm btn-danger w-100"
                                             data-bs-toggle="modal" data-bs-target="#deleteClubModal"

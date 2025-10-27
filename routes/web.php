@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
+use App\Http\Controllers\ClubResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +137,10 @@ Route::get('/student/contact', function () {
     return view('student.contact', compact('user'));
 })->name('student.contact.index');
 
+// Student Posts Routes
+Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
+Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+
 Route::get('/student/club-management', function () {
     $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
     if (!$user) return 'User not found';
@@ -243,6 +248,12 @@ Route::prefix('admin')->group(function () {
         Route::get('/fund-requests/batch-approval', [App\Http\Controllers\FundRequestController::class, 'batchApproval'])->name('admin.fund-requests.batch-approval');
         Route::post('/fund-requests/batch-approval/process', [App\Http\Controllers\FundRequestController::class, 'processBatchApproval'])->name('admin.fund-requests.batch-approval.process');
         
+        // Quyết toán kinh phí
+        Route::get('/fund-settlements', [App\Http\Controllers\FundSettlementController::class, 'index'])->name('admin.fund-settlements');
+        Route::get('/fund-settlements/{fundRequest}/create', [App\Http\Controllers\FundSettlementController::class, 'create'])->name('admin.fund-settlements.create');
+        Route::post('/fund-settlements/{fundRequest}', [App\Http\Controllers\FundSettlementController::class, 'store'])->name('admin.fund-settlements.store');
+        Route::get('/fund-settlements/{fundRequest}/show', [App\Http\Controllers\FundSettlementController::class, 'show'])->name('admin.fund-settlements.show');
+        
         // Test route để debug
         Route::get('/test-auth', function() {
             return [
@@ -292,6 +303,7 @@ Route::prefix('admin')->group(function () {
     Route::post('/permissions-detailed/add-to-club', [App\Http\Controllers\PermissionController::class, 'addToClub'])->name('admin.permissions.add-to-club');
     Route::post('/permissions/update', [App\Http\Controllers\PermissionController::class, 'updateUserPermissions'])->name('admin.permissions.update');
     Route::get('/permissions/user-permissions', [App\Http\Controllers\PermissionController::class, 'getUserPermissions'])->name('admin.permissions.user-permissions');
+    Route::get('/permissions/user-position', [App\Http\Controllers\PermissionController::class, 'getUserPosition'])->name('admin.permissions.user-position');
     
     // Quản lý thùng rác
     Route::get('/trash', [App\Http\Controllers\TrashController::class, 'index'])->name('admin.trash');
@@ -330,16 +342,21 @@ Route::prefix('admin')->group(function () {
             Route::delete('/clubs/{club}/members/{member}/remove', [AdminController::class, 'removeMember'])->name('admin.clubs.members.remove');
             Route::post('/clubs/{club}/members/bulk-update', [AdminController::class, 'bulkUpdateMembers'])->name('admin.clubs.members.bulk-update');
     
-    // Tài nguyên CLB
-    Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
-    Route::get('/learning-materials/create', [AdminController::class, 'learningMaterialsCreate'])->name('admin.learning-materials.create');
-    Route::post('/learning-materials', [AdminController::class, 'learningMaterialsStore'])->name('admin.learning-materials.store');
-    Route::get('/learning-materials/{id}/edit', [AdminController::class, 'learningMaterialsEdit'])->name('admin.learning-materials.edit');
-    Route::put('/learning-materials/{id}', [AdminController::class, 'learningMaterialsUpdate'])->name('admin.learning-materials.update');
-    
-    // Quản lý quỹ
-    Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
-    Route::post('/fund-management', [AdminController::class, 'fundManagementStore'])->name('admin.fund-management.store');
+
+    // Tài Nguyên CLB
+    Route::get('/club-resources', [ClubResourceController::class, 'index'])->name('admin.club-resources.index');
+    Route::get('/club-resources/create', [ClubResourceController::class, 'create'])->name('admin.club-resources.create');
+    Route::post('/club-resources', [ClubResourceController::class, 'store'])->name('admin.club-resources.store');
+    Route::get('/club-resources/trash', [ClubResourceController::class, 'trash'])->name('admin.club-resources.trash');
+    Route::get('/club-resources/{id}', [ClubResourceController::class, 'show'])->name('admin.club-resources.show');
+    Route::get('/club-resources/{id}/edit', [ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
+    Route::put('/club-resources/{id}', [ClubResourceController::class, 'update'])->name('admin.club-resources.update');
+    Route::delete('/club-resources/{id}', [ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
+    Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
+    Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
+    Route::delete('/club-resources/{id}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('admin.club-resources.force-delete');
+    Route::post('/club-resources/restore-all', [ClubResourceController::class, 'restoreAll'])->name('admin.club-resources.restore-all');
+    Route::delete('/club-resources/force-delete-all', [ClubResourceController::class, 'forceDeleteAll'])->name('admin.club-resources.force-delete-all');
     
     // Quản lý câu lạc bộ - Đã di chuyển lên trên
     
@@ -367,16 +384,21 @@ Route::prefix('admin')->group(function () {
     Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
     Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');
     
-    // Bài viết - CRUD operations (của Nam)
-    Route::get('/posts', [App\Http\Controllers\PostController::class, 'index'])->name('admin.posts');
-    Route::get('/posts/create', [App\Http\Controllers\PostController::class, 'create'])->name('admin.posts.create');
-    Route::post('/posts', [App\Http\Controllers\PostController::class, 'store'])->name('admin.posts.store');
-    Route::get('/posts/{id}', [App\Http\Controllers\PostController::class, 'show'])->name('admin.posts.show');
-    Route::get('/posts/{id}/edit', [App\Http\Controllers\PostController::class, 'edit'])->name('admin.posts.edit');
-    Route::put('/posts/{id}', [App\Http\Controllers\PostController::class, 'update'])->name('admin.posts.update');
-    Route::delete('/posts/{id}', [App\Http\Controllers\PostController::class, 'destroy'])->name('admin.posts.destroy');
-    Route::patch('/posts/{id}/status', [App\Http\Controllers\PostController::class, 'updateStatus'])->name('admin.posts.status');
-    Route::post('/posts/{id}/restore', [App\Http\Controllers\PostController::class, 'restore'])->name('admin.posts.restore');
+
+    // Bài viết
+    Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
+    Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
+    Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+        Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
+        Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
+        Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
+        Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
+        
+        // Thùng rác bài viết
+        Route::get('/posts-trash', [AdminController::class, 'postsTrash'])->name('admin.posts.trash');
+        Route::post('/posts/{id}/restore', [AdminController::class, 'restorePost'])->name('admin.posts.restore');
+        Route::delete('/posts/{id}/force-delete', [AdminController::class, 'forceDeletePost'])->name('admin.posts.force-delete');
+
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');

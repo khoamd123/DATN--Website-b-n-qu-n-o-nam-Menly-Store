@@ -67,9 +67,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Tài nguyên CLB
     Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('admin.learning-materials');
     
-    // Quản lý quỹ
-    Route::get('/fund-management', [AdminController::class, 'fundManagement'])->name('admin.fund-management');
-    
     // Kế hoạch
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');
     

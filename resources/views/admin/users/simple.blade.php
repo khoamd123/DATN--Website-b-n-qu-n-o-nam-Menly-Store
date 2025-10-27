@@ -48,7 +48,7 @@
             <table class="table table-hover table-striped">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Avatar</th>
                         <th>Tên</th>
                         <th>Email</th>
@@ -61,9 +61,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $user)
+                    @forelse($users as $index => $user)
                         <tr>
-                            <td><strong>{{ $user->id }}</strong></td>
+                            <td><strong>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</strong></td>
                             <td>
                                 <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" 
                                      style="width: 35px; height: 35px; font-size: 14px;">

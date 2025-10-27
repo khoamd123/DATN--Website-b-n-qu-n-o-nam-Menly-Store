@@ -203,7 +203,7 @@
                                     <h5 class="card-title fw-bold">Fund Management</h5>
                                     <p class="card-text text-muted">Quản lý quỹ</p>
                                     <div class="d-grid gap-2">
-                                        <a href="{{ route('admin.fund-management') }}" class="btn btn-primary btn-sm">
+                                        <a href="{{ route('admin.funds') }}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-list me-2"></i>Danh sách Funds
                                         </a>
                                     </div>

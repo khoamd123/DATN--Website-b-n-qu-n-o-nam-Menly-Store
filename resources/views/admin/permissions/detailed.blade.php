@@ -127,7 +127,7 @@
     </div>
 </div>
 
-<!-- Bảng quản lý permissions -->
+<!-- Danh sách users với CLB -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">👥 Phân Quyền Chi Tiết</h5>
@@ -136,47 +136,67 @@
         </button>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Người dùng</th>
-                        <th>Vị trí trong CLB</th>
-                        <th>Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($users as $user)
-                        @php
-                            // Chỉ lấy clubMembers có status = 'approved'
-                            $userClubs = $user->clubMembers()->where('status', 'approved')->with('club')->get();
-                        @endphp
-                        
-                        @if($userClubs->count() > 0)
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar-fixed me-2">
-                                            {{ substr($user->name, 0, 1) }}
-                                        </div>
-                                        <div>
-                                            <strong>{{ $user->name }}</strong>
-                                            <br><small class="text-muted">{{ $user->email }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if($user->isAdmin())
-                                        <span class="badge bg-danger">Admin Hệ Thống</span>
-                                        <br><small class="text-muted">Quyền: Tất cả CLB</small>
-                                    @else
-                                        @foreach($userClubs as $clubMember)
-                                            @php
-                                                $club = $clubMember->club;
-                                                $position = $clubMember->position ?? $clubMember->role_in_club;
-                                            @endphp
-                                            <div class="mb-2">
-                                                <strong>{{ $club->name }}:</strong> 
+        @foreach($users as $user)
+            @php
+                // Load lại từ database để lấy dữ liệu mới nhất (tránh cache)
+                // Lấy tất cả rồi group unique club_id trong PHP
+                $userClubsRaw = \App\Models\ClubMember::where('user_id', $user->id)
+                    ->whereIn('status', ['approved', 'active'])
+                    ->with('club')
+                    ->get();
+                
+                // Group unique by club_id trong PHP
+                $userClubs = $userClubsRaw->unique('club_id')->values();
+            @endphp
+            
+            @if($userClubs->count() > 0 || !$user->isAdmin())
+                <div class="card mb-3">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar-fixed me-3">
+                                {{ substr($user->name, 0, 1) }}
+                            </div>
+                            <div>
+                                <strong>{{ $user->name }}</strong>
+                                <br><small class="text-muted">{{ $user->email }}</small>
+                            </div>
+                        </div>
+                        @if(!$user->isAdmin())
+                            @if($userClubs->count() > 0)
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#user{{ $user->id }}Clubs">
+                                    <i class="fas fa-chevron-down"></i> Xem chi tiết
+                                </button>
+                            @else
+                                <span class="text-muted">Chưa tham gia CLB</span>
+                            @endif
+                        @else
+                            <span class="badge bg-danger">Admin Hệ Thống</span>
+                        @endif
+                    </div>
+                    
+                    @if($userClubs->count() > 0)
+                        <div id="user{{ $user->id }}Clubs" class="collapse show">
+                            <div class="card-body">
+                                @foreach($userClubs as $clubMember)
+                                    @php
+                                        $club = $clubMember->club;
+                                        $position = $clubMember->position ?? $clubMember->role_in_club;
+                                        
+                                        // Lấy quyền của user trong CLB này
+                                        $clubPermissions = \DB::table('user_permissions_club')
+                                            ->where('user_id', $user->id)
+                                            ->where('club_id', $club->id)
+                                            ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
+                                            ->select('permissions.name')
+                                            ->pluck('name')
+                                            ->toArray();
+                                    @endphp
+                                    <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <h6 class="mb-0 me-3">{{ $club->name }}</h6>
                                                 @switch($position)
                                                     @case('leader')
                                                     @case('chunhiem')
@@ -197,52 +217,29 @@
                                                         <span class="badge bg-secondary">{{ $position }}</span>
                                                 @endswitch
                                             </div>
-                                        @endforeach
-                                    @endif
-                                </td>
-                                <td>
-                                    @if(!$user->isAdmin())
-                                        <button class="btn btn-sm btn-outline-primary" 
-                                                onclick="editPermissions({{ $user->id }}, '{{ $user->name }}', {{ $userClubs->pluck('club.id')->toJson() }})">
+                                            <div>
+                                                <small class="text-muted">Quyền: </small>
+                                                @if(count($clubPermissions) > 0)
+                                                    @foreach($clubPermissions as $permName)
+                                                        <span class="badge bg-info mb-1">{{ $permName }}</span>
+                                                    @endforeach
+                                                @else
+                                                    <span class="text-muted">Chưa có quyền</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary ms-2" 
+                                                onclick="editPermissionsForClub({{ $user->id }}, {{ $club->id }}, '{{ $user->name }}', '{{ $club->name }}')">
                                             <i class="fas fa-edit"></i> Sửa quyền
                                         </button>
-                                    @else
-                                        <span class="text-muted">Admin - Không thể sửa</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @else
-                            {{-- Hiển thị user chưa tham gia CLB nào --}}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar-fixed me-2">
-                                            {{ substr($user->name, 0, 1) }}
-                                        </div>
-                                        <div>
-                                            <strong>{{ $user->name }}</strong>
-                                            <br><small class="text-muted">{{ $user->email }}</small>
-                                        </div>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="text-muted">Chưa tham gia CLB nào</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark">Không có</span>
-                                </td>
-                                <td>
-                                    <span class="text-muted">Không có quyền</span>
-                                </td>
-                                <td>
-                                    <span class="text-muted">Chọn CLB để thêm</span>
-                                </td>
-                            </tr>
-                        @endif
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @endforeach
     </div>
 </div>
 
@@ -259,10 +256,11 @@
                     <strong>Người dùng:</strong> <span id="modalUserName"></span>
                 </div>
                 <div class="mb-3">
-                    <label for="clubSelect" class="form-label">Chọn CLB:</label>
+                    <label for="clubSelect" class="form-label">Câu lạc bộ:</label>
                     <select class="form-select" id="clubSelect">
                         <option value="">Chọn CLB</option>
                     </select>
+                    <small class="text-muted d-none" id="clubSelectNote">Không thể chọn CLB khác vì thành viên chỉ thuộc 1 CLB này</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Chọn quyền:</label>
@@ -284,6 +282,14 @@
                         @endforeach
                     </div>
                 </div>
+                <div class="alert alert-info mt-3">
+                    <strong>Ghi chú:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Có <strong>5 quyền trở lên</strong> → Tự động thành <strong>Trưởng CLB</strong></li>
+                        <li>Có <strong>2-4 quyền</strong> → Tự động thành <strong>Cán sự</strong></li>
+                        <li>Chỉ có <strong>xem_bao_cao</strong> → Tự động thành <strong>Thành viên</strong></li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
@@ -293,46 +299,113 @@
     </div>
 </div>
 
+@endsection
+
+@section('scripts')
 <script>
 let currentUserId = null;
 let currentClubId = null;
 
+function editPermissionsForClub(userId, clubId, userName, clubName) {
+    editPermissions(userId, userName, [clubId]);
+}
+
 function editPermissions(userId, userName, clubIds) {
+    console.log('editPermissions called', { userId, userName, clubIds });
+    
     currentUserId = userId;
     
     document.getElementById('modalUserName').textContent = userName;
     
     // Tạo dropdown chọn CLB
     const clubSelect = document.getElementById('clubSelect');
-    clubSelect.innerHTML = '<option value="">Chọn CLB</option>';
+    const clubSelectNote = document.getElementById('clubSelectNote');
     
-    // Lấy danh sách CLB từ user
-    clubIds.forEach(clubId => {
-        // Tìm CLB trong danh sách $clubs
-        const club = {{ $clubs->pluck('name', 'id')->toJson() }};
-        if (club[clubId]) {
+    // Lấy tất cả CLB từ $clubs
+    const allClubs = @json($clubs->pluck('name', 'id'));
+    console.log('All clubs:', allClubs);
+    
+    // Nếu user đã có CLB
+    if (clubIds.length > 0) {
+        // Nếu chỉ có 1 CLB, chỉ hiển thị CLB đó và disable dropdown
+        if (clubIds.length === 1) {
+            clubSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = clubIds[0];
+            option.textContent = allClubs[clubIds[0]];
+            option.selected = true;
+            clubSelect.appendChild(option);
+            clubSelect.disabled = true;
+            clubSelectNote.classList.remove('d-none');
+            
+            currentClubId = clubIds[0];
+            loadPermissions(userId, clubIds[0]);
+        } else {
+            // Nếu có nhiều CLB, cho phép chọn
+            clubSelect.innerHTML = '<option value="">Chọn CLB</option>';
+            clubSelect.disabled = false;
+            clubSelectNote.classList.add('d-none');
+            
+            Object.keys(allClubs).forEach(clubId => {
+                const option = document.createElement('option');
+                option.value = clubId;
+                option.textContent = allClubs[clubId];
+                if (clubIds.includes(parseInt(clubId))) {
+                    option.selected = true;
+                }
+                clubSelect.appendChild(option);
+            });
+            
+            // Chọn CLB đầu tiên
+            clubSelect.value = clubIds[0];
+            currentClubId = clubIds[0];
+            loadPermissions(userId, clubIds[0]);
+            
+            // Load permissions khi chọn CLB khác
+            clubSelect.onchange = function() {
+                currentClubId = this.value;
+                if (currentClubId) {
+                    loadPermissions(userId, currentClubId);
+                }
+            };
+        }
+    } else {
+        // Nếu chưa có CLB, hiển thị tất cả để chọn
+        clubSelect.innerHTML = '<option value="">Chọn CLB</option>';
+        clubSelect.disabled = false;
+        clubSelectNote.classList.add('d-none');
+        
+        Object.keys(allClubs).forEach(clubId => {
             const option = document.createElement('option');
             option.value = clubId;
-            option.textContent = club[clubId];
+            option.textContent = allClubs[clubId];
             clubSelect.appendChild(option);
-        }
-    });
-    
-    // Reset club ID và load permissions khi chọn CLB
-    currentClubId = null;
-    clubSelect.onchange = function() {
-        currentClubId = this.value;
-        if (currentClubId) {
-            loadPermissions(userId, currentClubId);
-        }
-    };
+        });
+        
+        currentClubId = null;
+        
+        // Load permissions khi chọn CLB
+        clubSelect.onchange = function() {
+            currentClubId = this.value;
+            if (currentClubId) {
+                loadPermissions(userId, currentClubId);
+            }
+        };
+    }
     
     // Reset checkboxes
     document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
     
     // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('editPermissionsModal'));
-    modal.show();
+    const modalElement = document.getElementById('editPermissionsModal');
+    console.log('Modal element:', modalElement);
+    
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Modal element not found!');
+    }
 }
 
 function loadPermissions(userId, clubId) {
@@ -371,6 +444,12 @@ function savePermissions() {
     const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
         .map(cb => cb.value);
     
+    // Hiển thị loading
+    const saveBtn = event.target;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+    
     fetch('{{ url("/admin/permissions/update") }}', {
         method: 'POST',
         headers: {
@@ -385,15 +464,21 @@ function savePermissions() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Response data:', data);
         if (data.success) {
-            alert('Đã cập nhật quyền thành công!');
+            alert(data.message || 'Đã cập nhật quyền thành công!');
             location.reload();
         } else {
-            alert('Lỗi: ' + data.message);
+            alert('Lỗi: ' + (data.message || 'Không thể cập nhật quyền.'));
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         alert('Lỗi: ' + error.message);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
     });
 }
 
@@ -418,26 +503,7 @@ function getPermissionNameById(permissionId) {
     };
     return permissionMap[permissionId] || null;
 }
-</script>
 
-<style>
-.user-avatar-fixed {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-</style>
-
-<script>
 function addToClub(userId, clubId, userName, clubName) {
     if (confirm(`Bạn có chắc chắn muốn thêm "${userName}" vào CLB "${clubName}"?`)) {
         // Gửi request thêm user vào CLB
@@ -468,4 +534,23 @@ function addToClub(userId, clubId, userName, clubName) {
     }
 }
 </script>
+@endsection
+
+@section('styles')
+<style>
+.user-avatar-fixed {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+</style>
 @endsection

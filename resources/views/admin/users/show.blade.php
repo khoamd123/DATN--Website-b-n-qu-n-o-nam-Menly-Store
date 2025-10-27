@@ -3,6 +3,14 @@
 @section('title', 'Chi tiết người dùng')
 
 @section('content')
+@php
+    // Lấy tất cả clubMembers với status = 'approved' hoặc 'active'
+    $userClubs = $user->clubMembers()
+        ->whereIn('status', ['approved', 'active'])
+        ->with('club')
+        ->get();
+@endphp
+
 <div class="container-fluid">
     <div class="content-header">
         <h1><i class="fas fa-user"></i> Chi tiết người dùng</h1>
@@ -132,25 +140,27 @@
                             <h5 class="mb-0"><i class="fas fa-users"></i> Vai trò câu lạc bộ</h5>
                         </div>
                         <div class="card-body">
-                            @php
-                                $clubs = \App\Models\Club::all();
-                                $clubRoles = [];
-                                foreach($clubs as $club) {
-                                    $position = $user->getPositionInClub($club->id);
-                                    if($position) {
-                                        $clubRoles[] = [
-                                            'club' => $club,
-                                            'position' => $position
-                                        ];
-                                    }
-                                }
-                            @endphp
-                            
-                            @if(count($clubRoles) > 0)
-                                @foreach($clubRoles as $clubRole)
+                            @if($userClubs->count() > 0)
+                                @foreach($userClubs as $clubMember)
+                                    @php
+                                        $position = $clubMember->position ?? $clubMember->role_in_club;
+                                        $badgeColor = 'secondary';
+                                        $positionLabel = 'Member';
+                                        
+                                        if($position === 'leader' || $position === 'chunhiem') {
+                                            $badgeColor = 'danger';
+                                            $positionLabel = 'Trưởng CLB';
+                                        } elseif($position === 'officer' || $position === 'phonhiem') {
+                                            $badgeColor = 'info';
+                                            $positionLabel = 'Cán sự';
+                                        } elseif($position === 'member' || $position === 'thanhvien') {
+                                            $badgeColor = 'success';
+                                            $positionLabel = 'Thành viên';
+                                        }
+                                    @endphp
                                     <div class="mb-2">
-                                        <strong>{{ $clubRole['club']->name }}:</strong><br>
-                                        <span class="badge bg-info">{{ ucfirst($clubRole['position']) }}</span>
+                                        <strong>{{ $clubMember->club->name }}:</strong><br>
+                                        <span class="badge bg-{{ $badgeColor }}">{{ $positionLabel }}</span>
                                     </div>
                                 @endforeach
                             @else
@@ -200,7 +210,7 @@
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center">
-                                        <h3 class="text-warning">{{ count($clubRoles) }}</h3>
+                                        <h3 class="text-warning">{{ $userClubs->count() ?? 0 }}</h3>
                                         <small class="text-muted">Câu lạc bộ</small>
                                     </div>
                                 </div>
@@ -222,7 +232,9 @@
                         </div>
                         <div class="card-body">
                             @php
-                                $recentPosts = \App\Models\Post::where('user_id', $user->id)
+                                // Lấy tất cả bài viết từ các CLB mà user tham gia
+                                $clubIds = $userClubs->pluck('club_id')->toArray();
+                                $recentPosts = \App\Models\Post::whereIn('club_id', $clubIds)
                                     ->orderBy('created_at', 'desc')
                                     ->limit(5)
                                     ->get();

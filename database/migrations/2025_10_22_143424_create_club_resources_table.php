@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateClubResourcesTable extends Migration
+class CreateClubResourcesTableV2 extends Migration
 {
     /**
      * Run the migrations.
@@ -13,6 +13,10 @@ class CreateClubResourcesTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('club_resources')) {
+            return;
+        }
+        
         Schema::create('club_resources', function (Blueprint $table) {
             $table->id();
             $table->string('title');

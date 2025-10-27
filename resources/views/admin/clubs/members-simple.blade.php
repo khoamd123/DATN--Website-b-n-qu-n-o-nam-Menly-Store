@@ -10,7 +10,7 @@
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Thành viên CLB: {{ $club->name }}</h1>
-            <a href="/admin/clubs" class="btn btn-secondary">Quay lại</a>
+            <a href="{{ route('admin.clubs') }}" class="btn btn-secondary">Quay lại</a>
         </div>
 
         <div class="card mb-4">
@@ -32,10 +32,20 @@
                             <strong>{{ $member->user->name ?? 'Không xác định' }}</strong>
                             <br><small class="text-muted">{{ $member->user->student_id ?? 'N/A' }}</small>
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-{{ $member->position === 'leader' ? 'danger' : ($member->position === 'officer' ? 'info' : 'secondary') }}">
                                 {{ $member->position === 'leader' ? 'Trưởng CLB' : ($member->position === 'officer' ? 'Cán sự' : 'Thành viên') }}
                             </span>
+                            <form action="{{ route('admin.clubs.members.remove', ['club' => $club->id, 'member' => $member->id]) }}" 
+                                  method="POST" 
+                                  onsubmit="return confirm('Bạn có chắc chắn muốn xóa thành viên {{ $member->user->name ?? 'này' }} khỏi CLB này?')"
+                                  class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Xóa
+                                </button>
+                            </form>
                         </div>
                     </div>
                 @empty

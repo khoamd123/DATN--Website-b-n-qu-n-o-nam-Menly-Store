@@ -15,7 +15,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ $users->where('is_admin', true)->count() }}</h4>
+                        <h4>{{ \App\Models\User::where('is_admin', true)->count() }}</h4>
                         <p class="mb-0">Admin</p>
                     </div>
                     <div class="align-self-center">
@@ -30,7 +30,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ $users->where('is_admin', false)->count() }}</h4>
+                        <h4>{{ \App\Models\User::where('is_admin', false)->count() }}</h4>
                         <p class="mb-0">User thường</p>
                     </div>
                     <div class="align-self-center">
@@ -45,7 +45,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ $clubs->count() }}</h4>
+                        <h4>{{ \App\Models\Club::count() }}</h4>
                         <p class="mb-0">Câu lạc bộ</p>
                     </div>
                     <div class="align-self-center">
@@ -60,7 +60,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ $permissions->count() }}</h4>
+                        <h4>{{ \App\Models\Permission::count() }}</h4>
                         <p class="mb-0">Loại quyền</p>
                     </div>
                     <div class="align-self-center">
@@ -82,7 +82,7 @@
             <table class="table table-hover table-striped">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Role</th>
@@ -93,9 +93,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $user)
+                    @forelse($users as $index => $user)
                         <tr>
-                            <td><strong>{{ $user->id }}</strong></td>
+                            <td><strong>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</strong></td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2 text-white" 

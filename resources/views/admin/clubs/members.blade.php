@@ -106,6 +106,7 @@
                         <th>Trạng thái</th>
                         <th>Ngày tham gia</th>
                         <th>Thông tin liên hệ</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -170,10 +171,21 @@
                                     <div><i class="fas fa-phone me-1"></i> {{ $member->user->phone ?? 'N/A' }}</div>
                                 </div>
                             </td>
+                            <td>
+                                <form action="{{ route('admin.clubs.members.remove', ['club' => $club->id, 'member' => $member->id]) }}" 
+                                      method="POST" 
+                                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa thành viên {{ $member->user->name ?? 'này' }} khỏi CLB này?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 <i class="fas fa-users fa-2x mb-3 d-block"></i>
                                 CLB này chưa có thành viên nào
                             </td>

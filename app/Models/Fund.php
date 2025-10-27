@@ -78,4 +78,36 @@ class Fund extends Model
             ->where('status', 'approved')
             ->sum('amount');
     }
+
+    /**
+     * Cập nhật số tiền hiện tại dựa trên các giao dịch
+     */
+    public function updateCurrentAmount()
+    {
+        // Tính số dư = Số tiền ban đầu + Tổng thu - Tổng chi
+        $currentAmount = $this->initial_amount + $this->getTotalIncome() - $this->getTotalExpense();
+        
+        $this->current_amount = $currentAmount;
+        $this->save();
+        
+        return $this->current_amount;
+    }
+
+    /**
+     * Tính số giao dịch chờ duyệt
+     */
+    public function getPendingTransactionsCount()
+    {
+        return $this->transactions()
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * Tính tổng số giao dịch
+     */
+    public function getTotalTransactionsCount()
+    {
+        return $this->transactions()->count();
+    }
 }

@@ -13,11 +13,19 @@ class AddTransactionTypeToFundTransactionsTable extends Migration
      */
     public function up()
     {
+        // Xóa cột cũ nếu tồn tại (nếu có enum cũ)
+        if (Schema::hasColumn('fund_transactions', 'transaction_type')) {
+            Schema::table('fund_transactions', function (Blueprint $table) {
+                $table->dropColumn('transaction_type');
+            });
+        }
+        
+        // Thêm cột mới với enum mới
         Schema::table('fund_transactions', function (Blueprint $table) {
-            $table->enum('transaction_type', ['event_expense', 'operational_expense', 'income'])
+            $table->enum('transaction_type', ['event_expense', 'operational_expense', 'income', 'settlement', 'refund'])
                   ->nullable()
                   ->after('type')
-                  ->comment('Loại giao dịch: chi cho sự kiện, chi vận hành CLB, hoặc thu');
+                  ->comment('Loại giao dịch: chi cho sự kiện, chi vận hành CLB, quyết toán, hoàn tiền, hoặc thu');
         });
     }
 

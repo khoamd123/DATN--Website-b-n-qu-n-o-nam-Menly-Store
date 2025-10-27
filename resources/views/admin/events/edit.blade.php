@@ -241,12 +241,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('imagesInput');
     const wrap = document.getElementById('imagesPreviewWrap');
     const container = document.getElementById('imagesPreviewContainer');
+    
+    let selectedFiles = [];
 
     if (!input) return;
 
-    input.addEventListener('change', function(e) {
-        const files = e.target.files;
-        if (!files || files.length === 0) {
+    // Hàm render preview
+    function renderPreview() {
+        if (selectedFiles.length === 0) {
             wrap.style.display = 'none';
             container.innerHTML = '';
             return;
@@ -254,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         container.innerHTML = '';
 
-        Array.from(files).forEach((file, index) => {
+        selectedFiles.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const col = document.createElement('div');
@@ -262,17 +264,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 col.innerHTML = `
                     <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
                         <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
-                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
                             Mới ${index + 1}
                         </div>
+                        <button type="button" class="btn-remove-image" data-index="${index}" style="position: absolute; top: 5px; right: 5px; background: rgba(220,53,69,0.9); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; line-height: 1;" title="Xóa ảnh này">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 `;
                 container.appendChild(col);
+                
+                // Thêm event listener cho nút xóa
+                const removeBtn = col.querySelector('.btn-remove-image');
+                removeBtn.addEventListener('click', function() {
+                    const indexToRemove = parseInt(this.getAttribute('data-index'));
+                    selectedFiles.splice(indexToRemove, 1);
+                    
+                    // Cập nhật lại file input
+                    const dataTransfer = new DataTransfer();
+                    selectedFiles.forEach(file => {
+                        dataTransfer.items.add(file);
+                    });
+                    input.files = dataTransfer.files;
+                    
+                    // Render lại preview
+                    renderPreview();
+                });
             };
             reader.readAsDataURL(file);
         });
 
         wrap.style.display = 'block';
+    }
+
+    input.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (!files || files.length === 0) {
+            selectedFiles = [];
+            renderPreview();
+            return;
+        }
+
+        selectedFiles = Array.from(files);
+        renderPreview();
     });
 });
 </script>

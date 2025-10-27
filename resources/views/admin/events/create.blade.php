@@ -30,7 +30,7 @@
     @endif
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin sự kiện</h5>
@@ -142,34 +142,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Hướng dẫn</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-lightbulb"></i> Mẹo tạo sự kiện:</h6>
-                        <ul class="mb-0">
-                            <li>Đặt tên sự kiện rõ ràng và dễ hiểu</li>
-                            <li>Mô tả chi tiết để thu hút người tham gia</li>
-                            <li>Chọn thời gian phù hợp với đối tượng</li>
-                            <li>Xác định địa điểm cụ thể nếu tổ chức offline</li>
-                        </ul>
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <h6><i class="fas fa-exclamation-triangle"></i> Lưu ý:</h6>
-                        <ul class="mb-0">
-                            <li>Sự kiện sẽ được tạo ở trạng thái "Bản nháp"</li>
-                            <li>Cần duyệt trước khi công khai</li>
-                            <li>Kiểm tra kỹ thông tin trước khi lưu</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 @push('scripts')
 <script>
@@ -232,27 +204,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
         container.innerHTML = '';
 
+        // Tạo DataTransfer để quản lý files
+        const dataTransfer = new DataTransfer();
+        Array.from(files).forEach(file => dataTransfer.items.add(file));
+
+        // Hiển thị preview
         Array.from(files).forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 mb-2';
+                col.setAttribute('data-file-index', index);
                 col.innerHTML = `
                     <div style="position: relative; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
                         <img src="${ev.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
-                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
-                            ${index + 1}
-                        </div>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeImage(this)" style="position: absolute; top: 5px; right: 5px; z-index: 10; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 `;
                 container.appendChild(col);
             };
             reader.readAsDataURL(file);
+            col.dataset.fileName = file.name;
         });
+
+        // Cập nhật input với files mới
+        input.files = dataTransfer.files;
 
         wrap.style.display = 'block';
     });
 });
+
+// Hàm xóa ảnh
+function removeImage(button) {
+    const col = button.closest('.col-md-4');
+    const imageIndex = parseInt(col.getAttribute('data-file-index'));
+    
+    // Xóa preview
+    col.remove();
+    
+    // Lấy input file hiện tại
+    const input = document.getElementById('imagesInput');
+    const dataTransfer = new DataTransfer();
+    
+    // Copy tất cả files trừ file bị xóa
+    Array.from(input.files).forEach((file, index) => {
+        if (index !== imageIndex) {
+            dataTransfer.items.add(file);
+        }
+    });
+    
+    // Cập nhật input files
+    input.files = dataTransfer.files;
+    
+    // Nếu không còn ảnh nào thì ẩn preview container
+    const container = document.getElementById('imagesPreviewContainer');
+    if (container.children.length === 0) {
+        document.getElementById('imagesPreviewWrap').style.display = 'none';
+    } else {
+        // Re-index các ảnh còn lại
+        Array.from(container.children).forEach((col, index) => {
+            col.setAttribute('data-file-index', index);
+        });
+    }
+}
 </script>
 @endpush
 </div>

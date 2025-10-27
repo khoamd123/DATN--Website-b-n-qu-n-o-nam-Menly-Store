@@ -14,7 +14,7 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-user-shield"></i>
             </div>
-            <p class="stats-number">{{ $users->where('is_admin', true)->count() }}</p>
+            <p class="stats-number">{{ \App\Models\User::where('is_admin', true)->count() }}</p>
             <p class="stats-label">Admin</p>
         </div>
     </div>
@@ -23,7 +23,7 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number">{{ $users->where('is_admin', false)->count() }}</p>
+            <p class="stats-number">{{ \App\Models\User::where('is_admin', false)->count() }}</p>
             <p class="stats-label">User thường</p>
         </div>
     </div>
@@ -32,7 +32,7 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
-            <p class="stats-number">{{ $clubs->count() }}</p>
+            <p class="stats-number">{{ \App\Models\Club::count() }}</p>
             <p class="stats-label">Câu lạc bộ</p>
         </div>
     </div>
@@ -41,7 +41,7 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-key"></i>
             </div>
-            <p class="stats-number">{{ $permissions->count() }}</p>
+            <p class="stats-number">{{ \App\Models\Permission::count() }}</p>
             <p class="stats-label">Loại quyền</p>
         </div>
     </div>
@@ -54,7 +54,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Quyền Admin</th>
@@ -65,9 +65,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $user)
+                    @forelse($users as $index => $user)
                         <tr>
-                            <td>{{ $user->id }}</td>
+                            <td>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     @if($user->avatar && file_exists(public_path($user->avatar)))

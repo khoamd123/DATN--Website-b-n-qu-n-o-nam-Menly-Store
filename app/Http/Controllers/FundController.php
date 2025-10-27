@@ -100,17 +100,27 @@ class FundController extends Controller
     /**
      * Hiển thị chi tiết quỹ
      */
-    public function show(Fund $fund)
+    public function show(Request $request, Fund $fund)
     {
         $fund->load(['club', 'creator', 'transactions.creator', 'transactions.approver']);
         
-        // Thống kê
+        // Thống kê TRƯỚC KHI cập nhật để tránh loop
         $stats = [
             'total_income' => $fund->getTotalIncome(),
             'total_expense' => $fund->getTotalExpense(),
             'pending_transactions' => $fund->transactions()->where('status', 'pending')->count(),
             'recent_transactions' => $fund->transactions()->latest()->limit(10)->get(),
         ];
+        
+        // Chỉ cập nhật nếu có refresh parameter
+        if ($request->has('refresh')) {
+            $oldAmount = $fund->current_amount;
+            $fund->updateCurrentAmount();
+            $fund->refresh(); // Reload from database
+            
+            return view('admin.funds.show', compact('fund', 'stats'))
+                ->with('success', 'Đã cập nhật số tiền hiện tại: ' . number_format($fund->current_amount) . ' VNĐ');
+        }
 
         return view('admin.funds.show', compact('fund', 'stats'));
     }

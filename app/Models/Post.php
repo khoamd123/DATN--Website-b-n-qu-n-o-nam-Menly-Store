@@ -43,4 +43,12 @@ class Post extends Model
     {
         return $this->hasMany(\App\Models\PostComment::class);
     }
+
+    /**
+     * Get the attachments for the post
+     */
+    public function attachments()
+    {
+        return $this->hasMany(PostAttachment::class);
+    }
 }

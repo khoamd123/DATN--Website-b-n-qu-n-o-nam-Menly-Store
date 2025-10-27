@@ -222,7 +222,7 @@
         
         .table {
             margin-bottom: 0;
-            min-width: 1000px;
+            /* Removed min-width to prevent overflow */
         }
         
         /* Column width optimization - COMPACT VERSION */
@@ -628,10 +628,33 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }}" href="{{ route('admin.funds') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }} {{ request()->routeIs('admin.fund-requests*') ? 'active' : '' }} {{ request()->routeIs('admin.fund-settlements*') ? 'active' : '' }}" 
+                       href="#" 
+                       onclick="event.preventDefault(); toggleSubmenu('fund-menu'); return false;">
                         <i class="fas fa-coins"></i>
                         Quản lý quỹ
+                        <i class="fas fa-chevron-down float-end" id="fund-menu-icon" style="font-size: 0.75rem; transition: transform 0.3s;"></i>
                     </a>
+                    <ul class="submenu" id="fund-menu" style="display: {{ (request()->routeIs('admin.funds*') || request()->routeIs('admin.fund-requests*') || request()->routeIs('admin.fund-settlements*')) ? 'block' : 'none' }};">
+                        <li>
+                            <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }}" href="{{ route('admin.funds') }}" style="padding-left: 3rem;">
+                                <i class="fas fa-wallet"></i>
+                                Danh sách quỹ
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link {{ request()->routeIs('admin.fund-requests*') ? 'active' : '' }}" href="{{ route('admin.fund-requests') }}" style="padding-left: 3rem;">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                Yêu cầu cấp kinh phí
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link {{ request()->routeIs('admin.fund-settlements*') ? 'active' : '' }}" href="{{ route('admin.fund-settlements') }}" style="padding-left: 3rem;">
+                                <i class="fas fa-calculator"></i>
+                                Quyết toán kinh phí
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.plans-schedule*') ? 'active' : '' }}" href="{{ route('admin.plans-schedule') }}">
@@ -640,7 +663,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.posts*') ? 'active' : '' }}" href="{{ route('admin.posts') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.posts*') && !request()->routeIs('admin.posts.trash') ? 'active' : '' }}" href="{{ route('admin.posts') }}">
                         <i class="fas fa-newspaper"></i>
                         Bài viết
                     </a>
@@ -658,17 +681,28 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.permissions*') ? 'active' : '' }}" href="{{ route('admin.permissions') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.permissions*') ? 'active' : '' }}" 
+                       href="#" 
+                       onclick="event.preventDefault(); toggleSubmenu('permissions-menu'); return false;">
                         <i class="fas fa-balance-scale"></i>
                         Phân Quyền
+                        <i class="fas fa-chevron-down float-end" id="permissions-menu-icon" style="font-size: 0.75rem; transition: transform 0.3s;"></i>
                     </a>
+                    <ul class="submenu" id="permissions-menu" style="display: {{ (request()->routeIs('admin.permissions') || request()->routeIs('admin.permissions.detailed')) ? 'block' : 'none' }};">
+                        <li>
+                            <a class="nav-link {{ request()->routeIs('admin.permissions') && !request()->routeIs('admin.permissions.detailed') ? 'active' : '' }}" href="{{ route('admin.permissions') }}" style="padding-left: 3rem;">
+                                <i class="fas fa-shield-alt"></i>
+                                Phân quyền đơn giản
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link {{ request()->routeIs('admin.permissions.detailed') ? 'active' : '' }}" href="{{ route('admin.permissions.detailed') }}" style="padding-left: 3rem;">
+                                <i class="fas fa-cogs"></i>
+                                Phân quyền chi tiết
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-     <li class="nav-item">
-         <a class="nav-link {{ request()->routeIs('admin.permissions.detailed') ? 'active' : '' }}" href="{{ route('admin.permissions.detailed') }}">
-             <i class="fas fa-cogs"></i>
-             Phân Quyền Chi Tiết
-         </a>
-     </li>
      <li class="nav-item">
          <a class="nav-link {{ request()->routeIs('admin.trash*') ? 'active' : '' }}" href="{{ route('admin.trash') }}">
              <i class="fas fa-trash"></i>
@@ -726,6 +760,86 @@
     
     <!-- CKEditor 5 -->
     <script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
+    
+    <style>
+        /* Submenu styles */
+        .submenu {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            background-color: #2c3e50;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .submenu li {
+            padding: 0;
+        }
+        
+        .submenu .nav-link {
+            padding: 0.75rem 2rem;
+            color: #adb5bd;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .submenu .nav-link:hover {
+            background-color: #3c4f63;
+            color: white;
+            border-left-color: #007bff;
+        }
+        
+        .submenu .nav-link.active {
+            background-color: #495057;
+            color: white;
+            border-left-color: #007bff;
+        }
+        
+        .submenu .nav-link i {
+            margin-right: 0.75rem;
+            width: 20px;
+        }
+        
+        /* Chevron rotation */
+        #fund-menu-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .submenu.active #fund-menu-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+    
+    <script>
+        function toggleSubmenu(menuId) {
+            const submenu = document.getElementById(menuId);
+            const icon = document.getElementById(menuId + '-icon');
+            
+            if (submenu.style.display === 'block') {
+                submenu.style.display = 'none';
+                submenu.style.maxHeight = '0';
+            } else {
+                submenu.style.display = 'block';
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+            }
+        }
+        
+        // Initialize submenu on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const fundMenu = document.getElementById('fund-menu');
+            if (fundMenu && fundMenu.style.display === 'block') {
+                fundMenu.style.maxHeight = fundMenu.scrollHeight + 'px';
+            }
+            
+            const permissionsMenu = document.getElementById('permissions-menu');
+            if (permissionsMenu && permissionsMenu.style.display === 'block') {
+                permissionsMenu.style.maxHeight = permissionsMenu.scrollHeight + 'px';
+            }
+        });
+    </script>
     
     @stack('scripts')
     

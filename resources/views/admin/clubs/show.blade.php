@@ -74,8 +74,8 @@
                     return $member->status === 'pending';
                 });
                 $approvedMembers = $club->clubMembers->filter(function($member) {
-                    return $member->status === 'approved';
-                });
+                    return $member->status === 'approved' || $member->status === 'active';
+                })->unique('user_id'); // Loại bỏ trùng lặp theo user_id
             @endphp
 
             @if($pendingMembers->isNotEmpty())
@@ -170,6 +170,7 @@
                             </thead>
                             <tbody>
                                 @forelse($approvedMembers as $member)
+                                    @if($member->user)
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -192,7 +193,14 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-primary">{{ ucfirst($member->role_in_club) }}</span>
+                                            @php
+                                                $role = $member->position ?? $member->role_in_club;
+                                                $badgeColor = 'primary';
+                                                if($role === 'leader' || $role === 'chunhiem') $badgeColor = 'danger';
+                                                elseif($role === 'officer') $badgeColor = 'info';
+                                                elseif($role === 'member' || $role === 'thanhvien') $badgeColor = 'success';
+                                            @endphp
+                                            <span class="badge bg-{{ $badgeColor }}">{{ ucfirst($role) }}</span>
                                         </td>
                                         <td>{{ $member->created_at->format('d/m/Y') }}</td>
                                         <td>
@@ -201,13 +209,14 @@
                                                 <button type="button" class="btn btn-sm btn-danger" title="Xóa thành viên"
                                                         data-bs-toggle="modal" data-bs-target="#removeMemberModal"
                                                         data-member-id="{{ $member->id }}"
-                                                        data-member-name="{{ $member->user->name }}"
+                                                        data-member-name="{{ $member->user ? $member->user->name : 'Unknown' }}"
                                                         {{ $member->user_id == $club->owner_id ? 'disabled' : '' }}>
                                                     <i class="fas fa-user-times"></i>
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
+                                    @endif
                                 @empty
                                     <tr>
                                         <td colspan="4" class="text-center text-muted">Chưa có thành viên nào.</td>

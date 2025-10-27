@@ -12,6 +12,7 @@ class ClubResource extends Model
 
     protected $fillable = [
         'title',
+        'slug',
         'description',
         'club_id',
         'user_id',
@@ -23,11 +24,29 @@ class ClubResource extends Model
     ];
 
     protected $casts = [
+         'tags' => 'array',
         'file_size' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'view_count' => 'integer',
+        'download_count' => 'integer',
+
+        
+        'description',
+        'resource_type',
+        'club_id',
+        'user_id',
+        'status',
+        'file_path',
+        'file_name',
+        'file_type',
+        'file_size',
+        'thumbnail_path',
+        'external_link',
+        'tags',
+        'view_count',
+        'download_count'
     ];
+
+    
 
     /**
      * Get the club that owns the resource
@@ -46,6 +65,55 @@ class ClubResource extends Model
     }
 
     /**
+     * Get the images for this resource
+     */
+    public function images()
+    {
+        return $this->hasMany(ClubResourceImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the primary image
+     */
+    public function primaryImage()
+    {
+        return $this->hasOne(ClubResourceImage::class)->where('is_primary', true);
+    }
+
+    /**
+     * Get the files for this resource
+     */
+    public function files()
+    {
+        return $this->hasMany(ClubResourceFile::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the primary file
+     */
+    public function primaryFile()
+    {
+        return $this->hasOne(ClubResourceFile::class)->where('is_primary', true);
+    }
+
+    /**
+     * Increment view count
+     */
+    public function incrementViewCount()
+    {
+        $this->increment('view_count');
+    }
+
+    /**
+     * Increment download count
+     */
+    public function incrementDownloadCount()
+    {
+        $this->increment('download_count');
+    }
+
+    /**
+
      * Get the file URL
      */
     public function getFileUrlAttribute()
@@ -57,6 +125,7 @@ class ClubResource extends Model
     }
 
     /**
+
      * Get formatted file size
      */
     public function getFormattedFileSizeAttribute()
@@ -75,6 +144,16 @@ class ClubResource extends Model
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
+
+    public function getThumbnailUrlAttribute()
+    {
+        if ($this->thumbnail_path) {
+            return asset('storage/' . $this->thumbnail_path);
+        }
+        return null;
+
+    }
+
     /**
      * Scope for active resources
      */
@@ -88,6 +167,7 @@ class ClubResource extends Model
      */
     public function scopeByType($query, $type)
     {
+
         return $query->where('type', $type);
     }
 
@@ -97,5 +177,8 @@ class ClubResource extends Model
     public function scopeByClub($query, $clubId)
     {
         return $query->where('club_id', $clubId);
+
+        return $query->where('resource_type', $type);
+
     }
 }

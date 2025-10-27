@@ -194,13 +194,11 @@ class FundRequestController extends Controller
             'approval_notes' => 'nullable|string|max:1000'
         ]);
 
-        $fundRequest->update([
-            'status' => $request->approved_amount < $fundRequest->requested_amount ? 'partially_approved' : 'approved',
-            'approved_amount' => $request->approved_amount,
-            'approval_notes' => $request->approval_notes,
-            'approved_by' => Auth::id(),
-            'approved_at' => now()
-        ]);
+        $fundRequest->approve(
+            Auth::id(),
+            $request->approved_amount,
+            $request->approval_notes
+        );
 
         // Tự động tạo giao dịch thu tiền vào quỹ của CLB
         if ($fundRequest->club_id && $request->approved_amount > 0) {
@@ -263,12 +261,7 @@ class FundRequestController extends Controller
             'rejection_reason' => 'required|string|max:1000'
         ]);
 
-        $fundRequest->update([
-            'status' => 'rejected',
-            'rejection_reason' => $request->rejection_reason,
-            'approved_by' => Auth::id(),
-            'approved_at' => now()
-        ]);
+        $fundRequest->reject(Auth::id(), $request->rejection_reason);
 
         return redirect()->route('admin.fund-requests.show', $fundRequest->id)
             ->with('success', 'Yêu cầu cấp kinh phí đã bị từ chối!');

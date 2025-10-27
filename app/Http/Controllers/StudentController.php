@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Post;
+use App\Models\Club;
+use App\Models\ClubMember;
 
 class StudentController extends Controller
 {
@@ -113,5 +116,85 @@ class StudentController extends Controller
         }
 
         return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
+    }
+
+    /**
+     * Display posts for students with member-only access control
+     */
+    public function posts(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Lấy danh sách CLB mà user là thành viên
+        $userClubIds = $user->clubs->pluck('id')->toArray();
+        
+        // Query bài viết với logic kiểm tra quyền
+        $query = Post::with(['club', 'user'])
+            ->where(function($q) use ($userClubIds) {
+                // Bài viết công khai
+                $q->where('status', 'published')
+                  // Hoặc bài viết chỉ thành viên CLB mà user là thành viên
+                  ->orWhere(function($subQ) use ($userClubIds) {
+                      $subQ->where('status', 'members_only')
+                           ->whereIn('club_id', $userClubIds);
+                  });
+            })
+            ->where('status', '!=', 'deleted');
+
+        // Filter by club
+        if ($request->has('club_id') && $request->club_id) {
+            $query->where('club_id', $request->club_id);
+        }
+
+        // Filter by type
+        if ($request->has('type') && $request->type) {
+            $query->where('type', $request->type);
+        }
+
+        // Search
+        if ($request->has('search') && $request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('content', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $posts = $query->orderBy('created_at', 'desc')->paginate(10);
+        $clubs = Club::where('status', 'active')->get();
+
+        return view('student.posts.index', compact('posts', 'clubs', 'user'));
+    }
+
+    /**
+     * Display single post with member-only access control
+     */
+    public function showPost($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $post = Post::with(['club', 'user', 'comments.user'])->findOrFail($id);
+        
+        // Kiểm tra quyền xem bài viết
+        $canView = false;
+        
+        if ($post->status === 'published') {
+            $canView = true;
+        } elseif ($post->status === 'members_only') {
+            // Kiểm tra xem user có phải thành viên của CLB không
+            $userClubIds = $user->clubs->pluck('id')->toArray();
+            $canView = in_array($post->club_id, $userClubIds);
+        }
+
+        if (!$canView) {
+            return redirect()->route('student.posts')->with('error', 'Bạn không có quyền xem bài viết này.');
+        }
+
+        return view('student.posts.show', compact('post', 'user'));
     }
 }

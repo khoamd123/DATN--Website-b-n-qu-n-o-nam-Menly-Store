@@ -62,7 +62,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Tiêu đề</th>
                         <th>Câu lạc bộ</th>
                         <th>Người tạo</th>
