@@ -182,21 +182,25 @@
                                 @foreach($userClubs as $clubMember)
                                     @php
                                         $club = $clubMember->club;
-                                        $position = $clubMember->position ?? $clubMember->role_in_club;
-                                        
-                                        // Lấy quyền của user trong CLB này
-                                        $clubPermissions = \DB::table('user_permissions_club')
-                                            ->where('user_id', $user->id)
-                                            ->where('club_id', $club->id)
-                                            ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
-                                            ->select('permissions.name')
-                                            ->pluck('name')
-                                            ->toArray();
                                     @endphp
-                                    <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-2">
-                                                <h6 class="mb-0 me-3">{{ $club->name }}</h6>
+                                    
+                                    @if($club)
+                                        @php
+                                            $position = $clubMember->position ?? $clubMember->role_in_club;
+                                            
+                                            // Lấy quyền của user trong CLB này
+                                            $clubPermissions = \DB::table('user_permissions_club')
+                                                ->where('user_id', $user->id)
+                                                ->where('club_id', $club->id)
+                                                ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
+                                                ->select('permissions.name')
+                                                ->pluck('name')
+                                                ->toArray();
+                                        @endphp
+                                        <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <h6 class="mb-0 me-3">{{ $club->name }}</h6>
                                                 @switch($position)
                                                     @case('leader')
                                                     @case('chunhiem')
@@ -233,6 +237,7 @@
                                             <i class="fas fa-edit"></i> Sửa quyền
                                         </button>
                                     </div>
+                                    @endif
                                 @endforeach
                             </div>
                         </div>
@@ -240,6 +245,13 @@
                 </div>
             @endif
         @endforeach
+        
+        <!-- Phân trang -->
+        @if($users->hasPages())
+            <div class="d-flex justify-content-center mt-4 custom-pagination">
+                {{ $users->links() }}
+            </div>
+        @endif
     </div>
 </div>
 
@@ -551,6 +563,31 @@ function addToClub(userId, clubId, userName, clubName) {
     font-weight: bold;
     border: 2px solid #fff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Ẩn mũi tên phân trang */
+.custom-pagination svg,
+.custom-pagination .pagination svg,
+svg.w-5,
+svg.h-5 {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    visibility: hidden !important;
+}
+
+.custom-pagination .pagination .page-link {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* Thay thế mũi tên bằng text */
+.custom-pagination .pagination .page-link[rel="prev"]:before {
+    content: "‹ ";
+}
+
+.custom-pagination .pagination .page-link[rel="next"]:before {
+    content: " ›";
 }
 </style>
 @endsection

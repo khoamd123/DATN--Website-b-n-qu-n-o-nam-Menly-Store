@@ -264,10 +264,10 @@
 </div>
 
 <div class="row mt-4">
-    <!-- Sự kiện sắp diễn ra -->
+    <!-- Sự kiện gần đây -->
     <div class="col-12">
         <div class="user-list">
-            <h5 class="mb-3">Sự kiện sắp diễn ra</h5>
+            <h5 class="mb-3">Sự kiện gần đây (30 ngày)</h5>
             
             @if($upcomingEvents->count() > 0)
                 <div class="table-responsive">
@@ -297,7 +297,7 @@
                     </table>
                 </div>
             @else
-                <p class="text-muted">Không có sự kiện sắp diễn ra</p>
+                <p class="text-muted">Không có sự kiện trong 30 ngày gần đây</p>
             @endif
         </div>
     </div>

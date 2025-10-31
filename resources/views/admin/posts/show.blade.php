@@ -5,14 +5,34 @@
 @section('content')
 <div class="content-header">
     <div class="d-flex justify-content-between align-items-center">
-        <h1>Chi tiết Bài viết</h1>
+        <h1>Chi tiết Bài viết 
+            @if($post->deleted_at)
+                <span class="badge bg-warning text-dark">Trong thùng rác</span>
+            @endif
+        </h1>
         <div>
-            <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Chỉnh sửa
-            </a>
-            <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Quay lại
-            </a>
+            @if($post->deleted_at)
+                {{-- Bài viết đã xóa - hiển thị nút khôi phục --}}
+                <form method="POST" action="{{ route('admin.trash.restore') }}" class="d-inline">
+                    @csrf
+                    <input type="hidden" name="type" value="post">
+                    <input type="hidden" name="id" value="{{ $post->id }}">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc chắn muốn khôi phục bài viết này?')">
+                        <i class="fas fa-undo"></i> Khôi phục
+                    </button>
+                </form>
+                <a href="{{ route('admin.posts.trash') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại thùng rác
+                </a>
+            @else
+                {{-- Bài viết chưa xóa - hiển thị nút chỉnh sửa --}}
+                <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Chỉnh sửa
+                </a>
+                <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </a>
+            @endif
         </div>
     </div>
 </div>

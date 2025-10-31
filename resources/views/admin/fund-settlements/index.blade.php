@@ -97,7 +97,7 @@
                                     <div>
                                         <strong>{{ $request->title }}</strong>
                                         @if($request->description)
-                                            <br><small class="text-muted">{{ Str::limit($request->description, 50) }}</small>
+                                            <br><small class="text-muted">{{ Str::limit(strip_tags($request->description), 50) }}</small>
                                         @endif
                                     </div>
                                 </td>
@@ -199,7 +199,7 @@
                                     <div>
                                         <strong>{{ $request->title }}</strong>
                                         @if($request->description)
-                                            <br><small class="text-muted">{{ Str::limit($request->description, 50) }}</small>
+                                            <br><small class="text-muted">{{ Str::limit(strip_tags($request->description), 50) }}</small>
                                         @endif
                                     </div>
                                 </td>

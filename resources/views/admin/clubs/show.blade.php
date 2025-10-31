@@ -293,10 +293,11 @@
             @endif
           </div>
           <div class="mb-3">
-            <label for="role_in_club" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
-            <select class="form-select" id="role_in_club" name="role_in_club" required>
-                <option value="thanhvien" selected>Thành viên</option>
-                <option value="chunhiem">Chủ nhiệm</option>
+            <label for="position" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
+            <select class="form-select" id="position" name="position" required>
+                <option value="member" selected>Thành viên</option>
+                <option value="officer">Cán sự</option>
+                <option value="leader">Trưởng CLB</option>
             </select>
           </div>
         </div>

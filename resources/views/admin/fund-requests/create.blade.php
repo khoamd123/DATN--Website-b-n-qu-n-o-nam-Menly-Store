@@ -138,6 +138,7 @@
                                             @error('supporting_documents.*')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
+                                            <div id="supporting_documents_preview" class="mt-3"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -210,6 +211,55 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('remove-expense-item')) {
             e.target.closest('.expense-item').remove();
         }
+    });
+
+    // Multi-file preview and remove for supporting_documents
+    const fileInput = document.getElementById('supporting_documents');
+    const previewContainer = document.getElementById('supporting_documents_preview');
+
+    function renderPreviews(files) {
+        previewContainer.innerHTML = '';
+        Array.from(files).forEach((file, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex align-items-center mb-2 p-2 border rounded';
+
+            const info = document.createElement('div');
+            info.className = 'flex-grow-1';
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.className = 'me-2 rounded';
+                img.style.width = '56px';
+                img.style.height = '56px';
+                img.style.objectFit = 'cover';
+                const reader = new FileReader();
+                reader.onload = e => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+                wrapper.appendChild(img);
+                info.textContent = file.name;
+            } else {
+                info.textContent = file.name;
+            }
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-outline-danger ms-2';
+            removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            removeBtn.addEventListener('click', function() {
+                const dt = new DataTransfer();
+                Array.from(fileInput.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+                fileInput.files = dt.files;
+                renderPreviews(fileInput.files);
+            });
+
+            wrapper.appendChild(info);
+            wrapper.appendChild(removeBtn);
+            previewContainer.appendChild(wrapper);
+        });
+    }
+
+    fileInput.addEventListener('change', function() {
+        renderPreviews(fileInput.files);
     });
 });
 </script>

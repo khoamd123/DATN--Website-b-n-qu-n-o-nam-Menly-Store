@@ -54,10 +54,65 @@
                                 </span>
                             </div>
                             
-                            <div class="mb-3">
-                                <strong>Danh mục:</strong><br>
-                                <span class="text-muted">{{ $transaction->category ?? 'N/A' }}</span>
-                            </div>
+                            @if($transaction->items && $transaction->items->count() > 0)
+                                <div class="mb-3">
+                                    <strong><i class="fas fa-list"></i> Chi tiết chi phí:</strong><br>
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm table-bordered" id="itemsTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    @if($transaction->status === 'pending')
+                                                        <th width="50" class="text-center">
+                                                            <input type="checkbox" class="form-check-input" id="selectAllItems" checked>
+                                                        </th>
+                                                    @endif
+                                                    <th>Khoản mục</th>
+                                                    <th class="text-end">Số tiền</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($transaction->items as $index => $item)
+                                                <tr class="item-row" data-amount="{{ $item->amount }}" data-item-id="{{ $item->id }}">
+                                                    @if($transaction->status === 'pending')
+                                                        <td class="text-center">
+                                                            <input type="checkbox" class="form-check-input item-checkbox" 
+                                                                   name="approved_items[]" value="{{ $item->id }}" checked>
+                                                        </td>
+                                                    @endif
+                                                    <td>{{ $item->item_name }}</td>
+                                                    <td class="text-end">{{ number_format($item->amount, 0, ',', '.') }} VNĐ</td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                            <tfoot class="table-info">
+                                                <tr class="fw-bold">
+                                                    <td @if($transaction->status === 'pending') colspan="2" @endif>
+                                                        @if($transaction->status === 'pending')
+                                                            Tổng số tiền duyệt
+                                                        @else
+                                                            Tổng cộng
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <span id="totalApprovedAmount">{{ number_format($transaction->items->sum('amount'), 0, ',', '.') }}</span> VNĐ
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                    @if($transaction->status === 'pending')
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Bỏ chọn các khoản mục không muốn duyệt
+                                        </small>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="mb-3">
+                                    <strong>Danh mục:</strong><br>
+                                    <span class="text-muted">{{ $transaction->category ?? 'N/A' }}</span>
+                                </div>
+                            @endif
                         </div>
                         
                         <div class="col-md-6">
@@ -107,7 +162,7 @@
                         <div class="mb-3">
                             <strong>Mô tả:</strong><br>
                             <div class="border rounded p-3 bg-light">
-                                {{ $transaction->description }}
+                                {!! strip_tags($transaction->description, '<p><br><strong><b><i><u><ul><ol><li>') !!}
                             </div>
                         </div>
                     @endif
@@ -219,11 +274,12 @@
                                 <i class="fas fa-edit"></i> Chỉnh sửa
                             </a>
                             
-                            <form method="POST" action="{{ route('admin.funds.transactions.approve', [$fund->id, $transaction->id]) }}" class="d-inline">
+                            <form method="POST" action="{{ route('admin.funds.transactions.approve', [$fund->id, $transaction->id]) }}" class="d-inline" id="approveForm">
                                 @csrf
-                                <button type="submit" class="btn btn-success" 
-                                        onclick="return confirm('Xác nhận duyệt giao dịch này?')">
-                                    <i class="fas fa-check"></i> Duyệt
+                                <input type="hidden" name="approved_amount" id="approvedAmountInput">
+                                <button type="submit" class="btn btn-success" id="approveBtn"
+                                        onclick="return confirmApprove()">
+                                    <i class="fas fa-check"></i> Duyệt <span id="approveCount"></span>
                                 </button>
                             </form>
                             

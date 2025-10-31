@@ -218,7 +218,9 @@ class FundSettlementController extends Controller
             
             Log::info('Creating settlement expense transaction...');
 
-            // Tạo giao dịch chi tiêu thực tế
+            // ✅ LOGIC ĐÚNG: Khi duyệt CỘNG tiền vào quỹ (income), quyết toán phải TRỪ tiền chi thực tế (expense)
+            
+            // 1. Tạo giao dịch CHI TIÊU thực tế
             $expenseTransaction = FundTransaction::create([
                 'fund_id' => $fund->id,
                 'event_id' => $fundRequest->event_id,
@@ -237,31 +239,29 @@ class FundSettlementController extends Controller
             
             Log::info('Created settlement expense transaction ID: ' . $expenseTransaction->id);
 
-            // Nếu có tiền thừa (số tiền thực tế < số tiền duyệt), tạo giao dịch thu lại tiền thừa
+            // 2. Nếu có tiền thừa (chi ít hơn dự toán), GHI NHỚ để theo dõi (KHÔNG hoàn lại quỹ vì đã cộng thiếu từ đầu)
             if ($difference > 0) {
-                Log::info('Creating refund transaction for surplus: ' . $difference);
-                
-                $refundTransaction = FundTransaction::create([
-                    'fund_id' => $fund->id,
-                    'event_id' => $fundRequest->event_id,
-                    'type' => 'income',
-                    'transaction_type' => 'refund',
-                    'title' => 'Hoàn tiền thừa: ' . $fundRequest->title,
-                    'description' => 'Hoàn trả tiền thừa từ quyết toán yêu cầu #' . $fundRequest->id,
-                    'amount' => $difference,
-                    'transaction_date' => now(),
-                    'status' => 'approved',
-                    'created_by' => $userId,
-                    'approved_by' => $userId,
-                    'approved_at' => now()
-                ]);
-
-                Log::info('Created refund transaction ID: ' . $refundTransaction->id . ', Amount: ' . number_format($difference) . ' VNĐ');
+                Log::info('Surplus detected: ' . number_format($difference) . ' VNĐ');
+                Log::info('Note: Surplus remains in club budget (Net effect: +' . number_format($difference) . ' VNĐ to fund)');
+                // Không tạo giao dịch refund vì:
+                // - Khi duyệt: +1.000.000đ
+                // - Khi quyết toán: -800.000đ
+                // → Kết quả: Quỹ tăng 200.000đ (tiền thừa tự nhiên nằm trong quỹ)
             }
-            // Nếu chi tiêu > số tiền được duyệt (difference < 0), ghi chú vào log
+            // 3. Nếu chi vượt quá dự toán (chi nhiều hơn), tạo giao dịch chi thêm
             elseif ($difference < 0) {
                 $excessAmount = abs($difference);
-                Log::warning('Chi tiêu vượt quá số tiền được duyệt: ' . number_format($excessAmount) . ' VNĐ cho yêu cầu #' . $fundRequest->id);
+                Log::warning('Creating additional expense transaction for overspending: ' . $excessAmount);
+                
+                // Tạo giao dịch chi thêm vì đã chi vượt dự toán
+                // Không cần tạo giao dịch mới, chỉ cần log cảnh báo
+                // Vì expense ở trên đã ghi đúng số tiền thực tế chi (actualAmount)
+                Log::warning('Overspending detected: ' . number_format($excessAmount) . ' VNĐ over approved amount');
+                Log::warning('Net effect: Fund decreased by ' . number_format($actualAmount) . ' VNĐ (approved: ' . number_format($approvedAmount) . ' VNĐ)');
+            }
+            // 4. Nếu chi đúng bằng dự toán
+            else {
+                Log::info('Settlement matches approved amount exactly.');
             }
 
             // Cập nhật số dư quỹ

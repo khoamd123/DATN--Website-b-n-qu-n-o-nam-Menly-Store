@@ -25,7 +25,8 @@ class FundTransaction extends Model
         'created_by',
         'approved_by',
         'approved_at',
-        'event_id'
+        'event_id',
+        'expense_category_id'
     ];
 
     protected $casts = [
@@ -54,6 +55,16 @@ class FundTransaction extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function expenseCategory()
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(FundTransactionItem::class, 'transaction_id');
     }
 
     // Helper methods

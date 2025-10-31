@@ -34,7 +34,7 @@
                     </tr>
                     <tr>
                         <td><strong>Mô tả:</strong></td>
-                        <td>{{ $fundRequest->description ?: 'Không có' }}</td>
+                        <td>{{ strip_tags($fundRequest->description) ?: 'Không có' }}</td>
                     </tr>
                     <tr>
                         <td><strong>CLB:</strong></td>
@@ -210,21 +210,31 @@
                             @foreach($fundRequest->settlement_documents as $index => $document)
                                 <div class="col-6 col-md-3">
                                     <div class="card border hover-shadow h-100">
-                                        <div class="card-body text-center p-3">
-                                            @if(str_contains($document, '.pdf'))
+                                        @if(str_contains($document, '.pdf'))
+                                            <div class="card-body text-center p-3">
                                                 <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
-                                            @else
-                                                <i class="fas fa-file-image fa-3x text-primary mb-2"></i>
-                                            @endif
-                                            <p class="mb-2 small text-truncate" title="{{ basename($document) }}">
-                                                {{ basename($document) }}
-                                            </p>
-                                            <a href="{{ asset('storage/' . $document) }}" 
-                                               target="_blank" 
-                                               class="btn btn-sm btn-primary w-100">
-                                                <i class="fas fa-eye"></i> Xem
-                                            </a>
-                                        </div>
+                                                <p class="mb-2 small text-truncate" title="{{ basename($document) }}">
+                                                    {{ basename($document) }}
+                                                </p>
+                                                <a href="{{ asset('storage/' . $document) }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-primary w-100">
+                                                    <i class="fas fa-eye"></i> Xem PDF
+                                                </a>
+                                            </div>
+                                        @else
+                                            <img src="{{ asset('storage/' . $document) }}" 
+                                                 class="card-img-top" 
+                                                 alt="Hóa đơn {{ $index + 1 }}"
+                                                 style="height: 200px; object-fit: cover;">
+                                            <div class="card-body text-center p-2">
+                                                <a href="{{ asset('storage/' . $document) }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-primary w-100">
+                                                    <i class="fas fa-search-plus"></i> Xem lớn
+                                                </a>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach

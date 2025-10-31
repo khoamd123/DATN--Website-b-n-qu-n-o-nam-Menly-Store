@@ -53,23 +53,33 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="password" class="form-label">Mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" 
-                                   class="form-control @error('password') is-invalid @enderror" 
-                                   id="password" 
-                                   name="password" 
-                                   required>
-                            @error('password')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control @error('password') is-invalid @enderror" 
+                                       id="password" 
+                                       name="password" 
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#password" aria-label="Hiện/ẩn mật khẩu">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                @error('password')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="password_confirmation" class="form-label">Xác nhận mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" 
-                                   class="form-control" 
-                                   id="password_confirmation" 
-                                   name="password_confirmation" 
-                                   required>
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password_confirmation" 
+                                       name="password_confirmation" 
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#password_confirmation" aria-label="Hiện/ẩn mật khẩu">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -87,15 +97,20 @@
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label for="student_id" class="form-label">Mã sinh viên</label>
+                            <label for="student_id" class="form-label">
+                                Mã sinh viên 
+                                <small class="text-muted">(tự động từ email)</small>
+                            </label>
                             <input type="text" 
-                                   class="form-control @error('student_id') is-invalid @enderror" 
+                                   class="form-control bg-light" 
                                    id="student_id" 
                                    name="student_id" 
-                                   value="{{ old('student_id') }}">
-                            @error('student_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                   value="{{ old('student_id') }}"
+                                   readonly>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Mã SV sẽ tự động lấy từ email (VD: khoamdph31863 → PH31863)
+                            </small>
                         </div>
                     </div>
 
@@ -154,24 +169,96 @@
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Hướng dẫn</h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h6><i class="fas fa-lightbulb"></i> Lưu ý:</h6>
-                    <ul class="mb-0">
-                        <li>Email phải là duy nhất trong hệ thống</li>
-                        <li>Mật khẩu tối thiểu 6 ký tự</li>
-                        <li>Mã sinh viên phải là duy nhất (nếu có)</li>
-                        <li>Vai trò "Quản trị viên" có toàn quyền hệ thống</li>
-                        <li>Người dùng mới sẽ được đặt thời gian online là hiện tại</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="col-md-4"></div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function() {
+        function togglePasswordVisibility(button) {
+            var targetSelector = button.getAttribute('data-target');
+            var input = document.querySelector(targetSelector);
+            if (!input) return;
+            var isPassword = input.getAttribute('type') === 'password';
+            input.setAttribute('type', isPassword ? 'text' : 'password');
+            var icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.toggle-password')) {
+                togglePasswordVisibility(e.target.closest('.toggle-password'));
+            }
+        });
+
+        // Extract student_id from email (similar to user registration)
+        var emailInput = document.getElementById('email');
+        var studentIdInput = document.getElementById('student_id');
+
+        // Extract student code from email
+        // Example: khoamdph31863@fpt.edu.vn -> PH31863
+        function extractStudentIdFromEmail(email) {
+            if (!email) return '';
+            
+            // Get username part before @
+            var username = email.split('@')[0];
+            if (!username) return '';
+            
+            // Find where numbers start
+            var numberMatch = username.match(/\d/);
+            if (!numberMatch) return '';
+            
+            var numberPosition = username.indexOf(numberMatch[0]);
+            if (numberPosition <= 0) return '';
+            
+            // Go back 2-3 characters to include letters before numbers
+            // For khoamdph31863, we want "ph31863" not just "31863"
+            var startPosition = Math.max(0, numberPosition - 2);
+            var studentCode = username.substring(startPosition);
+            
+            // If the result is too short, try to get more context
+            if (studentCode.length < 4) {
+                startPosition = Math.max(0, numberPosition - 3);
+                studentCode = username.substring(startPosition);
+            }
+            
+            // Return uppercase
+            return studentCode.toUpperCase();
+        }
+
+        // Auto-add @fpt.edu.vn domain and extract student_id
+        function handleEmailInput() {
+            if (!emailInput) return;
+            
+            var value = emailInput.value;
+            
+            // If user hasn't typed @ yet, auto-add domain on blur
+            if (value && value.indexOf('@') === -1) {
+                emailInput.value = value + '@fpt.edu.vn';
+            }
+            
+            // Extract student_id from email
+            var studentId = extractStudentIdFromEmail(emailInput.value);
+            if (studentIdInput && studentId) {
+                studentIdInput.value = studentId;
+            }
+        }
+
+        // Initialize
+        if (emailInput) {
+            // Set default domain
+            emailInput.placeholder = 'vidu@fpt.edu.vn';
+            
+            // Update student_id as user types
+            emailInput.addEventListener('input', handleEmailInput);
+            
+            // Auto-add domain when leaving the field
+            emailInput.addEventListener('blur', handleEmailInput);
+        }
+    })();
+</script>
+@endpush

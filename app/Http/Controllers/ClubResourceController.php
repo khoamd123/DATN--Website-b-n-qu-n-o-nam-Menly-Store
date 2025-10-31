@@ -10,8 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
 
 class ClubResourceController extends Controller
 {
@@ -20,7 +18,7 @@ class ClubResourceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ClubResource::with(['club', 'user']);
+        $query = ClubResource::with(['club', 'user', 'images', 'files']);
         
         // Search
         if ($request->has('search') && $request->search) {
@@ -359,8 +357,6 @@ class ClubResourceController extends Controller
     private function createThumbnail($file, $uploadPath, $filename)
     {
         try {
-            $manager = new ImageManager(new Driver());
-            
             // For videos, we'll create a thumbnail from the first frame
             if (str_contains($file->getMimeType(), 'video')) {
                 // For now, return null for video thumbnails
@@ -368,14 +364,118 @@ class ClubResourceController extends Controller
                 return null;
             }
             
-            $img = $manager->read($file);
-            $img->resize(300, 300);
+            // Only create thumbnail for images
+            if (!str_contains($file->getMimeType(), 'image')) {
+                return null;
+            }
             
+            // Check if GD library is available
+            if (!extension_loaded('gd')) {
+                Log::warning('GD extension not loaded, skipping thumbnail creation');
+                return null;
+            }
+            
+            // Use GD library (built-in PHP) to create thumbnail
             $thumbnailPath = 'public/' . $uploadPath . '/thumbnails';
             $thumbnailFilename = pathinfo($filename, PATHINFO_FILENAME) . '_thumb.' . pathinfo($filename, PATHINFO_EXTENSION);
             
             Storage::makeDirectory($thumbnailPath);
-            $img->save(storage_path('app/' . $thumbnailPath . '/' . $thumbnailFilename));
+            
+            // Get image info
+            $sourceImage = $file->getRealPath();
+            $imageInfo = @getimagesize($sourceImage);
+            
+            if (!$imageInfo) {
+                Log::warning('Could not get image size for: ' . $sourceImage);
+                return null;
+            }
+            
+            $mimeType = $imageInfo['mime'];
+            
+            // Create image resource based on type
+            $image = null;
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    if (function_exists('imagecreatefromjpeg')) {
+                        $image = @imagecreatefromjpeg($sourceImage);
+                    }
+                    break;
+                case 'image/png':
+                    if (function_exists('imagecreatefrompng')) {
+                        $image = @imagecreatefrompng($sourceImage);
+                    }
+                    break;
+                case 'image/gif':
+                    if (function_exists('imagecreatefromgif')) {
+                        $image = @imagecreatefromgif($sourceImage);
+                    }
+                    break;
+                case 'image/webp':
+                    if (function_exists('imagecreatefromwebp')) {
+                        $image = @imagecreatefromwebp($sourceImage);
+                    }
+                    break;
+                default:
+                    Log::warning('Unsupported image type: ' . $mimeType);
+                    return null;
+            }
+            
+            if (!$image) {
+                Log::warning('Could not create image resource for: ' . $sourceImage . ' (type: ' . $mimeType . ')');
+                return null;
+            }
+            
+            // Get original dimensions
+            $width = imagesx($image);
+            $height = imagesy($image);
+            
+            // Calculate new dimensions (max 300x300, maintain aspect ratio)
+            $maxSize = 300;
+            if ($width > $height) {
+                $newWidth = $maxSize;
+                $newHeight = intval(($height / $width) * $maxSize);
+            } else {
+                $newHeight = $maxSize;
+                $newWidth = intval(($width / $height) * $maxSize);
+            }
+            
+            // Create thumbnail
+            $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Preserve transparency for PNG and GIF
+            if ($mimeType == 'image/png' || $mimeType == 'image/gif') {
+                imagealphablending($thumbnail, false);
+                imagesavealpha($thumbnail, true);
+                $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
+                imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+            
+            // Resize
+            imagecopyresampled($thumbnail, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            
+            // Save thumbnail
+            $savePath = storage_path('app/' . $thumbnailPath . '/' . $thumbnailFilename);
+            
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    imagejpeg($thumbnail, $savePath, 90);
+                    break;
+                case 'image/png':
+                    imagepng($thumbnail, $savePath, 9);
+                    break;
+                case 'image/gif':
+                    imagegif($thumbnail, $savePath);
+                    break;
+                case 'image/webp':
+                    imagewebp($thumbnail, $savePath, 90);
+                    break;
+            }
+            
+            // Free memory
+            imagedestroy($image);
+            imagedestroy($thumbnail);
             
             return $uploadPath . '/thumbnails/' . $thumbnailFilename;
         } catch (\Exception $e) {

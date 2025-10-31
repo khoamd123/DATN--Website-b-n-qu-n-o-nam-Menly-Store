@@ -73,7 +73,10 @@ class TrashController extends Controller
     {
         // Kiểm tra đăng nhập admin
         if (!session('logged_in') || !session('is_admin')) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
         $type = $request->input('type');
@@ -100,21 +103,36 @@ class TrashController extends Controller
                     $item = ClubResource::onlyTrashed()->findOrFail($id);
                     break;
                 default:
-                    return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);
+                    if ($request->expectsJson()) {
+                        return response()->json(['success' => false, 'message' => 'Loại không hợp lệ']);
+                    }
+                    return back()->with('error', 'Loại không hợp lệ');
             }
 
             $item->restore();
 
-            return response()->json([
-                'success' => true, 
-                'message' => "Đã khôi phục {$type} thành công!"
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true, 
+                    'message' => "Đã khôi phục {$type} thành công!"
+                ]);
+            }
+
+            // Redirect về trang chi tiết nếu là post
+            if ($type === 'post') {
+                return redirect()->route('admin.posts.show', $id)->with('success', 'Đã khôi phục bài viết thành công!');
+            }
+
+            return back()->with('success', 'Đã khôi phục thành công!');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Lỗi: ' . $e->getMessage()
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Lỗi: ' . $e->getMessage()
+                ]);
+            }
+            return back()->with('error', 'Lỗi: ' . $e->getMessage());
         }
     }
 
@@ -135,9 +153,17 @@ class TrashController extends Controller
             switch ($type) {
                 case 'user':
                     $item = User::onlyTrashed()->findOrFail($id);
+                    // Xóa tất cả permissions của user
+                    \DB::table('user_permissions_club')->where('user_id', $id)->delete();
+                    // Xóa tất cả club_members của user
+                    \DB::table('club_members')->where('user_id', $id)->delete();
                     break;
                 case 'club':
                     $item = Club::onlyTrashed()->findOrFail($id);
+                    // Xóa tất cả club_members của club
+                    \DB::table('club_members')->where('club_id', $id)->delete();
+                    // Xóa tất cả permissions của club
+                    \DB::table('user_permissions_club')->where('club_id', $id)->delete();
                     break;
                 case 'post':
                     $item = Post::onlyTrashed()->findOrFail($id);
@@ -236,10 +262,24 @@ class TrashController extends Controller
         try {
             switch ($type) {
                 case 'users':
-                    User::onlyTrashed()->forceDelete();
+                    // Xóa tất cả user đã bị xóa mềm
+                    $users = User::onlyTrashed()->get();
+                    foreach ($users as $user) {
+                        // Xóa permissions và club_members của user này
+                        \DB::table('user_permissions_club')->where('user_id', $user->id)->delete();
+                        \DB::table('club_members')->where('user_id', $user->id)->delete();
+                        $user->forceDelete();
+                    }
                     break;
                 case 'clubs':
-                    Club::onlyTrashed()->forceDelete();
+                    // Xóa tất cả club đã bị xóa mềm
+                    $clubs = Club::onlyTrashed()->get();
+                    foreach ($clubs as $club) {
+                        // Xóa club_members và permissions của club này
+                        \DB::table('club_members')->where('club_id', $club->id)->delete();
+                        \DB::table('user_permissions_club')->where('club_id', $club->id)->delete();
+                        $club->forceDelete();
+                    }
                     break;
                 case 'posts':
                     // Xóa tất cả bình luận trước, sau đó xóa bài viết

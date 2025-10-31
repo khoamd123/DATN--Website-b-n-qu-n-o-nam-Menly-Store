@@ -182,6 +182,7 @@
                     <div id="file-preview" class="mb-3" style="display: none;">
                         <label class="form-label">Files đã chọn:</label>
                         <div id="file-list" class="list-group"></div>
+                        <div id="image-grid" class="row mt-2"></div>
                     </div>
 
                     <!-- Buttons -->
@@ -204,6 +205,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('settlement_documents');
     const filePreview = document.getElementById('file-preview');
     const fileList = document.getElementById('file-list');
+    const imageGrid = document.getElementById('image-grid');
+
+    // Initialize CKEditor for settlement notes
+    if (window.ClassicEditor) {
+        ClassicEditor.create(document.querySelector('#settlement_notes'), {
+            toolbar: ['bold','italic','link','bulletedList','numberedList','blockQuote']
+        }).catch(() => {});
+    }
 
     fileInput.addEventListener('change', function() {
         const files = Array.from(this.files);
@@ -211,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (files.length > 0) {
             filePreview.style.display = 'block';
             fileList.innerHTML = '';
+            imageGrid.innerHTML = '';
             
             files.forEach((file, index) => {
                 const fileItem = document.createElement('div');
@@ -226,6 +236,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 `;
                 fileList.appendChild(fileItem);
+
+                if (file.type.startsWith('image/')) {
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-md-3 mb-2';
+                    const thumb = document.createElement('div');
+                    thumb.className = 'position-relative border rounded';
+                    const img = document.createElement('img');
+                    img.className = 'w-100';
+                    img.style.height = '120px';
+                    img.style.objectFit = 'cover';
+                    const reader = new FileReader();
+                    reader.onload = e => { img.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                    const rm = document.createElement('button');
+                    rm.type = 'button';
+                    rm.className = 'btn btn-sm btn-danger position-absolute top-0 end-0 m-1';
+                    rm.innerHTML = '<i class="fas fa-trash"></i>';
+                    rm.addEventListener('click', function(){ removeFile(index); });
+                    thumb.appendChild(img);
+                    thumb.appendChild(rm);
+                    col.appendChild(thumb);
+                    imageGrid.appendChild(col);
+                }
             });
         } else {
             filePreview.style.display = 'none';

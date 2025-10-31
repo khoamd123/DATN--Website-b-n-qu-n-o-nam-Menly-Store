@@ -117,7 +117,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ $title }} ({{ $data[$key]->count() }})</h5>
                     @if($data[$key]->count() > 5)
-                        <a href="{{ route('admin.trash', ['type' => $key]) }}" class="btn btn-sm btn-outline-primary">
+                        <a href="{{ route('admin.trash', ['type' => \Str::kebab($key)]) }}" class="btn btn-sm btn-outline-primary">
                             Xem tất cả
                         </a>
                     @endif
@@ -153,10 +153,10 @@
         </div>
         <div class="card-body">
             @php
-                $key = str_replace('-', '', ucwords($type, '-'));
-                $key = lcfirst($key);
+                // Convert type to data key: 'club-members' -> 'clubMembers'
+                $dataKey = \Str::camel($type);
             @endphp
-            @include('admin.trash.partials.' . $type, ['items' => $data[$key]])
+            @include('admin.trash.partials.' . $type, ['items' => $data[$dataKey]])
         </div>
     </div>
 @endif

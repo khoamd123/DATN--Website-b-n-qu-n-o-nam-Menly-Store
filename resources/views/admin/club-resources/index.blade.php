@@ -103,16 +103,70 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    @if($resource->thumbnail_path)
-                                                        <img src="{{ asset('storage/' . $resource->thumbnail_path) }}"
-                                                            class="img-thumbnail me-2" style="width: 40px; height: 40px;">
+                                                    @php
+                                                        $previewImage = null;
+                                                        $fullImage = null;
+                                                        // Ưu tiên lấy ảnh từ album images
+                                                        if($resource->images && $resource->images->count() > 0) {
+                                                            $primaryImage = $resource->images->where('is_primary', true)->first();
+                                                            $firstImage = $primaryImage ?: $resource->images->first();
+                                                            $previewImage = $firstImage->thumbnail_url;
+                                                            $fullImage = $firstImage->image_url;
+                                                        }
+                                                        // Nếu không có trong album images, lấy từ thumbnail_path
+                                                        elseif($resource->thumbnail_path) {
+                                                            $previewImage = asset('storage/' . $resource->thumbnail_path);
+                                                            $fullImage = $previewImage;
+                                                        }
+                                                        // Nếu không có, kiểm tra files có ảnh không
+                                                        elseif($resource->files && $resource->files->count() > 0) {
+                                                            foreach($resource->files as $file) {
+                                                                if(str_contains($file->file_type, 'image')) {
+                                                                    $previewImage = $file->file_url;
+                                                                    $fullImage = $file->file_url;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @if($previewImage)
+                                                        <img src="{{ $previewImage }}"
+                                                            class="img-thumbnail me-2 resource-thumbnail" 
+                                                            data-full-image="{{ $fullImage }}"
+                                                            data-title="{{ $resource->title }}"
+                                                            style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;"
+                                                            onclick="showImageModal(this)">
+                                                    @else
+                                                        <div class="me-2 text-center" style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                                            <i class="fas fa-file-alt fa-2x text-muted"></i>
+                                                        </div>
                                                     @endif
                                                     <div>
                                                         <strong>{{ $resource->title }}</strong>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            @if($resource->images && $resource->images->count() > 0)
+                                                                <i class="fas fa-images"></i> {{ $resource->images->count() }} ảnh
+                                                            @endif
+                                                            @if($resource->files && $resource->files->count() > 0)
+                                                                <i class="fas fa-file"></i> {{ $resource->files->count() }} file
+                                                            @endif
+                                                        </small>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>{{ $resource->club->name }}</td>
+                                            <td>
+                                                @if($resource->club)
+                                                    <a href="{{ route('admin.clubs.show', $resource->club->id) }}" 
+                                                       class="text-dark text-decoration-none"
+                                                       title="Xem chi tiết câu lạc bộ">
+                                                        {{ $resource->club->name }}
+                                                        <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">Không xác định</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 @if($resource->status == 'active')
                                                     <span class="badge bg-success">Hoạt động</span>
@@ -176,6 +230,60 @@
         </div>
     </div>
 
+    <!-- Image Preview Modal -->
+    <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imagePreviewModalTitle">Xem ảnh</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="imagePreviewModalImg" src="" class="img-fluid" style="max-height: 70vh; width: 100%; object-fit: contain;" alt="Preview">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <a id="imagePreviewModalLink" href="" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt"></i> Mở trong tab mới
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
+@endsection
+
+@section('scripts')
+<script>
+function showImageModal(img) {
+    const fullImageUrl = img.getAttribute('data-full-image');
+    const title = img.getAttribute('data-title');
+    
+    // Set modal content
+    document.getElementById('imagePreviewModalTitle').textContent = title;
+    document.getElementById('imagePreviewModalImg').src = fullImageUrl;
+    document.getElementById('imagePreviewModalLink').href = fullImageUrl;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+    modal.show();
+}
+
+// Add hover effect to thumbnails
+document.addEventListener('DOMContentLoaded', function() {
+    const thumbnails = document.querySelectorAll('.resource-thumbnail');
+    thumbnails.forEach(thumb => {
+        thumb.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        thumb.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+});
+</script>
 @endsection
 

@@ -124,7 +124,7 @@
 
                                     <div class="form-group">
                                         <strong>Mô tả chi tiết:</strong>
-                                        <p class="mt-2">{{ $fundRequest->description }}</p>
+                                        <div class="mt-2">{!! nl2br(e(strip_tags($fundRequest->description))) !!}</div>
                                     </div>
 
                                     @if($fundRequest->approval_notes)

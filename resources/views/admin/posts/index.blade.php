@@ -110,7 +110,18 @@
                                         {{ $post->type === 'announcement' ? 'Thông báo' : 'Bài viết' }}
                                     </span>
                                 </td>
-                                <td>{{ $post->club->name ?? 'Không xác định' }}</td>
+                                <td>
+                                    @if($post->club)
+                                        <a href="{{ route('admin.clubs.show', $post->club->id) }}" 
+                                           class="text-dark text-decoration-none"
+                                           title="Xem chi tiết câu lạc bộ">
+                                            {{ $post->club->name }}
+                                            <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Không xác định</span>
+                                    @endif
+                                </td>
                                 <td>{{ $post->user->name ?? 'Không xác định' }}</td>
                                 <td>
                                     @php

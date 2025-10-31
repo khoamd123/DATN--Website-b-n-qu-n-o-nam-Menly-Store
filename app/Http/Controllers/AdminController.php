@@ -18,6 +18,65 @@ use Illuminate\Support\Facades\Schema;
 class AdminController extends Controller
 {
     /**
+     * Generate the next sequential student ID based on a two-letter prefix series
+     * and a five-digit number starting from 10000. Sequence progresses by
+     * incrementing the number; once it reaches 99999, move to the next prefix
+     * lexicographically (e.g., AB -> AC -> AD ... -> AZ -> BA ...).
+     */
+    private function generateNextStudentId(string $startPrefix = 'AB'): string
+    {
+        // Find the latest existing student_id matching pattern XX99999 order by prefix+number
+        $last = \App\Models\User::whereRaw("student_id REGEXP '^[A-Z]{2}[0-9]{5}$'")
+            ->orderBy('student_id', 'desc')
+            ->first(['student_id']);
+
+        if (!$last) {
+            return strtoupper($startPrefix) . '10000';
+        }
+
+        $code = $last->student_id;
+        $prefix = substr($code, 0, 2);
+        $num = intval(substr($code, 2));
+
+        if ($num < 99999) {
+            $num += 1;
+            return $prefix . str_pad((string)$num, 5, '0', STR_PAD_LEFT);
+        }
+
+        // Roll number and increment prefix lexicographically
+        $num = 10000;
+        $a = ord($prefix[0]);
+        $b = ord($prefix[1]);
+        $b += 1;
+        if ($b > ord('Z')) { $b = ord('A'); $a += 1; }
+        if ($a > ord('Z')) { $a = ord($startPrefix[0]); $b = ord($startPrefix[1]); }
+        $newPrefix = chr($a) . chr($b);
+
+        // Ensure uniqueness: if exists, keep advancing
+        while (\App\Models\User::where('student_id', $newPrefix . $num)->exists()) {
+            $num += 1;
+            if ($num > 99999) {
+                $num = 10000;
+                $a = ord($newPrefix[0]);
+                $b = ord($newPrefix[1]) + 1;
+                if ($b > ord('Z')) { $b = ord('A'); $a += 1; }
+                if ($a > ord('Z')) { $a = ord($startPrefix[0]); $b = ord($startPrefix[1]); }
+                $newPrefix = chr($a) . chr($b);
+            }
+        }
+
+        return $newPrefix . str_pad((string)$num, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * API: return next student id for preview
+     */
+    public function nextStudentId(): \Illuminate\Http\JsonResponse
+    {
+        $next = $this->generateNextStudentId('AB');
+        return response()->json(['student_id' => $next]);
+    }
+    /**
      * Display admin dashboard
      */
     public function dashboard(Request $request)
@@ -90,11 +149,10 @@ class AdminController extends Controller
                 ->limit(5)
                 ->get();
             
-            // Sự kiện sắp diễn ra trong khoảng thời gian được chọn
+            // Sự kiện trong khoảng thời gian được chọn
             $upcomingEvents = Event::with(['club'])
                 ->whereBetween('start_time', [$startDate, $endDate])
-                ->where('status', 'active')
-                ->orderBy('start_time', 'asc')
+                ->orderBy('start_time', 'desc')
                 ->limit(5)
                 ->get();
         } else {
@@ -111,11 +169,10 @@ class AdminController extends Controller
                 ->limit(5)
                 ->get();
             
-            // Sự kiện sắp diễn ra
+            // Sự kiện gần đây (cả sắp tới và đã diễn ra gần đây)
             $upcomingEvents = Event::with(['club'])
-                ->where('start_time', '>', now())
-                ->where('status', 'active')
-                ->orderBy('start_time', 'asc')
+                ->where('start_time', '>=', now()->subDays(30)) // Lấy sự kiện từ 30 ngày trước đến tương lai
+                ->orderBy('start_time', 'desc')
                 ->limit(5)
                 ->get();
         }
@@ -353,10 +410,14 @@ class AdminController extends Controller
         try {
             $user = User::findOrFail($id);
             
+            if ($request->filled('student_id')) {
+                $request->merge(['student_id' => strtoupper(trim($request->student_id))]);
+            }
+            
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255|unique:users,email,' . $id,
-                'student_id' => 'nullable|string|max:20',
+                'student_id' => 'nullable|string|max:50|unique:users,student_id,' . $id,
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:500',
                 'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -437,9 +498,15 @@ class AdminController extends Controller
         }
 
         $club = Club::findOrFail($id);
+        
+        // Chỉ cho phép xóa CLB đã tạm dừng
+        if ($club->status !== 'inactive') {
+            return redirect()->back()->with('error', 'Chỉ có thể xóa câu lạc bộ đã tạm dừng!');
+        }
+        
         $club->delete(); // Soft delete
         
-        return redirect()->back()->with('success', 'Câu lạc bộ đã được chuyển vào thùng rác!');
+        return redirect()->route('admin.clubs')->with('success', 'Câu lạc bộ đã được chuyển vào thùng rác!');
     }
 
     /**
@@ -661,6 +728,29 @@ class AdminController extends Controller
                 'leader_id' => 'nullable|exists:users,id',
             ]);
 
+            // Validate: one user can be leader/officer of only one club
+            if ($request->leader_id) {
+                // Kiểm tra xem user đã là leader ở CLB khác chưa
+                $alreadyLeading = Club::where('leader_id', $request->leader_id)->whereNull('deleted_at')->exists();
+                if ($alreadyLeading) {
+                    return back()->with('error', 'Người này đã là Trưởng của một CLB khác.')->withInput();
+                }
+                
+                // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+                $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
+                    ->whereIn('status', ['approved', 'active'])
+                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereHas('club', function($query) {
+                        $query->whereNull('deleted_at');
+                    })
+                    ->first();
+                    
+                if ($existingLeaderOfficer) {
+                    $existingClub = Club::find($existingLeaderOfficer->club_id);
+                    return back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.")->withInput();
+                }
+            }
+
             // Xử lý field_id
             $fieldId = null;
             if ($request->filled('new_field_name')) {
@@ -721,12 +811,24 @@ class AdminController extends Controller
                     'status' => 'active',
                     'joined_at' => now(),
                 ]);
+                
+                // Tự động cấp tất cả quyền cho leader
+                $allPermissions = \App\Models\Permission::all();
+                foreach ($allPermissions as $permission) {
+                    \DB::table('user_permissions_club')->insert([
+                        'user_id' => $request->leader_id,
+                        'club_id' => $club->id,
+                        'permission_id' => $permission->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
 
             // Tự động tạo quỹ cho CLB
             $fundCreatorId = session('user_id') ?? 1;
             \App\Models\Fund::create([
-                'name' => null, // Name sẽ được tự động từ accessor
+                'name' => 'Quỹ ' . $club->name,
                 'description' => 'Quỹ hoạt động của ' . $club->name,
                 'initial_amount' => 0,
                 'current_amount' => 0,
@@ -782,6 +884,37 @@ class AdminController extends Controller
             ]);
 
             $club = Club::findOrFail($id);
+
+            // Validate: one user can be leader/officer of only one club
+            if ($request->leader_id) {
+                // Kiểm tra xem user đã là leader ở CLB khác chưa
+                $alreadyLeading = Club::where('leader_id', $request->leader_id)
+                    ->where('id', '!=', $club->id)
+                    ->whereNull('deleted_at')
+                    ->exists();
+                if ($alreadyLeading) {
+                    return back()->with('error', 'Người này đã là Trưởng của một CLB khác.');
+                }
+                
+                // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+                $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
+                    ->whereIn('status', ['approved', 'active'])
+                    ->whereIn('position', ['leader', 'officer'])
+                    ->where('club_id', '!=', $club->id)
+                    ->whereHas('club', function($query) {
+                        $query->whereNull('deleted_at');
+                    })
+                    ->first();
+                    
+                if ($existingLeaderOfficer) {
+                    $existingClub = Club::find($existingLeaderOfficer->club_id);
+                    return back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
+                }
+            }
+
+            // Lưu leader_id cũ để xử lý sau
+            $oldLeaderId = $club->leader_id;
+            
             $club->update([
                 'name' => $request->name,
                 'description' => $request->description,
@@ -789,6 +922,62 @@ class AdminController extends Controller
                 'leader_id' => $request->leader_id,
                 'status' => $request->status,
             ]);
+
+            // Xử lý thay đổi leader
+            if ($oldLeaderId != $request->leader_id) {
+                // Nếu có leader cũ, chuyển về thành viên và xóa quyền
+                if ($oldLeaderId) {
+                    \DB::table('club_members')
+                        ->where('user_id', $oldLeaderId)
+                        ->where('club_id', $club->id)
+                        ->update(['position' => 'member']);
+                    
+                    \DB::table('user_permissions_club')
+                        ->where('user_id', $oldLeaderId)
+                        ->where('club_id', $club->id)
+                        ->delete();
+                }
+                
+                // Nếu có leader mới, cấp quyền và set position
+                if ($request->leader_id) {
+                    // Tạo hoặc cập nhật club_member
+                    $existingMember = ClubMember::where('user_id', $request->leader_id)
+                        ->where('club_id', $club->id)
+                        ->first();
+                    
+                    if ($existingMember) {
+                        $existingMember->update([
+                            'position' => 'leader',
+                            'status' => 'active',
+                        ]);
+                    } else {
+                        ClubMember::create([
+                            'club_id' => $club->id,
+                            'user_id' => $request->leader_id,
+                            'position' => 'leader',
+                            'status' => 'active',
+                            'joined_at' => now(),
+                        ]);
+                    }
+                    
+                    // Xóa quyền cũ và cấp lại tất cả quyền
+                    \DB::table('user_permissions_club')
+                        ->where('user_id', $request->leader_id)
+                        ->where('club_id', $club->id)
+                        ->delete();
+                    
+                    $allPermissions = \App\Models\Permission::all();
+                    foreach ($allPermissions as $permission) {
+                        \DB::table('user_permissions_club')->insert([
+                            'user_id' => $request->leader_id,
+                            'club_id' => $club->id,
+                            'permission_id' => $permission->id,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
 
             return redirect()->route('admin.clubs')->with('success', 'Đã cập nhật câu lạc bộ thành công!');
         } catch (\Exception $e) {
@@ -1396,7 +1585,9 @@ class AdminController extends Controller
      */
     public function postsManagement(Request $request)
     {
-        $query = Post::whereIn('type', ['post', 'announcement'])->with(['club', 'user']);
+        $query = Post::whereIn('type', ['post', 'announcement'])
+            ->where('status', '!=', 'deleted') // Loại bỏ posts có status='deleted' (legacy)
+            ->with(['club', 'user']);
         
         if ($request->has('search') && $request->search) {
             $query->where(function($q) use ($request) {
@@ -1430,11 +1621,42 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị danh sách bài viết đã xóa (trash)
+     */
+    public function postsTrash(Request $request)
+    {
+        $query = Post::onlyTrashed()
+            ->whereIn('type', ['post', 'announcement'])
+            ->with(['club', 'user']);
+        
+        if ($request->has('search') && $request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('content', 'like', '%' . $request->search . '%');
+            });
+        }
+        
+        if ($request->has('club_id') && $request->club_id) {
+            $query->where('club_id', $request->club_id);
+        }
+        
+        if ($request->has('type') && $request->type) {
+            $query->where('type', $request->type);
+        }
+        
+        $posts = $query->orderBy('deleted_at', 'desc')->paginate(20);
+        $clubs = Club::where('status', 'active')->get();
+        
+        return view('admin.posts.trash', compact('posts', 'clubs'));
+    }
+
+    /**
      * Hiển thị chi tiết bài viết
      */
     public function postsShow($id)
     {
-        $post = Post::with(['club', 'user', 'attachments'])->findOrFail($id);
+        // Bao gồm cả bài viết đã xóa (trong thùng rác)
+        $post = Post::withTrashed()->with(['club', 'user', 'attachments'])->findOrFail($id);
         
         return view('admin.posts.show', compact('post'));
     }
@@ -1473,7 +1695,8 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,hidden,deleted,members_only',
+                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             ]);
 
             // Tạo slug từ title
@@ -1489,7 +1712,7 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            Post::create([
+            $post = Post::create([
                 'title' => $request->title,
                 'slug' => $slug,
                 'content' => $request->content,
@@ -1498,6 +1721,27 @@ class AdminController extends Controller
                 'type' => $request->type,
                 'status' => $request->status,
             ]);
+
+            // Handle images (optional, multiple)
+            if ($request->hasFile('images')) {
+                $firstImagePath = null;
+                foreach ($request->file('images') as $index => $image) {
+                    $imageName = time() . '_' . $index . '_' . $image->getClientOriginalName();
+                    $imagePath = 'uploads/posts/' . $imageName;
+                    $image->move(public_path('uploads/posts'), $imageName);
+                    \App\Models\PostAttachment::create([
+                        'post_id' => $post->id,
+                        'file_url' => $imagePath,
+                        'file_type' => 'image'
+                    ]);
+                    if ($index === 0) {
+                        $firstImagePath = $imagePath;
+                    }
+                }
+                if ($firstImagePath) {
+                    $post->update(['image' => $firstImagePath]);
+                }
+            }
 
             return redirect()->route('admin.posts')->with('success', 'Đã tạo bài viết thành công!');
         } catch (\Exception $e) {
@@ -1516,7 +1760,7 @@ class AdminController extends Controller
         }
 
         try {
-            $post = Post::whereIn('type', ['post', 'announcement'])->findOrFail($id);
+            $post = Post::withTrashed()->with('attachments')->whereIn('type', ['post', 'announcement'])->findOrFail($id);
             $clubs = Club::where('status', 'active')->get();
             return view('admin.posts.edit', compact('post', 'clubs'));
         } catch (\Exception $e) {
@@ -1540,11 +1784,16 @@ class AdminController extends Controller
                 'content' => 'required|string',
                 'club_id' => 'required|exists:clubs,id',
                 'type' => 'required|in:post,announcement',
-                'status' => 'required|in:published,hidden,deleted',
+                'status' => 'required|in:published,hidden,deleted,members_only',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'remove_image' => 'nullable|boolean',
+                'deleted_attachments' => 'nullable|string',
             ]);
 
             $post = Post::whereIn('type', ['post', 'announcement'])->findOrFail($id);
+            
+            // Load attachments để xử lý
+            $post->load('attachments');
             
             $updateData = [
                 'title' => $request->title,
@@ -1554,10 +1803,36 @@ class AdminController extends Controller
                 'status' => $request->status,
             ];
 
-            // Xử lý upload ảnh nếu có (nhiều ảnh)
-            if ($request->hasFile('images')) {
-                $images = $request->file('images');
+            // Xử lý xóa từng attachment theo ID (nếu có)
+            if ($request->has('deleted_attachments') && !empty($request->deleted_attachments)) {
+                $deletedIds = explode(',', $request->deleted_attachments);
+                $deletedIds = array_filter(array_map('trim', $deletedIds));
                 
+                if (!empty($deletedIds)) {
+                    foreach ($deletedIds as $attachmentId) {
+                        $attachment = \App\Models\PostAttachment::find($attachmentId);
+                        if ($attachment && $attachment->post_id == $post->id) {
+                            // Xóa file vật lý
+                            if (file_exists(public_path($attachment->file_url))) {
+                                @unlink(public_path($attachment->file_url));
+                            }
+                            // Xóa record trong database
+                            $attachment->delete();
+                        }
+                    }
+                    
+                    // Cập nhật ảnh chính nếu ảnh đầu tiên bị xóa hoặc không còn attachment nào
+                    $remainingAttachments = $post->fresh()->attachments;
+                    if ($remainingAttachments->count() > 0) {
+                        $updateData['image'] = $remainingAttachments->first()->file_url;
+                    } else {
+                        $updateData['image'] = null;
+                    }
+                }
+            }
+
+            // Xử lý xóa ảnh nếu người dùng yêu cầu (không upload ảnh mới và không có deleted_attachments)
+            if ($request->has('remove_image') && $request->remove_image == '1' && !$request->hasFile('images') && empty($request->deleted_attachments)) {
                 // Xóa file ảnh cũ trong bảng post_attachments
                 foreach ($post->attachments as $attachment) {
                     if (file_exists(public_path($attachment->file_url))) {
@@ -1570,6 +1845,50 @@ class AdminController extends Controller
                 // Xóa file ảnh cũ trong cột image nếu có
                 if ($post->image && file_exists(public_path($post->image))) {
                     @unlink(public_path($post->image));
+                }
+                
+                $updateData['image'] = null;
+            }
+
+            // Xử lý upload ảnh nếu có (nhiều ảnh)
+            if ($request->hasFile('images')) {
+                $images = $request->file('images');
+                
+                // Xử lý xóa các attachments được đánh dấu xóa trước (nếu có)
+                if ($request->has('deleted_attachments') && !empty($request->deleted_attachments)) {
+                    $deletedIds = explode(',', $request->deleted_attachments);
+                    $deletedIds = array_filter(array_map('trim', $deletedIds));
+                    
+                    if (!empty($deletedIds)) {
+                        foreach ($deletedIds as $attachmentId) {
+                            $attachment = \App\Models\PostAttachment::find($attachmentId);
+                            if ($attachment && $attachment->post_id == $post->id) {
+                                // Xóa file vật lý
+                                if (file_exists(public_path($attachment->file_url))) {
+                                    @unlink(public_path($attachment->file_url));
+                                }
+                                // Xóa record trong database
+                                $attachment->delete();
+                            }
+                        }
+                    }
+                }
+                
+                // Nếu có flag remove_image = 1 và upload ảnh mới, xóa tất cả attachments cũ và thay thế
+                if ($request->has('remove_image') && $request->remove_image == '1') {
+                    // Xóa file ảnh cũ trong bảng post_attachments
+                    foreach ($post->fresh()->attachments as $attachment) {
+                        if (file_exists(public_path($attachment->file_url))) {
+                            @unlink(public_path($attachment->file_url));
+                        }
+                    }
+                    // Xóa records cũ trong database
+                    $post->attachments()->delete();
+                    
+                    // Xóa file ảnh cũ trong cột image nếu có
+                    if ($post->image && file_exists(public_path($post->image))) {
+                        @unlink(public_path($post->image));
+                    }
                 }
                 
                 // Upload từng ảnh và lưu vào bảng post_attachments
@@ -1613,8 +1932,14 @@ class AdminController extends Controller
         $post = Post::findOrFail($id);
         
         $request->validate([
-            'status' => 'required|in:published,hidden,deleted'
+            'status' => 'required|in:published,hidden,deleted,members_only'
         ]);
+        
+        // Nếu status là "deleted", thực hiện soft delete thay vì update status
+        if ($request->status === 'deleted') {
+            $post->delete(); // Soft delete - chuyển vào thùng rác
+            return redirect()->back()->with('success', 'Đã chuyển bài viết vào thùng rác!');
+        }
         
         $post->update([
             'status' => $request->status
@@ -1800,15 +2125,15 @@ class AdminController extends Controller
             return null;
         }
         
-        // Nếu có start_date và end_date từ form (chỉ khi không có date_range preset)
-        if ($startDate && $endDate && !$dateRange) {
+        // Ưu tiên start_date và end_date từ form (khi user chọn ngày cụ thể)
+        if ($startDate && $endDate) {
             return [
                 'start' => \Carbon\Carbon::parse($startDate)->startOfDay(),
                 'end' => \Carbon\Carbon::parse($endDate)->endOfDay()
             ];
         }
         
-        // Xử lý các khoảng thời gian định sẵn
+        // Xử lý các khoảng thời gian định sẵn (chỉ khi không có start_date/end_date)
         switch ($dateRange) {
             case 'today':
                 return [
@@ -1891,6 +2216,8 @@ class AdminController extends Controller
      */
     public function storeUser(Request $request)
     {
+        // Student ID is now auto-extracted from email on the frontend
+        // No longer using sequential AB10000 series
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -1977,6 +2304,11 @@ class AdminController extends Controller
      */
     public function editClub($club)
     {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
         $club = Club::with(['field', 'owner'])->findOrFail($club);
         $fields = Field::all();
         $users = User::where('is_admin', false)->get();
@@ -1989,6 +2321,11 @@ class AdminController extends Controller
      */
     public function updateClub(Request $request, $club)
     {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
         $club = Club::findOrFail($club);
         
         $request->validate([
@@ -1996,13 +2333,118 @@ class AdminController extends Controller
             'slug' => 'nullable|string|max:255|unique:clubs,slug,' . $club->id,
             'field_id' => 'nullable|exists:fields,id',
             'owner_id' => 'required|exists:users,id',
+            'leader_id' => 'nullable|exists:users,id',
             'description' => 'nullable|string',
             'status' => 'required|in:pending,approved,active,inactive,rejected'
         ]);
         
+        // Validate: one user can be leader/officer of only one club
+        if ($request->leader_id) {
+            // Kiểm tra xem user đã là leader ở CLB khác chưa
+            $alreadyLeading = Club::where('leader_id', $request->leader_id)
+                ->where('id', '!=', $club->id)
+                ->whereNull('deleted_at')
+                ->exists();
+            if ($alreadyLeading) {
+                return back()->with('error', 'Người này đã là Trưởng của một CLB khác.');
+            }
+            
+            // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+            $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
+                ->whereIn('status', ['approved', 'active'])
+                ->whereIn('position', ['leader', 'officer'])
+                ->where('club_id', '!=', $club->id)
+                ->whereHas('club', function($query) {
+                    $query->whereNull('deleted_at');
+                })
+                ->first();
+                
+            if ($existingLeaderOfficer) {
+                $existingClub = Club::find($existingLeaderOfficer->club_id);
+                return back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
+            }
+        }
+        
+        // Lưu leader_id cũ để xử lý sau
+        $oldLeaderId = $club->leader_id;
+        
         $club->update($request->only([
-            'name', 'slug', 'field_id', 'owner_id', 'description', 'status'
+            'name', 'slug', 'field_id', 'owner_id', 'leader_id', 'description', 'status'
         ]));
+        
+        // Xử lý thay đổi leader
+        \Log::info("UpdateClub: oldLeaderId={$oldLeaderId}, newLeaderId={$request->leader_id}");
+        
+        if ($oldLeaderId != $request->leader_id) {
+            \Log::info("Leader changed! Processing update...");
+            
+            // Nếu có leader cũ, chuyển về thành viên và xóa quyền
+            if ($oldLeaderId) {
+                \Log::info("Removing old leader {$oldLeaderId} from club {$club->id}");
+                \DB::table('club_members')
+                    ->where('user_id', $oldLeaderId)
+                    ->where('club_id', $club->id)
+                    ->update(['position' => 'member']);
+                
+                \DB::table('user_permissions_club')
+                    ->where('user_id', $oldLeaderId)
+                    ->where('club_id', $club->id)
+                    ->delete();
+            }
+            
+            // Nếu có leader mới, cấp quyền và set position
+            if ($request->leader_id) {
+                \Log::info("Setting new leader {$request->leader_id} for club {$club->id}");
+                
+                // Kiểm tra xem user đã là thành viên chưa
+                $existingMember = \DB::table('club_members')
+                    ->where('user_id', $request->leader_id)
+                    ->where('club_id', $club->id)
+                    ->first();
+                
+                if ($existingMember) {
+                    \Log::info("User {$request->leader_id} already member, updating position to leader");
+                    // Cập nhật position và status
+                    $updated = \DB::table('club_members')
+                        ->where('user_id', $request->leader_id)
+                        ->where('club_id', $club->id)
+                        ->update([
+                            'position' => 'leader',
+                            'status' => 'active',
+                        ]);
+                    \Log::info("Update result: {$updated} row(s) affected");
+                } else {
+                    \Log::info("User {$request->leader_id} not member yet, creating new member as leader");
+                    // Tạo mới
+                    \DB::table('club_members')->insert([
+                        'club_id' => $club->id,
+                        'user_id' => $request->leader_id,
+                        'position' => 'leader',
+                        'status' => 'active',
+                        'joined_at' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                
+                // Xóa quyền cũ và cấp lại tất cả quyền
+                \DB::table('user_permissions_club')
+                    ->where('user_id', $request->leader_id)
+                    ->where('club_id', $club->id)
+                    ->delete();
+                
+                $allPermissions = \App\Models\Permission::all();
+                foreach ($allPermissions as $permission) {
+                    \DB::table('user_permissions_club')->insert([
+                        'user_id' => $request->leader_id,
+                        'club_id' => $club->id,
+                        'permission_id' => $permission->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
         
         return redirect()->route('admin.clubs.show', $club->id)
             ->with('success', 'Cập nhật thông tin câu lạc bộ thành công!');

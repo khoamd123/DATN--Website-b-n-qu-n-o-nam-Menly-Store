@@ -34,7 +34,7 @@
         <div class="col-lg-8">
             <!-- Header sự kiện -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-gradient-primary text-white">
+                <div class="card-header" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white;">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ $event->title }}</h4>
                         @php
@@ -319,7 +319,7 @@
         <div class="col-lg-4">
             <!-- Thống kê -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-gradient-info text-white">
+                <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
                     <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê sự kiện</h5>
                 </div>
                 <div class="card-body">
@@ -353,7 +353,7 @@
 
             <!-- Hành động -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-gradient-warning text-dark">
+                <div class="card-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
                     <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Hành động</h5>
                 </div>
                 <div class="card-body">
@@ -390,7 +390,7 @@
 
             <!-- Thông tin nhanh -->
             <div class="card shadow-sm">
-                <div class="card-header bg-gradient-secondary text-white">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
                     <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin nhanh</h5>
                 </div>
                 <div class="card-body">

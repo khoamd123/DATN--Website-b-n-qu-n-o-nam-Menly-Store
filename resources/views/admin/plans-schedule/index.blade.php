@@ -132,7 +132,18 @@
                                     </div>
                                 @endif
                             </td>
-                            <td>{{ $event->club->name ?? 'Không xác định' }}</td>
+                            <td>
+                                @if($event->club)
+                                    <a href="{{ route('admin.clubs.show', $event->club->id) }}" 
+                                       class="text-dark text-decoration-none"
+                                       title="Xem chi tiết câu lạc bộ">
+                                        {{ $event->club->name }}
+                                        <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
+                                    </a>
+                                @else
+                                    <span class="text-muted">Không xác định</span>
+                                @endif
+                            </td>
                             <td>
                                 <strong>Bắt đầu:</strong> {{ \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') }}
                                 <br><strong>Kết thúc:</strong> {{ \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') }}

@@ -20,21 +20,25 @@ class PermissionController extends Controller
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
-        // Load users với clubMembers có status = 'approved' hoặc 'active'
-        $users = User::all();
+        // Load users với phân trang (15 users/trang)
+        $users = User::paginate(15);
         
-        // Load clubMembers cho mỗi user (force refresh từ DB)
+        // Load clubMembers cho mỗi user (force refresh từ DB), chỉ lấy CLB chưa bị xóa
         foreach ($users as $user) {
             $userClubs = \App\Models\ClubMember::where('user_id', $user->id)
                 ->whereIn('status', ['approved', 'active'])
-                ->with('club')
+                ->with(['club' => function($query) {
+                    $query->whereNull('deleted_at');
+                }])
                 ->get();
             $user->setRelation('clubMembers', $userClubs);
         }
         
-        $clubs = Club::with(['leader', 'clubMembers' => function($query) {
-            $query->where('status', 'approved');
-        }])->get();
+        // Chỉ load CLB chưa bị xóa
+        $clubs = Club::whereNull('deleted_at')
+            ->with(['leader', 'clubMembers' => function($query) {
+                $query->where('status', 'approved');
+            }])->get();
         $permissions = Permission::all();
 
         return view('admin.permissions.detailed', compact('users', 'clubs', 'permissions'));
@@ -310,16 +314,11 @@ class PermissionController extends Controller
         
         \Log::info("Final position for user {$userId} in club {$clubId}: {$newPosition}");
         
-        // Map position (leader, officer, member) to role_in_club (chunhiem, phonhiem, thanhvien)
-        $roleInClub = 'thanhvien'; // Mặc định
-        if ($newPosition === 'leader') $roleInClub = 'chunhiem';
-        elseif ($newPosition === 'officer') $roleInClub = 'phonhiem';
-        
-        // Cập nhật role_in_club (cột thực tế trong DB)
+        // Cập nhật position trong DB
         $updated = \DB::table('club_members')
             ->where('user_id', $userId)
             ->where('club_id', $clubId)
-            ->update(['role_in_club' => $roleInClub]);
+            ->update(['position' => $newPosition]);
         
         \Log::info("DB update result: " . ($updated ? "SUCCESS (1 row affected)" : "FAILED (0 rows affected)"));
         

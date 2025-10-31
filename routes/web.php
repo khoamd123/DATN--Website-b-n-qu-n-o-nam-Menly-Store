@@ -197,6 +197,7 @@ Route::prefix('admin')->group(function () {
             // Quản lý người dùng
             Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
             Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
+            Route::get('/users/next-student-id', [AdminController::class, 'nextStudentId'])->name('admin.users.next-student-id');
             Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
             Route::get('/users/{id}', [AdminController::class, 'showUser'])->name('admin.users.show');
             Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
@@ -221,6 +222,7 @@ Route::prefix('admin')->group(function () {
             Route::get('/funds/{fund}/transactions/{transaction}/edit', [App\Http\Controllers\FundTransactionController::class, 'edit'])->name('admin.funds.transactions.edit');
             Route::put('/funds/{fund}/transactions/{transaction}', [App\Http\Controllers\FundTransactionController::class, 'update'])->name('admin.funds.transactions.update');
             Route::post('/funds/{fund}/transactions/{transaction}/approve', [App\Http\Controllers\FundTransactionController::class, 'approve'])->name('admin.funds.transactions.approve');
+            Route::post('/funds/{fund}/transactions/{transaction}/approve-partial', [App\Http\Controllers\FundTransactionController::class, 'approvePartial'])->name('admin.funds.transactions.approve-partial');
             Route::post('/funds/{fund}/transactions/{transaction}/reject', [App\Http\Controllers\FundTransactionController::class, 'reject'])->name('admin.funds.transactions.reject');
             Route::post('/funds/{fund}/transactions/{transaction}/cancel', [App\Http\Controllers\FundTransactionController::class, 'cancel'])->name('admin.funds.transactions.cancel');
             Route::delete('/funds/{fund}/transactions/{transaction}', [App\Http\Controllers\FundTransactionController::class, 'destroy'])->name('admin.funds.transactions.destroy');
@@ -327,16 +329,17 @@ Route::prefix('admin')->group(function () {
     
             // Quản lý câu lạc bộ - Routes của Huy
             Route::get('/clubs', [AdminController::class, 'clubs'])->name('admin.clubs');
-            Route::get('/clubs/create', [AdminController::class, 'createClub'])->name('admin.clubs.create');
-            Route::post('/clubs', [AdminController::class, 'storeClub'])->name('admin.clubs.store');
+            Route::get('/clubs/create', [AdminController::class, 'clubsCreate'])->name('admin.clubs.create');
+            Route::post('/clubs', [AdminController::class, 'clubsStore'])->name('admin.clubs.store');
+            // Status & Delete routes must come BEFORE {club} route to avoid conflicts
+            Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
+            Route::delete('/clubs/{id}', [AdminController::class, 'deleteClub'])->name('admin.clubs.delete');
             Route::get('/clubs/{club}', [AdminController::class, 'showClub'])->name('admin.clubs.show');
             Route::get('/clubs/{club}/edit', [AdminController::class, 'editClub'])->name('admin.clubs.edit');
             Route::put('/clubs/{club}', [AdminController::class, 'updateClub'])->name('admin.clubs.update');
-            Route::patch('/clubs/{id}/status', [AdminController::class, 'updateClubStatus'])->name('admin.clubs.status');
-            Route::delete('/clubs/{id}', [AdminController::class, 'deleteClubFull'])->name('admin.clubs.delete');
             
             // Club Members
-            Route::post('/clubs/{club}/members', [AdminController::class, 'addMember'])->name('admin.clubs.members.add');
+            Route::post('/clubs/{club}/members', [App\Http\Controllers\ClubManagementController::class, 'addMember'])->name('admin.clubs.members.add');
             Route::post('/clubs/{club}/members/{member}/approve', [AdminController::class, 'approveMember'])->name('admin.clubs.members.approve');
             Route::delete('/clubs/{club}/members/{member}/reject', [AdminController::class, 'rejectMember'])->name('admin.clubs.members.reject');
             Route::delete('/clubs/{club}/members/{member}/remove', [AdminController::class, 'removeMember'])->name('admin.clubs.members.remove');
@@ -344,32 +347,20 @@ Route::prefix('admin')->group(function () {
     
 
     // Tài Nguyên CLB
-    Route::get('/club-resources', [ClubResourceController::class, 'index'])->name('admin.club-resources.index');
-    Route::get('/club-resources/create', [ClubResourceController::class, 'create'])->name('admin.club-resources.create');
-    Route::post('/club-resources', [ClubResourceController::class, 'store'])->name('admin.club-resources.store');
+    // Trash route must come BEFORE {id} route to avoid conflicts
     Route::get('/club-resources/trash', [ClubResourceController::class, 'trash'])->name('admin.club-resources.trash');
+    Route::get('/club-resources/create', [ClubResourceController::class, 'create'])->name('admin.club-resources.create');
+    Route::get('/club-resources', [ClubResourceController::class, 'index'])->name('admin.club-resources.index');
+    Route::post('/club-resources', [ClubResourceController::class, 'store'])->name('admin.club-resources.store');
     Route::get('/club-resources/{id}', [ClubResourceController::class, 'show'])->name('admin.club-resources.show');
     Route::get('/club-resources/{id}/edit', [ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
+    Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
     Route::put('/club-resources/{id}', [ClubResourceController::class, 'update'])->name('admin.club-resources.update');
     Route::delete('/club-resources/{id}', [ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
-    Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('admin.club-resources.download');
     Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
     Route::delete('/club-resources/{id}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('admin.club-resources.force-delete');
     Route::post('/club-resources/restore-all', [ClubResourceController::class, 'restoreAll'])->name('admin.club-resources.restore-all');
     Route::delete('/club-resources/force-delete-all', [ClubResourceController::class, 'forceDeleteAll'])->name('admin.club-resources.force-delete-all');
-    
-    // Quản lý câu lạc bộ - Đã di chuyển lên trên
-    
-    // Tài nguyên CLB - CRUD (của Nam)
-    Route::get('/club-resources', [App\Http\Controllers\ClubResourceController::class, 'index'])->name('admin.club-resources.index');
-    Route::get('/club-resources/create', [App\Http\Controllers\ClubResourceController::class, 'create'])->name('admin.club-resources.create');
-    Route::post('/club-resources', [App\Http\Controllers\ClubResourceController::class, 'store'])->name('admin.club-resources.store');
-    Route::get('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'show'])->name('admin.club-resources.show');
-    Route::get('/club-resources/{id}/edit', [App\Http\Controllers\ClubResourceController::class, 'edit'])->name('admin.club-resources.edit');
-    Route::put('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'update'])->name('admin.club-resources.update');
-    Route::delete('/club-resources/{id}', [App\Http\Controllers\ClubResourceController::class, 'destroy'])->name('admin.club-resources.destroy');
-    Route::get('/club-resources/{id}/download', [App\Http\Controllers\ClubResourceController::class, 'download'])->name('admin.club-resources.download');
-    Route::post('/club-resources/{id}/restore', [App\Http\Controllers\ClubResourceController::class, 'restore'])->name('admin.club-resources.restore');
     
     // Kế hoạch
     Route::get('/plans-schedule', [AdminController::class, 'plansSchedule'])->name('admin.plans-schedule');

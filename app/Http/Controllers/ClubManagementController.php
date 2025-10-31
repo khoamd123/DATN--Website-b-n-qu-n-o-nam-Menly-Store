@@ -113,14 +113,11 @@ class ClubManagementController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:member,executive_board'
+            'position' => 'required|in:member,officer,leader'
         ]);
 
-        // Kiểm tra quyền
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
-
-        if (!session('is_admin') && !in_array($userRole, ['owner', 'executive_board'])) {
+        // Kiểm tra quyền (chỉ admin mới được thêm)
+        if (!session('is_admin')) {
             return redirect()->back()->with('error', 'Bạn không có quyền thêm thành viên.');
         }
 
@@ -133,12 +130,47 @@ class ClubManagementController extends Controller
             return redirect()->back()->with('error', 'Người dùng đã là thành viên của CLB này.');
         }
 
+        // Nếu thêm làm leader/officer, kiểm tra giới hạn
+        if (in_array($request->position, ['leader', 'officer'])) {
+            $alreadyLeaderOfficer = ClubMember::where('user_id', $request->user_id)
+                ->whereIn('status', ['approved', 'active'])
+                ->whereIn('position', ['leader', 'officer'])
+                ->whereHas('club', function($query) {
+                    $query->whereNull('deleted_at');
+                })
+                ->first();
+                
+            if ($alreadyLeaderOfficer) {
+                $club = Club::find($alreadyLeaderOfficer->club_id);
+                return redirect()->back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$club->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
+            }
+        }
+
         // Thêm thành viên
         ClubMember::create([
             'user_id' => $request->user_id,
             'club_id' => $clubId,
-            'role' => $request->role
+            'position' => $request->position,
+            'status' => 'active',
+            'joined_at' => now(),
         ]);
+        
+        // Nếu thêm làm leader, cập nhật clubs.leader_id và cấp quyền
+        if ($request->position === 'leader') {
+            \DB::table('clubs')->where('id', $clubId)->update(['leader_id' => $request->user_id]);
+            
+            // Cấp tất cả quyền
+            $allPermissions = \App\Models\Permission::all();
+            foreach ($allPermissions as $permission) {
+                \DB::table('user_permissions_club')->insert([
+                    'user_id' => $request->user_id,
+                    'club_id' => $clubId,
+                    'permission_id' => $permission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Đã thêm thành viên thành công!');
     }

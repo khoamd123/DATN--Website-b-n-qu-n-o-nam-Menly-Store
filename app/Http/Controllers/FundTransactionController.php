@@ -16,7 +16,7 @@ class FundTransactionController extends Controller
      */
     public function index(Request $request, Fund $fund)
     {
-        $query = $fund->transactions()->with(['creator', 'approver', 'event']);
+        $query = $fund->transactions()->with(['creator', 'approver', 'event', 'expenseCategory', 'items']);
 
         // Tìm kiếm
         if ($request->filled('search')) {
@@ -117,6 +117,9 @@ class FundTransactionController extends Controller
             'category' => 'nullable|string|max:255',
             'transaction_date' => 'required|date',
             'event_id' => 'nullable|exists:events,id',
+            'expense_items' => 'nullable|array',
+            'expense_items.*.name' => 'required_with:expense_items|string|max:255',
+            'expense_items.*.amount' => 'required_with:expense_items|numeric|min:0',
         ]);
 
         $data = $request->except(['receipts']);
@@ -152,6 +155,19 @@ class FundTransactionController extends Controller
 
         $transaction = FundTransaction::create($data);
 
+        // Lưu chi tiết chi phí (nếu có)
+        if ($request->has('expense_items') && is_array($request->expense_items)) {
+            foreach ($request->expense_items as $item) {
+                if (!empty($item['name']) && !empty($item['amount'])) {
+                    \App\Models\FundTransactionItem::create([
+                        'transaction_id' => $transaction->id,
+                        'item_name' => $item['name'],
+                        'amount' => $item['amount'],
+                    ]);
+                }
+            }
+        }
+
         return redirect()->route('admin.funds.transactions', $fund->id)
             ->with('success', 'Tạo giao dịch thành công! Giao dịch đang chờ duyệt.');
         } catch (\Exception $e) {
@@ -165,7 +181,7 @@ class FundTransactionController extends Controller
      */
     public function show(Fund $fund, FundTransaction $transaction)
     {
-        $transaction->load(['creator', 'approver', 'event']);
+        $transaction->load(['creator', 'approver', 'event', 'items']);
         return view('admin.funds.transactions.show', compact('fund', 'transaction'));
     }
 
@@ -293,6 +309,97 @@ class FundTransactionController extends Controller
     }
 
     /**
+     * Duyệt một phần giao dịch (chỉ duyệt một số khoản mục)
+     */
+    public function approvePartial(Request $request, Fund $fund, FundTransaction $transaction)
+    {
+        if ($transaction->status !== 'pending') {
+            return back()->with('error', 'Giao dịch này đã được xử lý!');
+        }
+
+        $approvedItems = json_decode($request->approved_items, true);
+        $rejectedItems = json_decode($request->rejected_items, true);
+
+        if (empty($approvedItems)) {
+            return back()->with('error', 'Vui lòng chọn ít nhất một khoản mục để duyệt!');
+        }
+
+        // Tính tổng số tiền được duyệt
+        $approvedAmount = 0;
+        foreach ($approvedItems as $item) {
+            $approvedAmount += floatval($item['amount']);
+        }
+
+        // Kiểm tra số dư quỹ nếu là giao dịch chi
+        if ($transaction->type === 'expense') {
+            $fund->updateCurrentAmount();
+            $currentBalance = $fund->current_amount;
+            
+            if ($currentBalance < $approvedAmount) {
+                return back()->with('error', 
+                    'Không thể duyệt! Số dư quỹ (' . number_format($currentBalance, 0) . ' VNĐ) ' .
+                    'không đủ để thanh toán (' . number_format($approvedAmount, 0) . ' VNĐ).'
+                );
+            }
+        }
+
+        // Cập nhật số tiền giao dịch
+        $transaction->amount = $approvedAmount;
+        $transaction->save(); // Lưu số tiền trước khi approve
+        
+        // Duyệt giao dịch
+        $transaction->approve(session('user_id', 1));
+
+        // Cập nhật trạng thái từng khoản mục
+        $approvedItemIds = array_column($approvedItems, 'id');
+        
+        // Đánh dấu các khoản được duyệt
+        foreach ($approvedItems as $approved) {
+            $item = $transaction->items()->find($approved['id']);
+            if ($item) {
+                $item->status = 'approved';
+                $item->rejection_reason = null;
+                $item->save();
+            }
+        }
+        
+        // Đánh dấu các khoản bị từ chối + lưu lý do
+        foreach ($rejectedItems as $rejected) {
+            $item = $transaction->items()->find($rejected['id']);
+            if ($item) {
+                $item->status = 'rejected';
+                $item->rejection_reason = $rejected['reason'];
+                $item->save();
+            }
+        }
+        
+        // Lưu tổng hợp lý do từ chối vào transaction
+        if (!empty($rejectedItems)) {
+            $rejectionNote = "Một số khoản mục bị từ chối:\n";
+            foreach ($rejectedItems as $rejected) {
+                $item = $transaction->items()->find($rejected['id']);
+                if ($item) {
+                    $rejectionNote .= "- {$item->item_name}: {$rejected['reason']}\n";
+                }
+            }
+            
+            $transaction->rejection_reason = $rejectionNote;
+            $transaction->save();
+        }
+
+        // Cập nhật số dư quỹ
+        $fund->updateCurrentAmount();
+
+        $message = 'Đã duyệt ' . count($approvedItems) . ' khoản mục';
+        if (!empty($rejectedItems)) {
+            $message .= ' và từ chối ' . count($rejectedItems) . ' khoản mục';
+        }
+
+        return redirect()->route('admin.funds.transactions', $fund->id)
+            ->with('success', $message);
+    }
+
+    /**
      * Từ chối giao dịch
      */
     public function reject(Request $request, Fund $fund, FundTransaction $transaction)
@@ -367,7 +474,7 @@ class FundTransactionController extends Controller
     public function exportInvoice(Fund $fund, FundTransaction $transaction)
     {
         // Load các quan hệ cần thiết
-        $transaction->load(['creator', 'approver', 'event', 'fund.club']);
+        $transaction->load(['creator', 'approver', 'event', 'fund.club', 'items']);
         
         // Tạo PDF
         $pdf = Pdf::loadView('admin.funds.transactions.invoice', [

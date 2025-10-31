@@ -110,21 +110,49 @@
                             @enderror
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Danh mục</label>
-                                    <input type="text" 
-                                           class="form-control @error('category') is-invalid @enderror" 
-                                           name="category" 
-                                           value="{{ old('category') }}" 
-                                           placeholder="Ví dụ: Ăn uống, Vận chuyển, Vật liệu...">
-                                    @error('category')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                        <!-- Chi tiết chi phí (chỉ hiện khi chọn Chi) -->
+                        <div id="expense-details-wrapper" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-list-ul"></i> Chi tiết chi phí
+                                    <small class="text-muted">(Nhập từng khoản mục chi)</small>
+                                </label>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <table class="table table-sm mb-2" id="expense-items-table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="50%">Khoản mục</th>
+                                                    <th width="40%">Số tiền (VNĐ)</th>
+                                                    <th width="10%"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="expense-items-body">
+                                                <!-- Rows will be added here -->
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="table-info fw-bold">
+                                                    <td>Tổng cộng</td>
+                                                    <td colspan="2">
+                                                        <span id="expense-total">0</span> VNĐ
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExpenseItem()">
+                                            <i class="fas fa-plus"></i> Thêm khoản mục
+                                        </button>
+                                        <div class="alert alert-warning mt-2 mb-0" id="amount-mismatch-warning" style="display:none;">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <small>Tổng chi tiết (<span id="detail-sum">0</span> VNĐ) khác với số tiền giao dịch!</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label class="form-label">Ngày giao dịch <span class="text-danger">*</span></label>
                                     <input type="date" 
@@ -220,7 +248,91 @@
 </div>
 
 <script>
+let expenseItemCounter = 0;
+
+// Thêm khoản mục chi
+function addExpenseItem() {
+    expenseItemCounter++;
+    const tbody = document.getElementById('expense-items-body');
+    const row = document.createElement('tr');
+    row.id = 'expense-item-' + expenseItemCounter;
+    row.innerHTML = `
+        <td>
+            <input type="text" 
+                   class="form-control form-control-sm" 
+                   name="expense_items[${expenseItemCounter}][name]" 
+                   placeholder="VD: Ăn uống, Địa điểm..." 
+                   required>
+        </td>
+        <td>
+            <input type="number" 
+                   class="form-control form-control-sm expense-amount" 
+                   name="expense_items[${expenseItemCounter}][amount]" 
+                   placeholder="0" 
+                   min="0" 
+                   step="1000"
+                   oninput="calculateExpenseTotal()"
+                   required>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeExpenseItem(${expenseItemCounter})">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+}
+
+// Xóa khoản mục
+function removeExpenseItem(id) {
+    document.getElementById('expense-item-' + id).remove();
+    calculateExpenseTotal();
+}
+
+// Tính tổng chi tiết
+function calculateExpenseTotal() {
+    const amounts = document.querySelectorAll('.expense-amount');
+    let total = 0;
+    amounts.forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    
+    document.getElementById('expense-total').textContent = total.toLocaleString('vi-VN');
+    document.getElementById('detail-sum').textContent = total.toLocaleString('vi-VN');
+    
+    // Kiểm tra khớp với số tiền giao dịch
+    const mainAmount = parseFloat(document.querySelector('input[name="amount"]').value) || 0;
+    const warning = document.getElementById('amount-mismatch-warning');
+    
+    if (amounts.length > 0 && total !== mainAmount) {
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Show/Hide chi tiết chi phí khi chọn loại giao dịch
+    const typeSelect = document.querySelector('select[name="type"]');
+    const expenseDetailsWrapper = document.getElementById('expense-details-wrapper');
+    const amountInput = document.querySelector('input[name="amount"]');
+    
+    function toggleExpenseDetails() {
+        if (typeSelect.value === 'expense') {
+            expenseDetailsWrapper.style.display = 'block';
+            // Tự động thêm 1 dòng đầu tiên
+            if (document.querySelectorAll('#expense-items-body tr').length === 0) {
+                addExpenseItem();
+            }
+        } else {
+            expenseDetailsWrapper.style.display = 'none';
+        }
+    }
+    
+    typeSelect.addEventListener('change', toggleExpenseDetails);
+    amountInput.addEventListener('input', calculateExpenseTotal);
+    toggleExpenseDetails(); // Check on page load
+    
     // Khởi tạo CKEditor cho mô tả
     ClassicEditor
         .create(document.querySelector('#description'), {

@@ -30,7 +30,7 @@
     @endif
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin sự kiện</h5>
@@ -167,24 +167,6 @@
                             </a>
                         </div>
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Gợi ý</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6 class="mb-1"><i class="fas fa-lightbulb"></i> Lưu ý khi chỉnh sửa</h6>
-                        <ul class="mb-0">
-                            <li>Ảnh mới sẽ thay thế ảnh hiện tại nếu tải lên.</li>
-                            <li>Chọn "Xóa ảnh hiện tại" để bỏ ảnh bìa.</li>
-                            <li>Đảm bảo thời gian kết thúc sau thời gian bắt đầu.</li>
-                        </ul>
-                    </div>
                 </div>
             </div>
         </div>
