@@ -244,12 +244,14 @@ Route::prefix('admin')->group(function () {
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
     Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
     Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+    Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
     Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
     Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
     Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');
+    Route::get('/comments/{type}/{id}', [AdminController::class, 'commentsShow'])->name('admin.comments.show');
     Route::delete('/comments/{type}/{id}', [AdminController::class, 'deleteComment'])->name('admin.comments.delete');
     
     // Phân quyền

@@ -32,7 +32,7 @@ class AdminController extends Controller
             $totalEvents = Event::count();
             $totalPosts = Post::where('type', 'post')->count();
             
-            // Thống kê nâng cao
+            // Thống kê nâng cao 
             $activeClubs = Club::where('status', 'active')->count();
             $pendingClubs = Club::where('status', 'pending')->count();
             $totalAdmins = User::where('is_admin', true)->count();
@@ -1369,6 +1369,24 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị chi tiết bài viết
+     */
+    public function postsShow($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $post = Post::with(['club', 'user', 'comments.user'])->whereIn('type', ['post', 'announcement'])->findOrFail($id);
+            return view('admin.posts.show', compact('post'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết.');
+        }
+    }
+
+    /**
      * Hiển thị form chỉnh sửa bài viết
      */
     public function postsEdit($id)
@@ -1456,10 +1474,39 @@ class AdminController extends Controller
         $postComments = $postComments->orderBy('created_at', 'desc')->get();
         $eventComments = $eventComments->orderBy('created_at', 'desc')->get();
         
-        // Gộp và sắp xếp tất cả comments
-        $allComments = $postComments->concat($eventComments)->sortByDesc('created_at');
+        // Gộp và sắp xếp tất cả comments (mới nhất lên đầu)
+        $allComments = $postComments->concat($eventComments)->sortByDesc('created_at')->values();
         
         return view('admin.comments.index', compact('allComments'));
+    }
+
+    /**
+     * Display comment detail page
+     */
+    public function commentsShow($type, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::with(['post.club', 'user', 'parent.user', 'replies.user'])->findOrFail($id);
+                $commentable = $comment->post;
+                $commentableType = 'Bài viết';
+                $commentableRoute = 'admin.posts.show';
+            } else {
+                $comment = \App\Models\EventComment::with(['event.club', 'user', 'parent.user', 'replies.user'])->findOrFail($id);
+                $commentable = $comment->event;
+                $commentableType = 'Sự kiện';
+                $commentableRoute = 'admin.events.show';
+            }
+
+            return view('admin.comments.show', compact('comment', 'commentable', 'commentableType', 'commentableRoute', 'type'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.comments')->with('error', 'Không tìm thấy bình luận.');
+        }
     }
 
     /**
@@ -1467,15 +1514,38 @@ class AdminController extends Controller
      */
     public function deleteComment(Request $request, $type, $id)
     {
-        if ($type === 'post') {
-            $comment = \App\Models\PostComment::findOrFail($id);
-        } else {
-            $comment = \App\Models\EventComment::findOrFail($id);
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
-        
-        $comment->delete();
-        
-        return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+
+        $request->validate([
+            'deletion_reason' => 'required|string|min:10|max:1000',
+        ], [
+            'deletion_reason.required' => 'Vui lòng nhập lý do xóa bình luận.',
+            'deletion_reason.min' => 'Lý do xóa phải có ít nhất 10 ký tự.',
+            'deletion_reason.max' => 'Lý do xóa không được vượt quá 1000 ký tự.',
+        ]);
+
+        try {
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::findOrFail($id);
+            } else {
+                $comment = \App\Models\EventComment::findOrFail($id);
+            }
+            
+            $comment->update([
+                'status' => 'deleted',
+                'deletion_reason' => $request->deletion_reason,
+                'deleted_at' => now(),
+            ]);
+            
+            $comment->delete();
+            
+            return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xóa bình luận: ' . $e->getMessage());
+        }
     }
 
     /**
