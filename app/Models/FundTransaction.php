@@ -26,7 +26,8 @@ class FundTransaction extends Model
         'approved_by',
         'approved_at',
         'event_id',
-        'expense_category_id'
+        'expense_category_id',
+        'source'
     ];
 
     protected $casts = [

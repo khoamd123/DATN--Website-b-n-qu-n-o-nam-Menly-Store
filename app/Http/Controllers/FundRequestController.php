@@ -70,8 +70,11 @@ class FundRequestController extends Controller
 
         $data = $request->all();
         
-        // Ensure we have a valid user ID
-        $userId = Auth::id();
+        // Ensure we have a valid user ID - use session first, then Auth, then fallback
+        $userId = session('user_id');
+        if (!$userId) {
+            $userId = Auth::id();
+        }
         if (!$userId) {
             // If no authenticated user, get the first admin user
             $adminUser = \App\Models\User::where('is_admin', 1)->first();
@@ -194,8 +197,15 @@ class FundRequestController extends Controller
             'approval_notes' => 'nullable|string|max:1000'
         ]);
 
+        // Get user ID from session or Auth
+        $userId = session('user_id') ?? Auth::id();
+        if (!$userId) {
+            $adminUser = \App\Models\User::where('is_admin', 1)->first();
+            $userId = $adminUser ? $adminUser->id : 1;
+        }
+        
         $fundRequest->approve(
-            Auth::id(),
+            $userId,
             $request->approved_amount,
             $request->approval_notes
         );
@@ -234,7 +244,7 @@ class FundRequestController extends Controller
                             'source' => 'Nhà trường',
                             'status' => 'approved',
                             'created_by' => session('user_id', 1),
-                            'approved_by' => Auth::id(),
+                            'approved_by' => $userId,
                             'approved_at' => now()
                         ]);
                         
@@ -243,7 +253,7 @@ class FundRequestController extends Controller
                     }
                 }
             } catch (\Exception $e) {
-                \Log::error('Error creating fund transaction: ' . $e->getMessage());
+                Log::error('Error creating fund transaction: ' . $e->getMessage());
             }
         }
 
@@ -261,7 +271,14 @@ class FundRequestController extends Controller
             'rejection_reason' => 'required|string|max:1000'
         ]);
 
-        $fundRequest->reject(Auth::id(), $request->rejection_reason);
+        // Get user ID from session or Auth
+        $userId = session('user_id') ?? Auth::id();
+        if (!$userId) {
+            $adminUser = \App\Models\User::where('is_admin', 1)->first();
+            $userId = $adminUser ? $adminUser->id : 1;
+        }
+        
+        $fundRequest->reject($userId, $request->rejection_reason);
 
         return redirect()->route('admin.fund-requests.show', $fundRequest->id)
             ->with('success', 'Yêu cầu cấp kinh phí đã bị từ chối!');
@@ -301,7 +318,7 @@ class FundRequestController extends Controller
             
             return view('admin.fund-requests.batch-approval', compact('pendingRequests', 'totalRequestedAmount'));
         } catch (\Exception $e) {
-            \Log::error('Batch approval error: ' . $e->getMessage());
+            Log::error('Batch approval error: ' . $e->getMessage());
             return redirect()->route('admin.fund-requests')
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
@@ -338,11 +355,18 @@ class FundRequestController extends Controller
             if ($approvedAmount > 0) {
                 // Duyệt (toàn bộ hoặc một phần)
                 $status = $approvedAmount >= $fundRequest->requested_amount ? 'approved' : 'partially_approved';
+                // Get user ID from session or Auth
+                $userId = session('user_id') ?? Auth::id();
+                if (!$userId) {
+                    $adminUser = \App\Models\User::where('is_admin', 1)->first();
+                    $userId = $adminUser ? $adminUser->id : 1;
+                }
+                
                 $fundRequest->update([
                     'status' => $status,
                     'approved_amount' => $approvedAmount,
                     'approval_notes' => $request->approval_notes,
-                    'approved_by' => Auth::id(),
+                    'approved_by' => $userId,
                     'approved_at' => now()
                 ]);
                 
@@ -379,7 +403,7 @@ class FundRequestController extends Controller
                                     'source' => 'Nhà trường',
                                     'status' => 'approved',
                                     'created_by' => session('user_id', 1),
-                                    'approved_by' => Auth::id(),
+                                    'approved_by' => $userId,
                                     'approved_at' => now()
                                 ]);
                                 
@@ -388,17 +412,26 @@ class FundRequestController extends Controller
                             }
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Error creating fund transaction: ' . $e->getMessage());
+                        Log::error('Error creating fund transaction: ' . $e->getMessage());
                     }
                 }
                 
                 $approvedCount++;
             } else {
                 // Từ chối
+                // Get user ID from session or Auth (use same $userId from above if already set)
+                if (!isset($userId)) {
+                    $userId = session('user_id') ?? Auth::id();
+                    if (!$userId) {
+                        $adminUser = \App\Models\User::where('is_admin', 1)->first();
+                        $userId = $adminUser ? $adminUser->id : 1;
+                    }
+                }
+                
                 $fundRequest->update([
                     'status' => 'rejected',
                     'rejection_reason' => 'Không được duyệt trong đợt duyệt hàng loạt này',
-                    'approved_by' => Auth::id(),
+                    'approved_by' => $userId,
                     'approved_at' => now()
                 ]);
                 $rejectedCount++;

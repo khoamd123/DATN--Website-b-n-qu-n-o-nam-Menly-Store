@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
@@ -380,6 +382,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
     Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
     Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+    // Upload ảnh từ trình soạn thảo
+    Route::post('/posts/upload-image', [PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
         Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
         Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
         Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');

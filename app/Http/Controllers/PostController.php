@@ -172,4 +172,21 @@ class PostController extends Controller
 
         return redirect()->route('admin.posts')->with('success', 'Khôi phục bài viết thành công!');
     }
+
+    /**
+     * Upload image from editor and return public URL (AJAX)
+     */
+    public function uploadEditorImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        $path = $request->file('image')->store('public/posts/content');
+        $url = Storage::url($path); // e.g. /storage/posts/content/xxx.jpg
+
+        return response()->json([
+            'url' => asset($url),
+        ]);
+    }
 }
