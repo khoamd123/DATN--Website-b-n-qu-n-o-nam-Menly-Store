@@ -116,11 +116,10 @@ Route::get('/student/events', function () {
     return view('student.events.index', compact('user'));
 })->name('student.events.index');
 
-Route::get('/student/profile', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.profile.index', compact('user'));
-})->name('student.profile.index');
+// Student Profile Routes
+Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
+Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileController::class, 'edit'])->name('student.profile.edit');
+Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', function () {
     $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
