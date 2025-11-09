@@ -23,11 +23,25 @@ class StudentProfileController extends Controller
     }
 
     /**
+     * Show the form for editing the user's profile.
+     */
+    public function edit()
+    {
+        // Tạm thời dùng user cứng, sẽ thay bằng Auth::user() sau khi có auth hoàn chỉnh
+        $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
+        }
+        return view('student.profile.edit', compact('user'));
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(Request $request)
     {
         // Tạm thời dùng user cứng
+        // In a real app, this would be Auth::user()
         $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
         if (!$user) {
             return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
@@ -35,12 +49,13 @@ class StudentProfileController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $user->name = $request->name;
+        $user->name = $request->name; // Email is not updated here to prevent login issues
         $user->phone = $request->phone;
         $user->address = $request->address;
 
