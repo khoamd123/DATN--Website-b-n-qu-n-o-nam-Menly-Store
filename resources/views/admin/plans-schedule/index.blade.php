@@ -14,7 +14,11 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-calendar-alt"></i>
             </div>
+<<<<<<< HEAD
             <p class="stats-number">{{ $events->total() }}</p>
+=======
+            <p class="stats-number">{{ \App\Models\Event::count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Tổng sự kiện</p>
         </div>
     </div>
@@ -23,8 +27,13 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-play"></i>
             </div>
+<<<<<<< HEAD
             <p class="stats-number">{{ $events->where('status', 'active')->count() }}</p>
             <p class="stats-label">Đang hoạt động</p>
+=======
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'ongoing')->count() }}</p>
+            <p class="stats-label">Đang diễn ra</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         </div>
     </div>
     <div class="col-md-3">
@@ -32,7 +41,11 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-clock"></i>
             </div>
+<<<<<<< HEAD
             <p class="stats-number">{{ $events->where('status', 'pending')->count() }}</p>
+=======
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'pending')->count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Chờ duyệt</p>
         </div>
     </div>
@@ -41,7 +54,11 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-ban"></i>
             </div>
+<<<<<<< HEAD
             <p class="stats-number">{{ $events->where('status', 'canceled')->count() }}</p>
+=======
+            <p class="stats-number">{{ \App\Models\Event::where('status', 'cancelled')->count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Đã hủy</p>
         </div>
     </div>
@@ -71,11 +88,20 @@
             <div class="col-md-2">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
+<<<<<<< HEAD
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
                     <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang hoạt động</option>
                     <option value="canceled" {{ request('status') == 'canceled' ? 'selected' : '' }}>Đã hủy</option>
                     <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+=======
+                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
+                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
+                    <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
+                    <option value="ongoing" {{ request('status') == 'ongoing' ? 'selected' : '' }}>Đang diễn ra</option>
+                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                 </select>
             </div>
             <div class="col-md-2">
@@ -84,9 +110,20 @@
                 </button>
             </div>
             <div class="col-md-3 text-end">
+<<<<<<< HEAD
                 <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
                     <i class="fas fa-refresh"></i> Làm mới
                 </a>
+=======
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i> Làm mới
+                    </a>
+                    <a href="{{ route('admin.events.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Tạo lịch trình sự kiện
+                    </a>
+                </div>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             </div>
         </form>
     </div>
@@ -99,7 +136,11 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+<<<<<<< HEAD
                         <th>ID</th>
+=======
+                        <th>STT</th>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <th>Tên sự kiện</th>
                         <th>Câu lạc bộ</th>
                         <th>Thời gian</th>
@@ -110,6 +151,7 @@
                     </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
                     @forelse($events as $event)
                         <tr>
                             <td>{{ $event->id }}</td>
@@ -125,11 +167,64 @@
                             <td>
                                 <span class="badge bg-{{ $event->mode === 'public' ? 'success' : 'warning' }}">
                                     {{ $event->mode === 'public' ? 'Công khai' : 'Riêng tư' }}
+=======
+                    @forelse($events as $index => $event)
+                        <tr>
+                            <td>{{ ($events->currentPage() - 1) * $events->perPage() + $index + 1 }}</td>
+                            <td>
+                                <strong>{{ $event->title }}</strong>
+                                <br><small class="text-muted">{{ Str::limit(strip_tags($event->description), 50) }}</small>
+                                @if($event->status === 'cancelled' && $event->cancellation_reason)
+                                    <br>
+                                    <div class="alert alert-danger alert-sm mb-0 mt-1 p-2">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
+                                        </small>
+                                    </div>
+                                @endif
+                            </td>
+                            <td>
+                                @if($event->club)
+                                    <a href="{{ route('admin.clubs.show', $event->club->id) }}" 
+                                       class="text-dark text-decoration-none"
+                                       title="Xem chi tiết câu lạc bộ">
+                                        {{ $event->club->name }}
+                                        <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
+                                    </a>
+                                @else
+                                    <span class="text-muted">Không xác định</span>
+                                @endif
+                            </td>
+                            <td>
+                                <strong>Bắt đầu:</strong> {{ \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') }}
+                                <br><strong>Kết thúc:</strong> {{ \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') }}
+                                @if($event->location)
+                                    <br><strong>Địa điểm:</strong> {{ $event->location }}
+                                @endif
+                            </td>
+                            <td>
+                                @php
+                                    $modeColors = [
+                                        'offline' => 'primary',
+                                        'online' => 'success',
+                                        'hybrid' => 'info'
+                                    ];
+                                    $modeLabels = [
+                                        'offline' => 'Trực tiếp',
+                                        'online' => 'Trực tuyến',
+                                        'hybrid' => 'Kết hợp'
+                                    ];
+                                @endphp
+                                <span class="badge bg-{{ $modeColors[$event->mode] ?? 'secondary' }}">
+                                    {{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 </span>
                             </td>
                             <td>
                                 @php
                                     $statusColors = [
+<<<<<<< HEAD
                                         'pending' => 'warning',
                                         'approved' => 'info',
                                         'active' => 'success',
@@ -142,6 +237,22 @@
                                         'active' => 'Đang hoạt động',
                                         'canceled' => 'Đã hủy',
                                         'completed' => 'Hoàn thành'
+=======
+                                        'draft' => 'secondary',
+                                        'pending' => 'warning',
+                                        'approved' => 'info',
+                                        'ongoing' => 'success',
+                                        'completed' => 'primary',
+                                        'cancelled' => 'danger'
+                                    ];
+                                    $statusLabels = [
+                                        'draft' => 'Bản nháp',
+                                        'pending' => 'Chờ duyệt',
+                                        'approved' => 'Đã duyệt',
+                                        'ongoing' => 'Đang diễn ra',
+                                        'completed' => 'Hoàn thành',
+                                        'cancelled' => 'Đã hủy'
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     ];
                                 @endphp
                                 <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
@@ -149,6 +260,7 @@
                                 </span>
                             </td>
                             <td>{{ $event->creator->name ?? 'Không xác định' }}</td>
+<<<<<<< HEAD
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($event->status === 'pending')
@@ -196,13 +308,28 @@
                                     <button class="btn btn-sm btn-info" onclick="viewEvent({{ $event->id }})">
                                         <i class="fas fa-eye"></i> Xem
                                     </button>
+=======
+                            <td style="min-width: 140px; width: 140px;">
+                                <div class="d-flex flex-column gap-1">
+                                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-sm btn-warning w-100">
+                                        <i class="fas fa-edit"></i> Chỉnh sửa
+                                    </a>
+                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-info w-100">
+                                        <i class="fas fa-eye"></i> Xem chi tiết
+                                    </a>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="8" class="text-center text-muted py-4">
+<<<<<<< HEAD
                                 Không tìm thấy sự kiện nào
+=======
+                                <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                                <br>Không tìm thấy sự kiện nào
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                             </td>
                         </tr>
                     @endforelse
@@ -210,12 +337,47 @@
             </table>
         </div>
         
+<<<<<<< HEAD
         <!-- Phân trang -->
         @if($events->hasPages())
             <div class="d-flex justify-content-center mt-4">
                 {{ $events->appends(request()->query())->links() }}
+=======
+        <!-- Pagination -->
+        @if($events->hasPages())
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        Hiển thị <strong>{{ $events->firstItem() }}</strong> - <strong>{{ $events->lastItem() }}</strong> 
+                        trong tổng <strong>{{ $events->total() }}</strong> kết quả
+                    </span>
+                </div>
+                <nav>
+                    <ul class="pagination">
+                        @foreach ($events->getUrlRange(1, $events->lastPage()) as $page => $url)
+                            @if ($page == $events->currentPage())
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ $page }}</span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </nav>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             </div>
         @endif
     </div>
 </div>
+<<<<<<< HEAD
+=======
+
+
+
+
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 @endsection

@@ -197,39 +197,4 @@ class StudentController extends Controller
 
         return view('student.posts.show', compact('post', 'user'));
     }
-
-    public function updateProfile(Request $request)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:255',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
-        $dataToUpdate = [
-            'name' => $request->name,
-            'phone' => $request->phone,
-            'address' => $request->address,
-        ];
-
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar
-            if ($user->avatar && file_exists(public_path($user->avatar))) {
-                @unlink(public_path($user->avatar));
-            }
-            $avatarName = $user->id . '_' . time() . '.' . $request->avatar->getClientOriginalExtension();
-            $request->avatar->move(public_path('uploads/avatars'), $avatarName);
-            $dataToUpdate['avatar'] = '/uploads/avatars/' . $avatarName;
-        }
-
-        $user->update($dataToUpdate);
-
-        return redirect()->route('student.profile.index')->with('success', 'Cập nhật thông tin thành công!');
-    }
 }

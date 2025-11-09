@@ -13,6 +13,7 @@ class PermissionSeeder extends Seeder
         $now = Carbon::now();
 
         $permissions = [
+<<<<<<< HEAD
             ['name' => 'manage_club', 'description' => 'Quản lý thông tin CLB (chỉnh sửa, xóa)'],
             ['name' => 'manage_members', 'description' => 'Thêm, xóa, duyệt thành viên CLB'],
             ['name' => 'create_event', 'description' => 'Tạo sự kiện cho CLB'],
@@ -21,6 +22,13 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_department', 'description' => 'Quản lý phòng ban/ban trong CLB'],
             ['name' => 'manage_documents', 'description' => 'Quản lý tài liệu, file đính kèm'],
             ['name' => 'view_reports', 'description' => 'Xem báo cáo tổng hợp, thành tích, thống kê CLB'],
+=======
+            ['name' => 'quan_ly_clb', 'description' => 'Quản lý thông tin CLB (chỉnh sửa, xóa)'],
+            ['name' => 'quan_ly_thanh_vien', 'description' => 'Thêm, xóa, duyệt thành viên CLB'],
+            ['name' => 'tao_su_kien', 'description' => 'Tạo sự kiện cho CLB'],
+            ['name' => 'dang_thong_bao', 'description' => 'Tạo thông báo, đăng tin trong CLB'],
+            ['name' => 'xem_bao_cao', 'description' => 'Xem báo cáo tổng hợp, thành tích, thống kê CLB'],
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         ];
 
         foreach ($permissions as $perm) {

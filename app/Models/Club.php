@@ -4,22 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Club extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'name',
         'slug',
         'description',
         'logo',
         'field_id',
+        'leader_id',
         'owner_id',
-        'leader_id', // Added leader_id
         'max_members',
-        'status',
-        'rejection_reason',
-        'deletion_reason'
+        'status'
     ];
 
     /**
@@ -31,19 +30,19 @@ class Club extends Model
     }
 
     /**
-     * Get the owner of the club
-     */
-    public function owner()
-    {
-        return $this->belongsTo(User::class, 'owner_id');
-    }
-
-    /**
      * Get the leader of the club
      */
     public function leader()
     {
         return $this->belongsTo(User::class, 'leader_id');
+    }
+
+    /**
+     * Get the owner of the club
+     */
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
     }
 
     /**
@@ -70,27 +69,21 @@ class Club extends Model
         return $this->hasMany(Post::class);
     }
 
+
     /**
-     * Get the club member pivot records for the club.
+     * Get active members of the club
+     */
+    public function activeMembers()
+    {
+        return $this->belongsToMany(User::class, 'club_members')
+                    ->wherePivot('status', 'active');
+    }
+
+    /**
+     * Get all club members
      */
     public function clubMembers()
     {
         return $this->hasMany(ClubMember::class);
-    }
-
-    /**
-     * Get the funds for the club.
-     */
-    public function funds()
-    {
-        return $this->hasMany(Fund::class);
-    }
-
-    /**
-     * Get the user permissions for the club.
-     */
-    public function userPermissionsClub()
-    {
-        return $this->hasMany(UserPermissionsClub::class);
     }
 }

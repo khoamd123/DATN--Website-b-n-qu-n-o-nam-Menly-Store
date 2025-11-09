@@ -29,6 +29,21 @@
         </div>
     @endif
 
+<<<<<<< HEAD
+=======
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle"></i> <strong>Có lỗi xảy ra:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
     <div class="row">
         <div class="col-md-8">
             <div class="card">
@@ -40,6 +55,12 @@
                         @csrf
                         @method('PUT')
                         
+<<<<<<< HEAD
+=======
+                        {{-- Hidden field to preserve owner_id --}}
+                        <input type="hidden" name="owner_id" value="{{ $club->owner_id }}">
+                        
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <div class="mb-3">
                             <label class="form-label">Tên câu lạc bộ <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" value="{{ old('name', $club->name) }}" required>
