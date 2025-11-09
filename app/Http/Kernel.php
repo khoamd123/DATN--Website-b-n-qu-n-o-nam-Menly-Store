@@ -16,7 +16,6 @@ class Kernel extends HttpKernel
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
         \App\Http\Middleware\TrustProxies::class,
-        \Illuminate\Http\Middleware\HandleCors::class,
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
@@ -36,6 +35,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\UpdateLastOnline::class,
         ],
 
         'api' => [
@@ -65,5 +65,15 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'club_manager' => \App\Http\Middleware\ClubManagerMiddleware::class,
+        'club_permission' => \App\Http\Middleware\ClubPermissionMiddleware::class,
+        'simple_auth' => \App\Http\Middleware\SimpleAuth::class,
+        'simple_admin' => \App\Http\Middleware\SimpleAdmin::class,
+        'club_role' => \App\Http\Middleware\ClubRoleMiddleware::class,
+        'club_leader' => \App\Http\Middleware\ClubLeaderMiddleware::class,
+        'club_officer' => \App\Http\Middleware\ClubOfficerMiddleware::class,
+        'club_member' => \App\Http\Middleware\ClubMemberMiddleware::class,
+        'check_permission' => \App\Http\Middleware\CheckPermissionMiddleware::class,
+        'update_last_online' => \App\Http\Middleware\UpdateLastOnline::class,
     ];
 }

@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ClubMember extends Model
 {
 
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $table = 'club_members';
     protected $fillable = [
         'club_id',
@@ -17,11 +18,10 @@ class ClubMember extends Model
         'status',
         'joined_at',
         'left_at',
-        'deletion_reason',
     ];
 
     /**
-     * Get the club that the member belongs to.
+     * Get the club that owns the member
      */
     public function club()
     {
@@ -29,7 +29,7 @@ class ClubMember extends Model
     }
 
     /**
-     * Get the user that is the member.
+     * Get the user that owns the member
      */
     public function user()
     {

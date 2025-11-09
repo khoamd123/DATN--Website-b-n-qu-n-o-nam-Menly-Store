@@ -86,7 +86,11 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+<<<<<<< HEAD
                         <th>ID</th>
+=======
+                        <th>STT</th>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <th>Người bình luận</th>
                         <th>Nội dung</th>
                         <th>Loại</th>
@@ -96,12 +100,17 @@
                     </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
                     @forelse($allComments as $comment)
+=======
+                    @forelse($allComments as $index => $comment)
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         @php
                             $commentable = $comment->post ?? $comment->event ?? null;
                             $commentableType = $comment->post ? 'Bài viết' : 'Sự kiện';
                         @endphp
                         <tr>
+<<<<<<< HEAD
                             <td>{{ $comment->id }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
@@ -111,6 +120,23 @@
                                          width="30" 
                                          height="30"
                                          onerror="this.src='/images/avatar/avatar.png'">
+=======
+                            <td>{{ $index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    @if($comment->user && $comment->user->avatar && file_exists(public_path($comment->user->avatar)))
+                                        <img src="{{ asset($comment->user->avatar) }}" 
+                                             alt="{{ $comment->user->name }}" 
+                                             class="rounded-circle me-2" 
+                                             width="30" 
+                                             height="30">
+                                    @else
+                                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 30px; height: 30px;">
+                                            <i class="fas fa-user text-white" style="font-size: 12px;"></i>
+                                        </div>
+                                    @endif
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     <div>
                                         <strong>{{ $comment->user->name ?? 'Không xác định' }}</strong>
                                         <br><small class="text-muted">{{ $comment->user->email ?? '' }}</small>
@@ -119,7 +145,11 @@
                             </td>
                             <td>
                                 <div style="max-width: 300px;">
+<<<<<<< HEAD
                                     {{ Str::limit($comment->content, 100) }}
+=======
+                                    {{ substr($comment->content, 0, 100) }}{{ strlen($comment->content) > 100 ? '...' : '' }}
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 </div>
                             </td>
                             <td>
@@ -136,15 +166,24 @@
                                 @endif
                             </td>
                             <td>{{ $comment->created_at->format('d/m/Y H:i') }}</td>
+<<<<<<< HEAD
                             <td>
                                 <div class="btn-group" role="group">
+=======
+                            <td style="min-width: 120px; width: 120px;">
+                                <div class="d-flex flex-column gap-1">
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     <button class="btn btn-sm btn-info" onclick="viewComment({{ $comment->id }})">
                                         <i class="fas fa-eye"></i> Xem
                                     </button>
                                     <form method="POST" action="{{ route('admin.comments.delete', [$comment->post ? 'post' : 'event', $comment->id]) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
+<<<<<<< HEAD
                                         <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+=======
+                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>

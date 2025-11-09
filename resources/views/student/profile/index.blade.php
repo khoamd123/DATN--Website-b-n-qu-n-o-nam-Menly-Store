@@ -3,6 +3,7 @@
 @section('title', 'Hồ sơ - UniClubs')
 
 @section('content')
+<<<<<<< HEAD
 
 <?php if(session('success')): ?>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -19,6 +20,8 @@
     </div>
 <?php endif; ?>
 
+=======
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 <div class="row">
     <!-- Main Content -->
     <div class="col-lg-8">
@@ -26,6 +29,7 @@
         <div class="content-card">
             <div class="row align-items-center">
                 <div class="col-md-3 text-center">
+<<<<<<< HEAD
                     @if($user->avatar && file_exists(public_path($user->avatar)))
                         <img src="{{ asset($user->avatar) }}" alt="Avatar" class="profile-avatar-img mb-3">
                     @else
@@ -33,6 +37,14 @@
                             {{ substr($user->name, 0, 1) }}
                         </div>
                     @endif
+=======
+                    <div class="profile-avatar mb-3">
+                        {{ substr($user->name, 0, 1) }}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-camera me-2"></i> Đổi ảnh
+                    </button>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                 </div>
                 <div class="col-md-9">
                     <h3 class="mb-2">{{ $user->name }}</h3>
@@ -72,6 +84,7 @@
                 <i class="fas fa-user text-teal me-2"></i> Thông tin cá nhân
             </h4>
             
+<<<<<<< HEAD
             <form action="{{ route('student.profile.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="row">
@@ -79,6 +92,13 @@
                         <label for="name" class="form-label">Họ và tên</label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $user->name) }}">
                         @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+=======
+            <form>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">Họ và tên</label>
+                        <input type="text" class="form-control" id="name" value="{{ $user->name }}" readonly>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="student_id" class="form-label">Mã sinh viên</label>
@@ -90,6 +110,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="phone" class="form-label">Số điện thoại</label>
+<<<<<<< HEAD
                         <input type="tel" class="form-control @error('phone') is-invalid @enderror" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" placeholder="Chưa cập nhật">
                         @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
@@ -102,6 +123,13 @@
                         <label for="address" class="form-label">Địa chỉ</label>
                         <textarea class="form-control @error('address') is-invalid @enderror" id="address" name="address" rows="2" placeholder="Chưa cập nhật">{{ old('address', $user->address) }}</textarea>
                         @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
+=======
+                        <input type="tel" class="form-control" id="phone" value="{{ $user->phone ?? 'Chưa cập nhật' }}">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea class="form-control" id="address" rows="3">{{ $user->address ?? 'Chưa cập nhật' }}</textarea>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
@@ -262,6 +290,7 @@
         font-weight: bold;
         margin: 0 auto;
     }
+<<<<<<< HEAD
 
     .profile-avatar-img {
         width: 120px;
@@ -271,6 +300,8 @@
         border: 3px solid #14b8a6;
         margin: 0 auto;
     }
+=======
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
     
     .club-logo {
         width: 40px;

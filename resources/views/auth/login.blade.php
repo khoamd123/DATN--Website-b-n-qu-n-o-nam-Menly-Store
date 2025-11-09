@@ -13,7 +13,7 @@
     
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f0fdfa;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -22,16 +22,17 @@
         }
         
         .login-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(20, 184, 166, 0.1);
             overflow: hidden;
             max-width: 400px;
             width: 100%;
+            border: 1px solid #a7f3d0;
         }
         
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #14b8a6;
             color: white;
             padding: 2rem;
             text-align: center;
@@ -64,19 +65,19 @@
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #14b8a6;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 0.75rem 2rem;
             color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            transition: all 0.2s ease;
             width: 100%;
         }
         
         .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: #0d9488;
+            transform: translateY(-1px);
             color: white;
         }
         
@@ -172,11 +173,21 @@
                 </button>
             </form>
             
-            <!-- Thông tin tài khoản admin mẫu -->
+            <!-- Thông tin tài khoản mẫu -->
             <div class="admin-info">
-                <h6><i class="fas fa-info-circle"></i> Tài khoản Admin mẫu:</h6>
-                <p class="mb-1"><strong>Email:</strong> nguyenvana@example.com</p>
+                <h6><i class="fas fa-info-circle"></i> Tài khoản mẫu:</h6>
+                <p class="mb-1"><strong>Admin:</strong> admin@university.edu.vn</p>
+                <p class="mb-1"><strong>Student:</strong> khoamdph31863@fpt.edu.vn</p>
                 <p class="mb-0"><strong>Password:</strong> password</p>
+            </div>
+            
+            <div class="text-center mt-3">
+                <p class="mb-0">
+                    Chưa có tài khoản? 
+                    <a href="{{ route('register') }}" class="text-decoration-none">
+                        <strong>Đăng ký ngay</strong>
+                    </a>
+                </p>
             </div>
         </div>
     </div>

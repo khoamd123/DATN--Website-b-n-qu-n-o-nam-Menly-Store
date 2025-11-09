@@ -15,17 +15,22 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Kiểm tra xem user đã đăng nhập chưa
-        if (!auth()->check()) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để truy cập admin panel.');
-        }
+        try {
+            // Kiểm tra xem user đã đăng nhập chưa
+            $user = $request->user();
+            if (!$user) {
+                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để truy cập admin panel.');
+            }
 
-        // Kiểm tra xem user có phải admin không
-        if (!auth()->user()->is_admin) {
-            return redirect()->route('home')->with('error', 'Bạn không có quyền truy cập trang admin.');
-        }
+            // Kiểm tra xem user có phải admin không
+            if (!$user->is_admin) {
+                return redirect()->route('home')->with('error', 'Bạn không có quyền truy cập trang admin.');
+            }
 
-        return $next($request);
+            return $next($request);
+        } catch (\Exception $e) {
+            return redirect()->route('login')->with('error', 'Lỗi xác thực. Vui lòng đăng nhập lại.');
+        }
     }
 }
 

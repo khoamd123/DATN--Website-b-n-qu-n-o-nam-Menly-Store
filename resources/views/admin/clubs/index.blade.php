@@ -67,9 +67,15 @@
                     </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
                     @forelse($clubs as $club)
                         <tr>
                             <td>{{ $club->id }}</td>
+=======
+                    @forelse($clubs as $index => $club)
+                        <tr>
+                            <td>{{ ($clubs->currentPage() - 1) * $clubs->perPage() + $index + 1 }}</td>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                             <td>
                                 @php
                                     $logoPath = $club->logo ? public_path($club->logo) : null;
@@ -99,24 +105,48 @@
                                 <br><small class="text-muted">Chủ sở hữu</small>
                             </td>
                             <td>
+<<<<<<< HEAD
                                 <span class="badge bg-info">{{ $club->clubMembers?->count() ?? 0 }}</span>
                                 <br><small class="text-muted">{{ $club->clubMembers?->where('role_in_club', 'chunhiem')->count() ?? 0 }} trưởng</small>
+=======
+                                @php
+                                    // Sử dụng dữ liệu từ controller (query trực tiếp từ DB)
+                                    $approvedMembersCount = isset($club->approved_members_count) ? $club->approved_members_count : 0;
+                                    $officersCount = isset($club->officers_count) ? $club->officers_count : 0;
+                                    $leadersCount = isset($club->leaders_count) ? $club->leaders_count : 0;
+                                @endphp
+                                <span class="badge bg-info">{{ $approvedMembersCount }}</span>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 @if($club->leader) {{-- This now correctly uses the new leader relationship --}}
                                     <br><small class="text-success">
                                         <i class="fas fa-crown"></i> {{ $club->leader->name }}
                                     </small>
+<<<<<<< HEAD
                                 @elseif($club->clubMembers?->where('role_in_club', 'chunhiem')->count() > 0)
                                     <br><small class="text-warning">
                                         <i class="fas fa-users"></i> 
                                         @foreach($club->clubMembers->where('role_in_club', 'chunhiem') as $leader)
                                             {{ $leader->user->name }}@if(!$loop->last), @endif
                                         @endforeach
+=======
+                                @elseif($leadersCount > 0)
+                                    <br><small class="text-success">
+                                        <i class="fas fa-crown"></i> Có trưởng
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     </small>
                                 @else
                                     <br><small class="text-danger">
                                         <i class="fas fa-exclamation-triangle"></i> Chưa có trưởng
                                     </small>
                                 @endif
+<<<<<<< HEAD
+=======
+                                @if($officersCount > 0)
+                                    <br><small class="text-warning">
+                                        <i class="fas fa-star"></i> {{ $officersCount }} Cán sự
+                                    </small>
+                                @endif
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                             </td>
                             <td>{{ substr($club->description, 0, 50) }}{{ strlen($club->description) > 50 ? '...' : '' }}</td>
                             <td>
@@ -146,6 +176,7 @@
                     <a href="{{ route('admin.clubs.show', $club->id) }}" class="btn btn-sm btn-primary">
                         <i class="fas fa-eye"></i> Chi tiết
                     </a>
+<<<<<<< HEAD
                     <a href="{{ route('admin.clubs.members', $club->id) }}" class="btn btn-sm btn-info">
                         <i class="fas fa-users"></i> Thành viên
                     </a>
@@ -175,33 +206,96 @@
                                         @endif
                                         
                                         @if($club->status === 'approved')
+=======
+                    <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa
+                    </a>
+                                    @if($club->status === 'pending')
+                                        <!-- Form Duyệt -->
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="approved">
+                                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                                <i class="fas fa-check"></i> Duyệt
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Form Từ chối -->
+                                        <button type="button" class="btn btn-sm btn-danger w-100" 
+                                                data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
+                                                data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
+                                            <i class="fas fa-times"></i> Từ chối
+                                        </button>
+                                    @endif
+                                    
+                                    @if($club->status === 'approved')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                             <input type="hidden" name="status" value="active">
                                             <button type="submit" class="btn btn-sm btn-primary w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt
                                             </button>
+<<<<<<< HEAD
                                         @endif
                                         
                                         @if(in_array($club->status, ['active', 'approved']))
+=======
+                                        </form>
+                                    @endif
+                                    
+                                    @if(in_array($club->status, ['active', 'approved']))
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                             <input type="hidden" name="status" value="inactive">
                                             <button type="submit" class="btn btn-sm btn-warning w-100" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
                                                 <i class="fas fa-pause"></i> Tạm dừng
                                             </button>
+<<<<<<< HEAD
                                         @endif
                                         
                                         @if($club->status === 'inactive')
+=======
+                                        </form>
+                                    @endif
+                                    
+                                    @if($club->status === 'inactive')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                             <input type="hidden" name="status" value="active">
                                             <button type="submit" class="btn btn-sm btn-success w-100">
                                                 <i class="fas fa-play"></i> Kích hoạt lại
                                             </button>
+<<<<<<< HEAD
                                         @endif
                                         
                                         @if($club->status === 'rejected')
+=======
+                                        </form>
+                                    @endif
+                                    
+                                    @if($club->status === 'rejected')
+                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                             <input type="hidden" name="status" value="pending">
                                             <button type="submit" class="btn btn-sm btn-info w-100">
                                                 <i class="fas fa-undo"></i> Khôi phục
                                             </button>
+<<<<<<< HEAD
                                         @endif
                                     </form>
+=======
+                                        </form>
+                                    @endif
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 
                                     <button type="button" class="btn btn-sm btn-danger w-100"
                                             data-bs-toggle="modal" data-bs-target="#deleteClubModal"

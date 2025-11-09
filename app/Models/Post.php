@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Post extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'club_id',
         'user_id',
@@ -16,6 +17,7 @@ class Post extends Model
         'content',
         'type',
         'status',
+        'image',
     ];
 
     /**
@@ -42,5 +44,11 @@ class Post extends Model
         return $this->hasMany(\App\Models\PostComment::class);
     }
 
-
+    /**
+     * Get the attachments for the post
+     */
+    public function attachments()
+    {
+        return $this->hasMany(PostAttachment::class);
+    }
 }
