@@ -11,11 +11,15 @@
             <div class="row align-items-center">
                 <div class="col-md-3 text-center">
                     <div class="profile-avatar mb-3">
-                        {{ substr($user->name, 0, 1) }}
+                        @if($user->avatar)
+                            <img src="{{ asset($user->avatar) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                        @else
+                            {{ substr($user->name, 0, 1) }}
+                        @endif
                     </div>
-                    <button class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-camera me-2"></i> Đổi ảnh
-                    </button>
+                    {{-- Nút đổi ảnh sẽ được xử lý ở trang chỉnh sửa --}}
+                    {{-- <button class="btn btn-outline-primary btn-sm"><i class="fas fa-camera me-2"></i> Đổi ảnh</button> --}}
+                    <p class="text-muted small">Ảnh đại diện</p>
                 </div>
                 <div class="col-md-9">
                     <h3 class="mb-2">{{ $user->name }}</h3>
@@ -55,35 +59,32 @@
                 <i class="fas fa-user text-teal me-2"></i> Thông tin cá nhân
             </h4>
             
-            <form>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="name" class="form-label">Họ và tên</label>
-                        <input type="text" class="form-control" id="name" value="{{ $user->name }}" readonly>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="student_id" class="form-label">Mã sinh viên</label>
-                        <input type="text" class="form-control" id="student_id" value="{{ $user->student_id ?? 'Chưa có' }}" readonly>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" value="{{ $user->email }}" readonly>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="phone" class="form-label">Số điện thoại</label>
-                        <input type="tel" class="form-control" id="phone" value="{{ $user->phone ?? 'Chưa cập nhật' }}">
-                    </div>
-                    <div class="col-12 mb-3">
-                        <label for="address" class="form-label">Địa chỉ</label>
-                        <textarea class="form-control" id="address" rows="3">{{ $user->address ?? 'Chưa cập nhật' }}</textarea>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i> Cập nhật thông tin
-                        </button>
-                    </div>
+            {{-- Chuyển form thành dạng text tĩnh để chỉ hiển thị thông tin --}}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">Họ và tên</label>
+                    <p class="form-control-plaintext">{{ $user->name }}</p>
                 </div>
-            </form>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">Mã sinh viên</label>
+                    <p class="form-control-plaintext">{{ $user->student_id ?? 'Chưa có' }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">Email</label>
+                    <p class="form-control-plaintext">{{ $user->email }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">Số điện thoại</label>
+                    <p class="form-control-plaintext">{{ $user->phone ?? 'Chưa cập nhật' }}</p>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label text-muted">Địa chỉ</label>
+                    <p class="form-control-plaintext">{{ $user->address ?? 'Chưa cập nhật' }}</p>
+                </div>
+            </div>
+            <a href="{{ route('student.profile.edit') }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-2"></i> Chỉnh sửa thông tin
+            </a>
         </div>
 
         <!-- My Clubs -->
@@ -171,7 +172,7 @@
                 <i class="fas fa-cog"></i> Cài đặt
             </h5>
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ route('student.profile.edit') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-edit me-2"></i> Chỉnh sửa hồ sơ
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
@@ -236,6 +237,7 @@
         font-weight: bold;
         margin: 0 auto;
     }
+    .profile-avatar { overflow: hidden; }
     
     .club-logo {
         width: 40px;
