@@ -16,7 +16,7 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h5>{{ $club->name }}</h5>
-                <p>{{ $club->description }}</p>
+                <p>{{ strip_tags($club->description) }}</p>
                 <p><strong>Tổng thành viên:</strong> {{ $members->count() }}</p>
             </div>
         </div>

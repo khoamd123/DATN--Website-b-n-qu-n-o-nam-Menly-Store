@@ -31,27 +31,11 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <select name="date_range" class="form-select">
-                    <option value="">Tất cả thời gian</option>
-                    <option value="today" {{ request('date_range') == 'today' ? 'selected' : '' }}>Hôm nay</option>
-                    <option value="yesterday" {{ request('date_range') == 'yesterday' ? 'selected' : '' }}>Hôm qua</option>
-                    <option value="this_week" {{ request('date_range') == 'this_week' ? 'selected' : '' }}>Tuần này</option>
-                    <option value="last_week" {{ request('date_range') == 'last_week' ? 'selected' : '' }}>Tuần trước</option>
-                    <option value="this_month" {{ request('date_range') == 'this_month' ? 'selected' : '' }}>Tháng này</option>
-                    <option value="last_month" {{ request('date_range') == 'last_month' ? 'selected' : '' }}>Tháng trước</option>
-                    <option value="this_year" {{ request('date_range') == 'this_year' ? 'selected' : '' }}>Năm nay</option>
-                    <option value="last_year" {{ request('date_range') == 'last_year' ? 'selected' : '' }}>Năm trước</option>
-                    <option value="last_7_days" {{ request('date_range') == 'last_7_days' ? 'selected' : '' }}>7 ngày qua</option>
-                    <option value="last_30_days" {{ request('date_range') == 'last_30_days' ? 'selected' : '' }}>30 ngày qua</option>
-                    <option value="last_90_days" {{ request('date_range') == 'last_90_days' ? 'selected' : '' }}>90 ngày qua</option>
-                </select>
-            </div>
-            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
             </div>
-            <div class="col-md-3 text-end">
+            <div class="col-md-auto ms-auto">
                 <a href="{{ route('admin.users') }}" class="btn btn-secondary">
                     <i class="fas fa-refresh"></i> Làm mới
                 </a>

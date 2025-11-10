@@ -31,6 +31,40 @@ class PermissionController extends Controller
                     $query->whereNull('deleted_at');
                 }])
                 ->get();
+            
+            // Tự động đồng bộ position dựa trên số quyền cho mỗi CLB
+            foreach ($userClubs as $clubMember) {
+                if ($clubMember->club) {
+                    $permissionCount = \DB::table('user_permissions_club')
+                        ->where('user_id', $user->id)
+                        ->where('club_id', $clubMember->club->id)
+                        ->count();
+                    
+                    $permissionNames = \DB::table('user_permissions_club')
+                        ->where('user_id', $user->id)
+                        ->where('club_id', $clubMember->club->id)
+                        ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
+                        ->pluck('permissions.name')
+                        ->toArray();
+                    
+                    $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
+                    
+                    // Xác định position mong muốn
+                    $expectedPosition = 'member';
+                    if ($permissionCount >= 5) {
+                        $expectedPosition = 'leader';
+                    } elseif ($hasOtherPermissions && $permissionCount >= 2) {
+                        $expectedPosition = 'officer';
+                    }
+                    
+                    // Nếu position không đúng, cập nhật lại
+                    if ($clubMember->position !== $expectedPosition) {
+                        $clubMember->update(['position' => $expectedPosition]);
+                        $clubMember->position = $expectedPosition; // Cập nhật trong memory
+                    }
+                }
+            }
+            
             $user->setRelation('clubMembers', $userClubs);
         }
         
@@ -84,6 +118,27 @@ class PermissionController extends Controller
             'status' => 'approved',  // Sửa từ 'active' thành 'approved'
             'joined_at' => now()
         ]);
+
+        // Tự động gán quyền "xem_bao_cao" cho thành viên mới
+        $viewReportPermission = Permission::where('name', 'xem_bao_cao')->first();
+        if ($viewReportPermission) {
+            // Kiểm tra xem đã có quyền này chưa
+            $existingPermission = \DB::table('user_permissions_club')
+                ->where('user_id', $userId)
+                ->where('club_id', $clubId)
+                ->where('permission_id', $viewReportPermission->id)
+                ->first();
+            
+            if (!$existingPermission) {
+                \DB::table('user_permissions_club')->insert([
+                    'user_id' => $userId,
+                    'club_id' => $clubId,
+                    'permission_id' => $viewReportPermission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
 
         return response()->json([
             'success' => true, 

@@ -153,8 +153,21 @@
                 <div class="card mb-3">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
-                            <div class="user-avatar-fixed me-3">
-                                {{ substr($user->name, 0, 1) }}
+                            <div class="me-3">
+                                @if($user->avatar && file_exists(public_path($user->avatar)))
+                                    <img src="{{ asset($user->avatar) }}" 
+                                         alt="{{ $user->name }}" 
+                                         class="rounded-circle" 
+                                         style="width: 40px; height: 40px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+                                         onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="user-avatar-fixed" style="display: none;">
+                                        {{ substr($user->name, 0, 1) }}
+                                    </div>
+                                @else
+                                    <div class="user-avatar-fixed">
+                                        {{ substr($user->name, 0, 1) }}
+                                    </div>
+                                @endif
                             </div>
                             <div>
                                 <strong>{{ $user->name }}</strong>
@@ -186,7 +199,8 @@
                                     
                                     @if($club)
                                         @php
-                                            $position = $clubMember->position ?? $clubMember->role_in_club;
+                                            // Lấy position từ clubMember (đã được đồng bộ ở controller)
+                                            $position = $clubMember->position ?? 'member';
                                             
                                             // Lấy quyền của user trong CLB này
                                             $clubPermissions = \DB::table('user_permissions_club')

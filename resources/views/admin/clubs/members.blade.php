@@ -28,7 +28,7 @@
         <div class="row">
             <div class="col-md-8">
                 <h5 class="card-title">{{ $club->name }}</h5>
-                <p class="card-text">{{ $club->description }}</p>
+                <p class="card-text">{{ strip_tags($club->description) }}</p>
                 <div class="row">
                     <div class="col-md-6">
                         <small class="text-muted">

@@ -245,9 +245,7 @@
                         <a href="{{ route('admin.funds.transactions.create', $fund->id) }}" class="btn btn-success">
                             <i class="fas fa-plus"></i> Thêm giao dịch
                         </a>
-                        <a href="{{ route('admin.fund-requests.create') }}?event_id={{ $fund->event_id ?? '' }}&club_id={{ $fund->club_id ?? '' }}" class="btn btn-info">
-                            <i class="fas fa-money-bill-wave"></i> Xin cấp kinh phí
-                        </a>
+                        {{-- Bỏ nút tạo yêu cầu cấp kinh phí --}}
                         <a href="{{ route('admin.funds.show', $fund->id) }}?refresh=true" class="btn btn-primary" title="Cập nhật lại số tiền hiện tại">
                             <i class="fas fa-sync-alt"></i> Cập nhật số tiền
                         </a>

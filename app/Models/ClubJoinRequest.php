@@ -127,6 +127,27 @@ class ClubJoinRequest extends Model
             'status' => 'active',
             'joined_at' => now()
         ]);
+
+        // Tự động gán quyền "xem_bao_cao" cho thành viên mới
+        $viewReportPermission = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
+        if ($viewReportPermission) {
+            // Kiểm tra xem đã có quyền này chưa
+            $existingPermission = \DB::table('user_permissions_club')
+                ->where('user_id', $this->user_id)
+                ->where('club_id', $this->club_id)
+                ->where('permission_id', $viewReportPermission->id)
+                ->first();
+            
+            if (!$existingPermission) {
+                \DB::table('user_permissions_club')->insert([
+                    'user_id' => $this->user_id,
+                    'club_id' => $this->club_id,
+                    'permission_id' => $viewReportPermission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
     }
 
     /**

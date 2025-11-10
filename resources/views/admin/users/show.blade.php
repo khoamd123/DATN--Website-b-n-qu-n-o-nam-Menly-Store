@@ -232,9 +232,11 @@
                         </div>
                         <div class="card-body">
                             @php
-                                // Lấy tất cả bài viết từ các CLB mà user tham gia
+                                // Lấy tất cả bài viết từ các CLB mà user tham gia (chỉ lấy type = 'post', không bao gồm bài viết đã xóa)
                                 $clubIds = $userClubs->pluck('club_id')->toArray();
                                 $recentPosts = \App\Models\Post::whereIn('club_id', $clubIds)
+                                    ->where('type', 'post') // Chỉ lấy bài viết, không lấy announcement hay document
+                                    ->whereNull('deleted_at') // Loại bỏ bài viết đã bị soft delete
                                     ->orderBy('created_at', 'desc')
                                     ->limit(5)
                                     ->get();
@@ -248,7 +250,11 @@
                                                 <h6 class="mb-1">{{ $post->title }}</h6>
                                                 <small>{{ $post->created_at ? $post->created_at->format('d/m/Y') : 'N/A' }}</small>
                                             </div>
-                                            <p class="mb-1">{{ substr($post->content, 0, 100) }}...</p>
+                                            <p class="mb-1">@php
+                                                $cleanContent = html_entity_decode(strip_tags($post->content), ENT_QUOTES, 'UTF-8');
+                                                $cleanContent = str_replace('&nbsp;', ' ', $cleanContent);
+                                                echo mb_strlen($cleanContent) > 100 ? mb_substr($cleanContent, 0, 100) . '...' : $cleanContent;
+                                            @endphp</p>
                                             <small>
                                                 <span class="badge bg-{{ $post->status === 'published' ? 'success' : 'warning' }}">
                                                     {{ $post->status === 'published' ? 'Đã xuất bản' : 'Ẩn' }}
@@ -326,8 +332,16 @@
                                 @endif
                             </div>
                             <div class="flex-grow-1">
-                                <input type="file" class="form-control" name="avatar" accept="image/*">
-                                <small class="text-muted">Chọn ảnh mới để thay đổi ảnh đại diện</small>
+                                <input type="file" class="form-control mb-2" name="avatar" accept="image/*">
+                                @if($user->avatar && file_exists(public_path($user->avatar)))
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="remove_avatar" value="1" id="removeAvatar">
+                                        <label class="form-check-label text-danger" for="removeAvatar">
+                                            <i class="fas fa-trash"></i> Xóa ảnh đại diện hiện tại
+                                        </label>
+                                    </div>
+                                @endif
+                                <small class="text-muted d-block mt-1">Chọn ảnh mới để thay đổi ảnh đại diện</small>
                             </div>
                         </div>
                     </div>

@@ -18,7 +18,8 @@ class Club extends Model
         'leader_id',
         'owner_id',
         'max_members',
-        'status'
+        'status',
+        'rejection_reason'
     ];
 
     /**

@@ -296,12 +296,6 @@
                                 </button>
                             </form>
                         @endif
-                        
-                        @if($transaction->status === 'approved')
-                            <button class="btn btn-warning" onclick="showCancelModal()">
-                                <i class="fas fa-ban"></i> Hủy giao dịch
-                            </button>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -334,42 +328,9 @@
     </div>
 </div>
 
-<!-- Modal hủy giao dịch -->
-<div class="modal fade" id="cancelModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Hủy giao dịch</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ route('admin.funds.transactions.cancel', [$fund->id, $transaction->id]) }}">
-                @csrf
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Hủy giao dịch sẽ tạo giao dịch điều chỉnh ngược lại để khôi phục số dư quỹ.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Lý do hủy <span class="text-danger">*</span></label>
-                        <textarea name="cancellation_reason" class="form-control" rows="3" required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-warning">Xác nhận hủy</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
 function showRejectModal() {
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
-}
-
-function showCancelModal() {
-    new bootstrap.Modal(document.getElementById('cancelModal')).show();
 }
 </script>
 @endsection

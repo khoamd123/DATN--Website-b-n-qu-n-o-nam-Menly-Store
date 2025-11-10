@@ -153,10 +153,49 @@ class TrashController extends Controller
             switch ($type) {
                 case 'user':
                     $item = User::onlyTrashed()->findOrFail($id);
-                    // Xóa tất cả permissions của user
+                    // Xóa tất cả dữ liệu liên quan trước khi xóa user
+                    // 1. Permissions
                     \DB::table('user_permissions_club')->where('user_id', $id)->delete();
-                    // Xóa tất cả club_members của user
+                    // 2. Club members
                     \DB::table('club_members')->where('user_id', $id)->delete();
+                    // 3. Post comments
+                    \DB::table('post_comments')->where('user_id', $id)->delete();
+                    // 4. Posts (xóa cả attachments và comments trước)
+                    $userPosts = \App\Models\Post::where('user_id', $id)->get();
+                    foreach ($userPosts as $post) {
+                        \DB::table('post_attachments')->where('post_id', $post->id)->delete();
+                        \DB::table('post_comments')->where('post_id', $post->id)->delete();
+                    }
+                    \DB::table('posts')->where('user_id', $id)->delete();
+                    // 5. Event registrations
+                    \DB::table('event_registrations')->where('user_id', $id)->delete();
+                    // 6. Event comments
+                    \DB::table('event_comments')->where('user_id', $id)->delete();
+                    // 7. Event member evaluations
+                    \DB::table('event_member_evaluations')->where('evaluator_id', $id)->orWhere('member_id', $id)->delete();
+                    // 8. Event logs
+                    \DB::table('event_logs')->where('user_id', $id)->delete();
+                    // 9. Department members
+                    \DB::table('department_members')->where('user_id', $id)->delete();
+                    // 10. Notification reads
+                    \DB::table('notification_reads')->where('user_id', $id)->delete();
+                    // 11. Club join requests
+                    \DB::table('club_join_requests')->where('user_id', $id)->delete();
+                    // 12. Cập nhật clubs nếu user là owner hoặc leader
+                    \DB::table('clubs')->where('owner_id', $id)->update(['owner_id' => null]);
+                    \DB::table('clubs')->where('leader_id', $id)->update(['leader_id' => null]);
+                    // 13. Cập nhật events nếu user là creator
+                    \DB::table('events')->where('created_by', $id)->update(['created_by' => null]);
+                    // 14. Cập nhật notifications nếu user là sender
+                    \DB::table('notifications')->where('sender_id', $id)->update(['sender_id' => null]);
+                    // 15. Fund transactions (approved_by sẽ set null do onDelete set null)
+                    \DB::table('fund_transactions')->where('created_by', $id)->delete();
+                    // 16. Fund requests (approved_by và settled_by sẽ set null)
+                    \DB::table('fund_requests')->where('created_by', $id)->delete();
+                    // 17. Funds
+                    \DB::table('funds')->where('created_by', $id)->delete();
+                    // 18. Club resources (có onDelete cascade nhưng để chắc chắn)
+                    \DB::table('club_resources')->where('user_id', $id)->delete();
                     break;
                 case 'club':
                     $item = Club::onlyTrashed()->findOrFail($id);
@@ -167,7 +206,9 @@ class TrashController extends Controller
                     break;
                 case 'post':
                     $item = Post::onlyTrashed()->findOrFail($id);
-                    // Xóa tất cả bình luận liên kết trước
+                    // Xóa tất cả attachments trước
+                    \DB::table('post_attachments')->where('post_id', $id)->delete();
+                    // Xóa tất cả bình luận liên kết
                     $item->comments()->forceDelete();
                     break;
                 case 'club-member':
@@ -265,9 +306,31 @@ class TrashController extends Controller
                     // Xóa tất cả user đã bị xóa mềm
                     $users = User::onlyTrashed()->get();
                     foreach ($users as $user) {
-                        // Xóa permissions và club_members của user này
+                        // Xóa tất cả dữ liệu liên quan
                         \DB::table('user_permissions_club')->where('user_id', $user->id)->delete();
                         \DB::table('club_members')->where('user_id', $user->id)->delete();
+                        \DB::table('post_comments')->where('user_id', $user->id)->delete();
+                        $userPosts = \App\Models\Post::where('user_id', $user->id)->get();
+                        foreach ($userPosts as $post) {
+                            \DB::table('post_attachments')->where('post_id', $post->id)->delete();
+                            \DB::table('post_comments')->where('post_id', $post->id)->delete();
+                        }
+                        \DB::table('posts')->where('user_id', $user->id)->delete();
+                        \DB::table('event_registrations')->where('user_id', $user->id)->delete();
+                        \DB::table('event_comments')->where('user_id', $user->id)->delete();
+                        \DB::table('event_member_evaluations')->where('evaluator_id', $user->id)->orWhere('member_id', $user->id)->delete();
+                        \DB::table('event_logs')->where('user_id', $user->id)->delete();
+                        \DB::table('department_members')->where('user_id', $user->id)->delete();
+                        \DB::table('notification_reads')->where('user_id', $user->id)->delete();
+                        \DB::table('club_join_requests')->where('user_id', $user->id)->delete();
+                        \DB::table('clubs')->where('owner_id', $user->id)->update(['owner_id' => null]);
+                        \DB::table('clubs')->where('leader_id', $user->id)->update(['leader_id' => null]);
+                        \DB::table('events')->where('created_by', $user->id)->update(['created_by' => null]);
+                        \DB::table('notifications')->where('sender_id', $user->id)->update(['sender_id' => null]);
+                        \DB::table('fund_transactions')->where('created_by', $user->id)->delete();
+                        \DB::table('fund_requests')->where('created_by', $user->id)->delete();
+                        \DB::table('funds')->where('created_by', $user->id)->delete();
+                        \DB::table('club_resources')->where('user_id', $user->id)->delete();
                         $user->forceDelete();
                     }
                     break;
@@ -282,10 +345,14 @@ class TrashController extends Controller
                     }
                     break;
                 case 'posts':
-                    // Xóa tất cả bình luận trước, sau đó xóa bài viết
+                    // Xóa tất cả attachments và bình luận trước, sau đó xóa bài viết
                     $posts = Post::onlyTrashed()->get();
                     foreach ($posts as $post) {
+                        // Xóa attachments
+                        \DB::table('post_attachments')->where('post_id', $post->id)->delete();
+                        // Xóa bình luận
                         $post->comments()->forceDelete();
+                        // Xóa bài viết
                         $post->forceDelete();
                     }
                     break;

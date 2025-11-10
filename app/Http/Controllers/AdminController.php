@@ -9,6 +9,7 @@ use App\Models\EventImage;
 use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
+use App\Models\NotificationTarget;
 use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
@@ -207,40 +208,76 @@ class AdminController extends Controller
             ]);
         }
         
-        // Dữ liệu cho biểu đồ (12 tháng gần nhất)
+        // Dữ liệu cho biểu đồ - nếu có date filter thì lọc theo filter, nếu không thì 12 tháng gần nhất
         $monthlyStats = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $monthlyStats[] = [
-                'month' => $date->format('M Y'),
-                'users' => User::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)->count(),
-                'clubs' => Club::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)->count(),
-                'events' => Event::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)->count(),
-                'posts' => Post::where('type', 'post')->whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)->count(),
-            ];
+        if ($dateFilter) {
+            // Lọc theo khoảng thời gian được chọn
+            $start = $startDate;
+            $end = $endDate;
+            $daysDiff = $start->diffInDays($end);
+            
+            // Nếu khoảng thời gian <= 31 ngày, chia theo ngày
+            if ($daysDiff <= 31) {
+                $current = clone $start;
+                while ($current <= $end) {
+                    $dayStart = $current->copy()->startOfDay();
+                    $dayEnd = $current->copy()->endOfDay();
+                    
+                    // Đảm bảo không vượt quá khoảng thời gian được chọn
+                    if ($dayStart < $start) $dayStart = $start;
+                    if ($dayEnd > $end) $dayEnd = $end;
+                    
+                    $monthlyStats[] = [
+                        'month' => $current->format('d/m/Y'),
+                        'users' => User::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+                        'clubs' => Club::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+                        'events' => Event::whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+                        'posts' => Post::where('type', 'post')->whereBetween('created_at', [$dayStart, $dayEnd])->count(),
+                    ];
+                    
+                    $current->addDay();
+                }
+            } else {
+                // Nếu > 31 ngày, chia theo tháng
+                $current = clone $start;
+                while ($current <= $end) {
+                    $monthStart = $current->copy()->startOfMonth();
+                    $monthEnd = $current->copy()->endOfMonth();
+                    
+                    // Đảm bảo không vượt quá khoảng thời gian được chọn
+                    if ($monthStart < $start) $monthStart = $start;
+                    if ($monthEnd > $end) $monthEnd = $end;
+                    
+                    $monthlyStats[] = [
+                        'month' => $current->format('M Y'),
+                        'users' => User::whereBetween('created_at', [$monthStart, $monthEnd])->count(),
+                        'clubs' => Club::whereBetween('created_at', [$monthStart, $monthEnd])->count(),
+                        'events' => Event::whereBetween('created_at', [$monthStart, $monthEnd])->count(),
+                        'posts' => Post::where('type', 'post')->whereBetween('created_at', [$monthStart, $monthEnd])->count(),
+                    ];
+                    
+                    $current->addMonth();
+                }
+            }
+        } else {
+            // Mặc định: 12 tháng gần nhất (từ tháng hiện tại trở về trước)
+            for ($i = 11; $i >= 0; $i--) {
+                $date = now()->subMonths($i);
+                $monthlyStats[] = [
+                    'month' => $date->format('M Y'),
+                    'users' => User::whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)->count(),
+                    'clubs' => Club::whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)->count(),
+                    'events' => Event::whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)->count(),
+                    'posts' => Post::where('type', 'post')->whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)->count(),
+                ];
+            }
         }
         
-        // Đảm bảo có ít nhất một số dữ liệu để test
-        if (empty($monthlyStats) || array_sum(array_column($monthlyStats, 'users')) == 0) {
-            $monthlyStats = [
-                ['month' => 'Jan 2024', 'users' => 5, 'clubs' => 2, 'events' => 3, 'posts' => 8],
-                ['month' => 'Feb 2024', 'users' => 8, 'clubs' => 3, 'events' => 5, 'posts' => 12],
-                ['month' => 'Mar 2024', 'users' => 12, 'clubs' => 4, 'events' => 7, 'posts' => 15],
-                ['month' => 'Apr 2024', 'users' => 15, 'clubs' => 5, 'events' => 9, 'posts' => 18],
-                ['month' => 'May 2024', 'users' => 18, 'clubs' => 6, 'events' => 11, 'posts' => 22],
-                ['month' => 'Jun 2024', 'users' => 22, 'clubs' => 7, 'events' => 13, 'posts' => 25],
-                ['month' => 'Jul 2024', 'users' => 25, 'clubs' => 8, 'events' => 15, 'posts' => 28],
-                ['month' => 'Aug 2024', 'users' => 28, 'clubs' => 9, 'events' => 17, 'posts' => 32],
-                ['month' => 'Sep 2024', 'users' => 32, 'clubs' => 10, 'events' => 19, 'posts' => 35],
-                ['month' => 'Oct 2024', 'users' => 35, 'clubs' => 11, 'events' => 21, 'posts' => 38],
-                ['month' => 'Nov 2024', 'users' => 38, 'clubs' => 12, 'events' => 23, 'posts' => 42],
-                ['month' => 'Dec 2024', 'users' => 42, 'clubs' => 13, 'events' => 25, 'posts' => 45],
-            ];
-        }
+        // KHÔNG fallback về dữ liệu mẫu - hiển thị đúng dữ liệu thực tế, kể cả khi = 0
 
         return view('admin.dashboard', compact(
             'totalUsers', 
@@ -410,32 +447,43 @@ class AdminController extends Controller
         try {
             $user = User::findOrFail($id);
             
+            // Xử lý student_id: nếu empty thì set về null
             if ($request->filled('student_id')) {
-                $request->merge(['student_id' => strtoupper(trim($request->student_id))]);
+                $studentId = strtoupper(trim($request->student_id));
+                $request->merge(['student_id' => $studentId ?: null]);
+            } else {
+                $request->merge(['student_id' => null]);
             }
             
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255|unique:users,email,' . $id,
-                'student_id' => 'nullable|string|max:50|unique:users,student_id,' . $id,
+                'student_id' => 'nullable|string|max:50|unique:users,student_id,' . $id . ',id,deleted_at,NULL',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:500',
-                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'avatar' => 'nullable|file|max:10240', // Cho phép tất cả file types, max 10MB
+                'remove_avatar' => 'nullable|boolean', // Cho phép xóa ảnh
             ]);
             
-            $data = $request->except(['avatar']);
+            $data = $request->except(['avatar', 'remove_avatar']);
             
-            // Xử lý upload ảnh đại diện
+            // Xử lý xóa ảnh đại diện
+            if ($request->has('remove_avatar') && $request->remove_avatar) {
+                // Xóa file ảnh cũ nếu có
+                if ($user->avatar && file_exists(public_path($user->avatar))) {
+                    @unlink(public_path($user->avatar));
+                }
+                $data['avatar'] = null; // Set về null để dùng ảnh mặc định
+            }
+            
+            // Xử lý upload ảnh đại diện mới
             if ($request->hasFile('avatar')) {
                 try {
                     $avatar = $request->file('avatar');
                     
-                    // Validate file type
-                    if (!in_array($avatar->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif'])) {
-                        return back()->with('error', 'Chỉ chấp nhận file ảnh định dạng JPG, JPEG, PNG, GIF');
-                    }
-                    
-                    $avatarName = time() . '_' . $user->id . '.' . $avatar->getClientOriginalExtension();
+                    // Lấy extension và tên file
+                    $extension = $avatar->getClientOriginalExtension();
+                    $avatarName = time() . '_' . $user->id . '.' . $extension;
                     $avatarPath = 'uploads/avatars/' . $avatarName;
                     
                     // Tạo thư mục nếu chưa tồn tại
@@ -504,7 +552,49 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Chỉ có thể xóa câu lạc bộ đã tạm dừng!');
         }
         
+        // Ẩn tất cả quỹ của CLB này
+        \App\Models\Fund::where('club_id', $club->id)->update(['status' => 'inactive']);
+        
         $club->delete(); // Soft delete
+        
+        // Gửi thông báo cho người dùng (owner và members)
+        $notificationMessage = 'Câu lạc bộ ' . $club->name . ' của bạn đã được giải tán.';
+        $senderId = auth()->id() ?? 1; // Admin user
+        
+        // Thu thập tất cả user_id cần gửi thông báo
+        $userIds = [];
+        if ($club->owner_id) {
+            $userIds[] = $club->owner_id;
+        }
+        
+        // Lấy các thành viên
+        $members = ClubMember::where('club_id', $club->id)
+            ->whereIn('status', ['active', 'approved'])
+            ->get();
+        
+        foreach ($members as $member) {
+            if ($member->user_id && $member->user_id != $club->owner_id && !in_array($member->user_id, $userIds)) {
+                $userIds[] = $member->user_id;
+            }
+        }
+        
+        // Tạo notification và notification_targets cho từng user
+        if (!empty($userIds)) {
+            $notification = Notification::create([
+                'sender_id' => $senderId,
+                'title' => 'Câu lạc bộ đã được giải tán',
+                'message' => $notificationMessage,
+            ]);
+            
+            // Tạo notification_targets cho từng user
+            foreach ($userIds as $userId) {
+                NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $userId,
+                ]);
+            }
+        }
         
         return redirect()->route('admin.clubs')->with('success', 'Câu lạc bộ đã được chuyển vào thùng rác!');
     }
@@ -726,6 +816,7 @@ class AdminController extends Controller
                 'field_id' => 'nullable|exists:fields,id',
                 'new_field_name' => 'nullable|string|max:255',
                 'leader_id' => 'nullable|exists:users,id',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
             ]);
 
             // Validate: one user can be leader/officer of only one club
@@ -791,26 +882,61 @@ class AdminController extends Controller
                 $counter++;
             }
 
+            // Xử lý upload logo
+            $logoPath = null;
+            if ($request->hasFile('logo')) {
+                try {
+                    $logo = $request->file('logo');
+                    $logoName = time() . '_' . $clubSlug . '.' . $logo->getClientOriginalExtension();
+                    $logoPath = 'uploads/clubs/logos/' . $logoName;
+                    
+                    // Tạo thư mục nếu chưa tồn tại
+                    $logoDir = public_path('uploads/clubs/logos');
+                    if (!file_exists($logoDir)) {
+                        mkdir($logoDir, 0755, true);
+                    }
+                    
+                    // Di chuyển file
+                    $logo->move($logoDir, $logoName);
+                } catch (\Exception $e) {
+                    return back()->with('error', 'Lỗi upload logo: ' . $e->getMessage())->withInput();
+                }
+            }
+
             $club = Club::create([
                 'name' => $request->name,
                 'slug' => $clubSlug,
                 'description' => $request->description,
-                'logo' => '', // Set logo to empty string
+                'logo' => $logoPath,
                 'field_id' => $fieldId,
                 'owner_id' => session('user_id'), // Set owner to current admin user
                 'leader_id' => $request->leader_id,
                 'status' => 'pending',
             ]);
 
-            // Tự động tạo club member nếu có leader
+            // Tự động tạo club member nếu có leader - đảm bảo position = leader, không phải member
             if ($request->leader_id) {
-                ClubMember::create([
-                    'club_id' => $club->id,
-                    'user_id' => $request->leader_id,
-                    'position' => 'leader',
-                    'status' => 'active',
-                    'joined_at' => now(),
-                ]);
+                // Kiểm tra xem đã có member record chưa
+                $existingMember = ClubMember::where('club_id', $club->id)
+                    ->where('user_id', $request->leader_id)
+                    ->first();
+                
+                if ($existingMember) {
+                    // Cập nhật position thành leader
+                    $existingMember->update([
+                        'position' => 'leader',
+                        'status' => 'active',
+                    ]);
+                } else {
+                    // Tạo mới với position = leader
+                    ClubMember::create([
+                        'club_id' => $club->id,
+                        'user_id' => $request->leader_id,
+                        'position' => 'leader', // Đảm bảo là leader, không phải member
+                        'status' => 'active',
+                        'joined_at' => now(),
+                    ]);
+                }
                 
                 // Tự động cấp tất cả quyền cho leader
                 $allPermissions = \App\Models\Permission::all();
@@ -1012,12 +1138,28 @@ class AdminController extends Controller
         $club = Club::findOrFail($id);
         
         $request->validate([
-            'status' => 'required|in:pending,approved,rejected,active,inactive'
+            'status' => 'required|in:pending,approved,rejected,active,inactive',
+            'rejection_reason' => 'nullable|string|max:1000'
         ]);
         
-        $club->update([
+        $updateData = [
             'status' => $request->status
-        ]);
+        ];
+        
+        // Nếu từ chối, lưu lý do từ chối
+        if ($request->status === 'rejected' && $request->filled('rejection_reason')) {
+            // Kiểm tra xem bảng có cột rejection_reason không
+            if (Schema::hasColumn('clubs', 'rejection_reason')) {
+                $updateData['rejection_reason'] = $request->rejection_reason;
+            }
+        }
+        
+        // Nếu duyệt, tự động set status = active (thay vì approved)
+        if ($request->status === 'approved') {
+            $updateData['status'] = 'active';
+        }
+        
+        $club->update($updateData);
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
     }
@@ -2116,91 +2258,53 @@ class AdminController extends Controller
      */
     private function getDateFilter(Request $request)
     {
-        $dateRange = $request->get('date_range');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         
         // Nếu không có filter nào được chọn, trả về null
-        if (!$dateRange && !$startDate && !$endDate) {
+        if (!$startDate && !$endDate) {
             return null;
         }
         
-        // Ưu tiên start_date và end_date từ form (khi user chọn ngày cụ thể)
-        if ($startDate && $endDate) {
+        // Nếu chỉ có start_date, dùng start_date làm cả start và end
+        if ($startDate && !$endDate) {
+            $parsedStart = \Carbon\Carbon::parse($startDate)->startOfDay();
             return [
-                'start' => \Carbon\Carbon::parse($startDate)->startOfDay(),
-                'end' => \Carbon\Carbon::parse($endDate)->endOfDay()
+                'start' => $parsedStart,
+                'end' => $parsedStart->copy()->endOfDay()
             ];
         }
         
-        // Xử lý các khoảng thời gian định sẵn (chỉ khi không có start_date/end_date)
-        switch ($dateRange) {
-            case 'today':
-                return [
-                    'start' => now()->startOfDay(),
-                    'end' => now()->endOfDay()
-                ];
-            case 'yesterday':
-                return [
-                    'start' => now()->subDay()->startOfDay(),
-                    'end' => now()->subDay()->endOfDay()
-                ];
-            case 'this_week':
-                return [
-                    'start' => now()->startOfWeek(),
-                    'end' => now()->endOfWeek()
-                ];
-            case 'last_week':
-                return [
-                    'start' => now()->subWeek()->startOfWeek(),
-                    'end' => now()->subWeek()->endOfWeek()
-                ];
-            case 'this_month':
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'last_month':
-                return [
-                    'start' => now()->subMonth()->startOfMonth(),
-                    'end' => now()->subMonth()->endOfMonth()
-                ];
-            case 'this_quarter':
-                return [
-                    'start' => now()->startOfQuarter(),
-                    'end' => now()->endOfQuarter()
-                ];
-            case 'this_year':
-                return [
-                    'start' => now()->startOfYear(),
-                    'end' => now()->endOfYear()
-                ];
-            case 'last_year':
-                return [
-                    'start' => now()->subYear()->startOfYear(),
-                    'end' => now()->subYear()->endOfYear()
-                ];
-            case 'last_7_days':
-                return [
-                    'start' => now()->subDays(7),
-                    'end' => now()
-                ];
-            case 'last_30_days':
-                return [
-                    'start' => now()->subDays(30),
-                    'end' => now()
-                ];
-            case 'last_90_days':
-                return [
-                    'start' => now()->subDays(90),
-                    'end' => now()
-                ];
-            default:
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
+        // Nếu chỉ có end_date, dùng end_date làm cả start và end
+        if (!$startDate && $endDate) {
+            $parsedEnd = \Carbon\Carbon::parse($endDate)->endOfDay();
+            return [
+                'start' => $parsedEnd->copy()->startOfDay(),
+                'end' => $parsedEnd
+            ];
         }
+        
+        // Nếu có cả start_date và end_date
+        if ($startDate && $endDate) {
+            $parsedStart = \Carbon\Carbon::parse($startDate)->startOfDay();
+            $parsedEnd = \Carbon\Carbon::parse($endDate)->endOfDay();
+            
+            // Đảm bảo end_date không nhỏ hơn start_date
+            if ($parsedEnd->lt($parsedStart)) {
+                // Nếu end_date < start_date, đổi chỗ
+                return [
+                    'start' => $parsedEnd->copy()->startOfDay(),
+                    'end' => $parsedStart->copy()->endOfDay()
+                ];
+            }
+            
+            return [
+                'start' => $parsedStart,
+                'end' => $parsedEnd
+            ];
+        }
+        
+        return null;
     }
 
     /**
@@ -2256,6 +2360,43 @@ class AdminController extends Controller
             'posts',
             'events'
         ])->findOrFail($club);
+
+        // Tự động đồng bộ position dựa trên số quyền cho tất cả thành viên
+        foreach ($club->clubMembers as $clubMember) {
+            $permissionCount = \DB::table('user_permissions_club')
+                ->where('user_id', $clubMember->user_id)
+                ->where('club_id', $club->id)
+                ->count();
+            
+            $permissionNames = \DB::table('user_permissions_club')
+                ->where('user_id', $clubMember->user_id)
+                ->where('club_id', $club->id)
+                ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
+                ->pluck('permissions.name')
+                ->toArray();
+            
+            $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
+            
+            // Xác định position mong muốn
+            $expectedPosition = 'member';
+            if ($permissionCount >= 5) {
+                $expectedPosition = 'leader';
+            } elseif ($hasOtherPermissions && $permissionCount >= 2) {
+                $expectedPosition = 'officer';
+            }
+            
+            // Nếu position không đúng, cập nhật lại
+            if ($clubMember->position !== $expectedPosition) {
+                \DB::table('club_members')
+                    ->where('id', $clubMember->id)
+                    ->update(['position' => $expectedPosition]);
+                $clubMember->position = $expectedPosition; // Cập nhật trong memory
+                \Log::info("Updated position for user {$clubMember->user_id} in club {$club->id}: {$clubMember->position} -> {$expectedPosition} (permission count: {$permissionCount})");
+            }
+        }
+        
+        // Refresh lại relationship để đảm bảo dữ liệu mới nhất
+        $club->load('clubMembers');
 
         // Debug: Log tất cả clubMembers
         \Log::info('Club Members Debug', [
@@ -2335,7 +2476,9 @@ class AdminController extends Controller
             'owner_id' => 'required|exists:users,id',
             'leader_id' => 'nullable|exists:users,id',
             'description' => 'nullable|string',
-            'status' => 'required|in:pending,approved,active,inactive,rejected'
+            'status' => 'required|in:pending,approved,active,inactive,rejected',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
+            'remove_logo' => 'nullable|boolean',
         ]);
         
         // Validate: one user can be leader/officer of only one club
@@ -2368,18 +2511,80 @@ class AdminController extends Controller
         // Lưu leader_id cũ để xử lý sau
         $oldLeaderId = $club->leader_id;
         
-        $club->update($request->only([
+        // Xử lý upload/delete logo
+        $updateData = $request->only([
             'name', 'slug', 'field_id', 'owner_id', 'leader_id', 'description', 'status'
-        ]));
+        ]);
         
-        // Xử lý thay đổi leader
+        // Xử lý xóa logo
+        if ($request->has('remove_logo') && $request->remove_logo) {
+            // Xóa file logo cũ nếu có
+            if ($club->logo && file_exists(public_path($club->logo))) {
+                @unlink(public_path($club->logo));
+            }
+            $updateData['logo'] = null;
+        }
+        
+        // Xử lý upload logo mới
+        if ($request->hasFile('logo')) {
+            try {
+                $logo = $request->file('logo');
+                $logoName = time() . '_' . $club->slug . '.' . $logo->getClientOriginalExtension();
+                $logoPath = 'uploads/clubs/logos/' . $logoName;
+                
+                // Tạo thư mục nếu chưa tồn tại
+                $logoDir = public_path('uploads/clubs/logos');
+                if (!file_exists($logoDir)) {
+                    mkdir($logoDir, 0755, true);
+                }
+                
+                // Xóa logo cũ nếu có
+                if ($club->logo && file_exists(public_path($club->logo))) {
+                    @unlink(public_path($club->logo));
+                }
+                
+                // Di chuyển file
+                $logo->move($logoDir, $logoName);
+                $updateData['logo'] = $logoPath;
+            } catch (\Exception $e) {
+                return back()->with('error', 'Lỗi upload logo: ' . $e->getMessage())->withInput();
+            }
+        }
+        
+        $club->update($updateData);
+        
+        // Xử lý thay đổi leader - ĐẢM BẢO CHỈ CÓ 1 LEADER
         \Log::info("UpdateClub: oldLeaderId={$oldLeaderId}, newLeaderId={$request->leader_id}");
+        
+        // QUAN TRỌNG: Chuyển TẤT CẢ leader hiện tại trong CLB này thành member (trước khi set leader mới)
+        // Điều này đảm bảo không có nhiều leader cùng lúc
+        $allCurrentLeaders = \DB::table('club_members')
+            ->where('club_id', $club->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['approved', 'active'])
+            ->get();
+        
+        foreach ($allCurrentLeaders as $currentLeader) {
+            // Chỉ chuyển nếu không phải leader mới (nếu có)
+            if (!$request->leader_id || $currentLeader->user_id != $request->leader_id) {
+                \Log::info("Converting existing leader {$currentLeader->user_id} to member in club {$club->id}");
+                \DB::table('club_members')
+                    ->where('id', $currentLeader->id)
+                    ->update(['position' => 'member']);
+                
+                // Xóa quyền của leader cũ
+                \DB::table('user_permissions_club')
+                    ->where('user_id', $currentLeader->user_id)
+                    ->where('club_id', $club->id)
+                    ->delete();
+            }
+        }
         
         if ($oldLeaderId != $request->leader_id) {
             \Log::info("Leader changed! Processing update...");
             
-            // Nếu có leader cũ, chuyển về thành viên và xóa quyền
-            if ($oldLeaderId) {
+            // Nếu có leader cũ, chuyển về thành viên và xóa quyền (đã xử lý ở trên, nhưng để chắc chắn)
+            if ($oldLeaderId && (!$request->leader_id || $oldLeaderId != $request->leader_id)) {
                 \Log::info("Removing old leader {$oldLeaderId} from club {$club->id}");
                 \DB::table('club_members')
                     ->where('user_id', $oldLeaderId)

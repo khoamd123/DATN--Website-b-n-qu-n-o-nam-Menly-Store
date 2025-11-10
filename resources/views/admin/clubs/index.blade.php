@@ -125,7 +125,7 @@
                                     </small>
                                 @endif
                             </td>
-                            <td>{{ substr($club->description, 0, 50) }}{{ strlen($club->description) > 50 ? '...' : '' }}</td>
+                            <td>{{ Str::limit(html_entity_decode(strip_tags($club->description), ENT_QUOTES, 'UTF-8'), 50) }}</td>
                             <td>
                                 @php
                                     $statusColors = [
@@ -175,16 +175,7 @@
                                         </button>
                                     @endif
                                     
-                                    @if($club->status === 'approved')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="active">
-                                            <button type="submit" class="btn btn-sm btn-primary w-100">
-                                                <i class="fas fa-play"></i> Kích hoạt
-                                            </button>
-                                        </form>
-                                    @endif
+                                    {{-- Không hiển thị nút kích hoạt nếu status = active (đã được tự động set khi duyệt) --}}
                                     
                                     @if(in_array($club->status, ['active', 'approved']))
                                         <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
@@ -319,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var form = rejectClubModal.querySelector('#rejectClubForm');
 
         clubNameElement.textContent = clubName;
-        form.action = `/admin/clubs/${clubId}/status`; // Cập nhật action của form
+        form.action = '{{ url("admin/clubs") }}/' + clubId + '/status'; // Cập nhật action của form
     });
 
     var deleteClubModal = document.getElementById('deleteClubModal');

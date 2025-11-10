@@ -36,9 +36,15 @@
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin câu lạc bộ</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.clubs.store') }}">
+                    <form method="POST" action="{{ route('admin.clubs.store') }}" enctype="multipart/form-data">
                         @csrf
                         
+                        <div class="mb-3">
+                            <label class="form-label">Logo câu lạc bộ</label>
+                            <input type="file" class="form-control" name="logo" accept="image/*">
+                            <small class="text-muted">Chọn ảnh logo cho CLB (JPG, PNG, GIF, max 5MB)</small>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label">Tên câu lạc bộ <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" value="{{ old('name') }}" required>
@@ -46,7 +52,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="description" rows="4" required>{{ old('description') }}</textarea>
+                            <textarea class="form-control" id="description" name="description" rows="10" required>{{ old('description') }}</textarea>
                         </div>
 
                         <div class="row">
@@ -101,37 +107,10 @@
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Hướng dẫn</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-lightbulb"></i> Mẹo tạo CLB:</h6>
-                        <ul class="mb-0">
-                            <li>Đặt tên CLB rõ ràng và dễ hiểu</li>
-                            <li>Mô tả chi tiết về mục đích và hoạt động</li>
-                            <li>Chọn lĩnh vực phù hợp</li>
-                            <li>Có thể bổ sung trưởng CLB sau</li>
-                        </ul>
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <h6><i class="fas fa-exclamation-triangle"></i> Lưu ý:</h6>
-                        <ul class="mb-0">
-                            <li>CLB sẽ được tạo ở trạng thái "Chờ duyệt"</li>
-                            <li>Cần duyệt trước khi hoạt động</li>
-                            <li>Kiểm tra kỹ thông tin trước khi lưu</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
 function toggleFieldInput() {
     const select = document.getElementById('field-select');
@@ -147,5 +126,31 @@ function toggleFieldInput() {
         document.querySelector('input[name="new_field_name"]').required = false;
     }
 }
+
+// Khởi tạo CKEditor
+document.addEventListener('DOMContentLoaded', function() {
+    CKEDITOR.replace('description', {
+        height: 300,
+        language: 'vi',
+        filebrowserBrowseUrl: '/filemanager?type=Images',
+        filebrowserUploadUrl: '/filemanager/upload?type=Images&_token=',
+        toolbar: [
+            { name: 'document', items: ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates'] },
+            { name: 'clipboard', items: ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'] },
+            { name: 'editing', items: ['Find', 'Replace', '-', 'SelectAll', '-', 'Scayt'] },
+            { name: 'forms', items: ['Form', 'Checkbox', 'Radio', 'TextField', 'Textarea', 'Select', 'Button', 'ImageButton', 'HiddenField'] },
+            '/',
+            { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat'] },
+            { name: 'paragraph', items: ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language'] },
+            { name: 'links', items: ['Link', 'Unlink', 'Anchor'] },
+            { name: 'insert', items: ['Image', 'Flash', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'PageBreak', 'Iframe'] },
+            '/',
+            { name: 'styles', items: ['Styles', 'Format', 'Font', 'FontSize'] },
+            { name: 'colors', items: ['TextColor', 'BGColor'] },
+            { name: 'tools', items: ['Maximize', 'ShowBlocks'] },
+            { name: 'about', items: ['About'] }
+        ]
+    });
+});
 </script>
 @endsection

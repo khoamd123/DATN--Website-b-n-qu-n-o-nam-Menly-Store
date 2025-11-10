@@ -107,12 +107,13 @@ class ClubManagementController extends Controller
     }
 
     /**
-     * Add member to club
+     * Add member to club - hỗ trợ thêm nhiều thành viên cùng lúc
      */
     public function addMember(Request $request, $clubId)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|array',
+            'user_id.*' => 'exists:users,id',
             'position' => 'required|in:member,officer,leader'
         ]);
 
@@ -121,58 +122,98 @@ class ClubManagementController extends Controller
             return redirect()->back()->with('error', 'Bạn không có quyền thêm thành viên.');
         }
 
-        // Kiểm tra user đã là thành viên chưa
-        $existingMember = ClubMember::where('user_id', $request->user_id)
-            ->where('club_id', $clubId)
-            ->first();
+        $addedCount = 0;
+        $skippedCount = 0;
+        $errors = [];
 
-        if ($existingMember) {
-            return redirect()->back()->with('error', 'Người dùng đã là thành viên của CLB này.');
-        }
-
-        // Nếu thêm làm leader/officer, kiểm tra giới hạn
-        if (in_array($request->position, ['leader', 'officer'])) {
-            $alreadyLeaderOfficer = ClubMember::where('user_id', $request->user_id)
-                ->whereIn('status', ['approved', 'active'])
-                ->whereIn('position', ['leader', 'officer'])
-                ->whereHas('club', function($query) {
-                    $query->whereNull('deleted_at');
-                })
+        foreach ($request->user_id as $userId) {
+            // Kiểm tra user đã là thành viên chưa
+            $existingMember = ClubMember::where('user_id', $userId)
+                ->where('club_id', $clubId)
                 ->first();
-                
-            if ($alreadyLeaderOfficer) {
-                $club = Club::find($alreadyLeaderOfficer->club_id);
-                return redirect()->back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$club->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
-            }
-        }
 
-        // Thêm thành viên
-        ClubMember::create([
-            'user_id' => $request->user_id,
-            'club_id' => $clubId,
-            'position' => $request->position,
-            'status' => 'active',
-            'joined_at' => now(),
-        ]);
-        
-        // Nếu thêm làm leader, cập nhật clubs.leader_id và cấp quyền
-        if ($request->position === 'leader') {
-            \DB::table('clubs')->where('id', $clubId)->update(['leader_id' => $request->user_id]);
+            if ($existingMember) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Nếu thêm làm leader/officer, kiểm tra giới hạn
+            if (in_array($request->position, ['leader', 'officer'])) {
+                $alreadyLeaderOfficer = ClubMember::where('user_id', $userId)
+                    ->whereIn('status', ['approved', 'active'])
+                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereHas('club', function($query) {
+                        $query->whereNull('deleted_at');
+                    })
+                    ->first();
+                    
+                if ($alreadyLeaderOfficer) {
+                    $club = Club::find($alreadyLeaderOfficer->club_id);
+                    $errors[] = "Người này đã là cán sự/trưởng ở CLB '{$club->name}'.";
+                    continue;
+                }
+            }
+
+            // Thêm thành viên
+            ClubMember::create([
+                'user_id' => $userId,
+                'club_id' => $clubId,
+                'position' => $request->position,
+                'status' => 'active',
+                'joined_at' => now(),
+            ]);
             
-            // Cấp tất cả quyền
-            $allPermissions = \App\Models\Permission::all();
-            foreach ($allPermissions as $permission) {
-                \DB::table('user_permissions_club')->insert([
-                    'user_id' => $request->user_id,
-                    'club_id' => $clubId,
-                    'permission_id' => $permission->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            // Nếu thêm làm leader, cập nhật clubs.leader_id và cấp quyền
+            if ($request->position === 'leader') {
+                \DB::table('clubs')->where('id', $clubId)->update(['leader_id' => $userId]);
+                
+                // Cấp tất cả quyền
+                $allPermissions = \App\Models\Permission::all();
+                foreach ($allPermissions as $permission) {
+                    \DB::table('user_permissions_club')->insert([
+                        'user_id' => $userId,
+                        'club_id' => $clubId,
+                        'permission_id' => $permission->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            } else {
+                // Nếu là member, tự động gán quyền "xem_bao_cao"
+                $viewReportPermission = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
+                if ($viewReportPermission) {
+                    // Kiểm tra xem đã có quyền này chưa
+                    $existingPermission = \DB::table('user_permissions_club')
+                        ->where('user_id', $userId)
+                        ->where('club_id', $clubId)
+                        ->where('permission_id', $viewReportPermission->id)
+                        ->first();
+                    
+                    if (!$existingPermission) {
+                        \DB::table('user_permissions_club')->insert([
+                            'user_id' => $userId,
+                            'club_id' => $clubId,
+                            'permission_id' => $viewReportPermission->id,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
+            
+            $addedCount++;
         }
 
-        return redirect()->back()->with('success', 'Đã thêm thành viên thành công!');
+        $message = "Đã thêm {$addedCount} thành viên thành công!";
+        if ($skippedCount > 0) {
+            $message .= " ({$skippedCount} thành viên đã tồn tại, bỏ qua)";
+        }
+        if (!empty($errors)) {
+            $message .= " " . implode(' ', $errors);
+            return redirect()->back()->with('warning', $message);
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**

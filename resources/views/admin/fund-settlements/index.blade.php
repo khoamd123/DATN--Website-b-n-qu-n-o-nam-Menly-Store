@@ -102,11 +102,15 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary">{{ $request->club->name }}</span>
+                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" class="badge bg-primary text-white text-decoration-none">
+                                        {{ $request->club->name }}
+                                    </a>
                                 </td>
                                 <td>
                                     @if($request->event)
-                                        <span class="badge bg-info">{{ $request->event->name }}</span>
+                                        <a href="{{ route('admin.events.show', $request->event->id) }}" class="badge bg-info text-white text-decoration-none">
+                                            {{ $request->event->title ?? $request->event->name }}
+                                        </a>
                                     @else
                                         <span class="text-muted">Không có</span>
                                     @endif
@@ -204,7 +208,9 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary">{{ $request->club->name }}</span>
+                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" class="badge bg-primary text-white text-decoration-none">
+                                        {{ $request->club->name }}
+                                    </a>
                                 </td>
                                 <td>
                                     <strong class="text-success">{{ number_format($request->approved_amount) }} VNĐ</strong>

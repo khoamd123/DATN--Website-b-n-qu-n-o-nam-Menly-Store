@@ -2,6 +2,20 @@
 
 @section('title', 'Quản lý yêu cầu cấp kinh phí')
 
+@section('styles')
+<style>
+/* Đảm bảo tất cả link trong bảng có màu đen và không gạch chân */
+.table a {
+    color: #212529 !important;
+    text-decoration: none !important;
+}
+.table a:hover {
+    color: #0d6efd !important;
+    text-decoration: underline !important;
+}
+</style>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -16,9 +30,7 @@
                         <a href="{{ route('admin.funds') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Quay về quản lý quỹ
                         </a>
-                        <a href="{{ route('admin.fund-requests.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Tạo yêu cầu mới
-                        </a>
+                        {{-- Bỏ nút tạo yêu cầu cấp kinh phí --}}
                     </div>
                 </div>
 
@@ -75,6 +87,7 @@
                                     <th>Tiêu đề</th>
                                     <th>Sự kiện</th>
                                     <th>CLB</th>
+                                    <th>Quỹ</th>
                                     <th>Số tiền yêu cầu</th>
                                     <th>Số tiền duyệt</th>
                                     <th>Trạng thái</th>
@@ -88,15 +101,23 @@
                                     <tr>
                                         <td>{{ $requests->firstItem() + $index }}</td>
                                         <td>
-                                            <strong>{{ $request->title }}</strong>
-                                            @if($request->description)
-                                                <br><small class="text-muted">{{ Str::limit(strip_tags($request->description), 50) }}</small>
+                                            <a href="{{ route('admin.fund-requests.show', $request->id) }}" class="text-dark text-decoration-none">
+                                                <strong>{{ $request->title }}</strong>
+                                            </a>
+                                            {{-- Không hiện chữ nhạt dưới phần tiêu đề, chỉ hiện sự kiện nếu có --}}
+                                            @if($request->event)
+                                                <br><small class="text-info">
+                                                    <i class="fas fa-calendar-alt"></i> 
+                                                    <a href="{{ route('admin.events.show', $request->event->id) }}" class="text-dark text-decoration-none">
+                                                        {{ $request->event->title ?? $request->event->name }}
+                                                    </a>
+                                                </small>
                                             @endif
                                         </td>
                                         <td>
                                             @if($request->event)
-                                                <a href="{{ route('admin.events.show', $request->event->id) }}" class="text-primary">
-                                                    {{ $request->event->name }}
+                                                <a href="{{ route('admin.events.show', $request->event->id) }}" class="text-dark text-decoration-none">
+                                                    {{ $request->event->title ?? $request->event->name }}
                                                 </a>
                                             @else
                                                 <span class="text-muted">Không có</span>
@@ -104,9 +125,27 @@
                                         </td>
                                         <td>
                                             @if($request->club)
-                                                <span class="badge badge-info">{{ $request->club->name }}</span>
+                                                <a href="{{ route('admin.clubs.show', $request->club->id) }}" class="badge bg-info text-dark text-decoration-none">
+                                                    {{ $request->club->name }}
+                                                </a>
                                             @else
                                                 <span class="text-muted">Không có</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($request->club)
+                                                @php
+                                                    $clubFund = \App\Models\Fund::where('club_id', $request->club->id)->where('status', 'active')->first();
+                                                @endphp
+                                                @if($clubFund)
+                                                    <a href="{{ route('admin.funds.show', $clubFund->id) }}" class="badge bg-success text-white text-decoration-none" title="Xem chi tiết quỹ">
+                                                        <i class="fas fa-wallet"></i> {{ number_format($clubFund->current_amount, 0, ',', '.') }} VNĐ
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">Chưa có quỹ</span>
+                                                @endif
+                                            @else
+                                                <span class="text-muted">-</span>
                                             @endif
                                         </td>
                                         <td class="text-right">
@@ -122,16 +161,16 @@
                                         <td>
                                             @switch($request->status)
                                                 @case('pending')
-                                                    <span class="badge badge-warning">Chờ duyệt</span>
+                                                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
                                                     @break
                                                 @case('approved')
-                                                    <span class="badge badge-success">Đã duyệt</span>
+                                                    <span class="badge bg-success text-white">Đã duyệt</span>
                                                     @break
                                                 @case('partially_approved')
-                                                    <span class="badge badge-info">Duyệt một phần</span>
+                                                    <span class="badge bg-info text-dark">Duyệt một phần</span>
                                                     @break
                                                 @case('rejected')
-                                                    <span class="badge badge-danger">Từ chối</span>
+                                                    <span class="badge bg-danger text-white">Từ chối</span>
                                                     @break
                                             @endswitch
                                         </td>
@@ -169,7 +208,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="10" class="text-center py-4">
+                                        <td colspan="11" class="text-center py-4">
                                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                             <p class="text-muted">Không tìm thấy yêu cầu cấp kinh phí nào</p>
                                         </td>

@@ -43,8 +43,13 @@ class FundRequestController extends Controller
 
         $requests = $query->orderBy('created_at', 'desc')->paginate(15);
         $clubs = Club::all();
+        
+        // Lấy danh sách quỹ cho các CLB có sự kiện
+        $funds = \App\Models\Fund::whereHas('club', function($q) {
+            $q->where('status', 'active');
+        })->with('club')->get();
 
-        return view('admin.fund-requests.index', compact('requests', 'clubs'));
+        return view('admin.fund-requests.index', compact('requests', 'clubs', 'funds'));
     }
 
     public function create()

@@ -329,12 +329,7 @@
                                             </a>
                                         @endif
                                         
-                                        @if($transaction->status === 'approved')
-                                            <button class="btn btn-sm btn-outline-warning" 
-                                                    onclick="showCancelModal({{ $transaction->id }})">
-                                                <i class="fas fa-ban"></i>
-                                            </button>
-                                        @endif
+                                        {{-- Không cho phép hủy giao dịch khi đã duyệt --}}
                                     </div>
                                 </td>
                             </tr>

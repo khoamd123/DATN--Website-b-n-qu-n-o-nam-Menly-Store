@@ -2,6 +2,118 @@
 
 @section('title', 'Chi tiết câu lạc bộ: ' . $club->name)
 
+@section('styles')
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+/* Select2 styling */
+.select2-container {
+    width: 100% !important;
+}
+.select2-container--default .select2-selection--multiple {
+    min-height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #0d6efd;
+    border: 1px solid #0d6efd;
+    color: white;
+    padding: 2px 8px;
+    margin: 3px;
+    max-width: 100%;
+    word-break: break-word;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: white;
+    margin-right: 5px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #f8f9fa;
+}
+/* Dropdown styling - đảm bảo không bị tràn */
+.select2-container--open .select2-dropdown {
+    z-index: 9999 !important;
+    min-width: 100% !important;
+    width: auto !important;
+}
+.select2-container {
+    z-index: 9998 !important;
+}
+/* Đảm bảo dropdown rộng đủ để hiển thị email - FORCE width */
+.select2-dropdown {
+    min-width: 500px !important;
+    width: 500px !important;
+    max-width: 100% !important;
+}
+.select2-container--default .select2-dropdown {
+    min-width: 500px !important;
+    width: 500px !important;
+}
+/* Options trong dropdown - FORCE text wrap và không tràn */
+.select2-results__option {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    overflow: visible !important;
+    padding: 8px 12px !important;
+    line-height: 1.5 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    text-overflow: clip !important;
+}
+.select2-results__option * {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    display: inline !important;
+}
+/* Override Select2 default styles */
+.select2-container--default .select2-results__option {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+.select2-results__option--highlighted {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+/* Đảm bảo dropdown hiển thị đầy đủ options khi mở */
+.select2-results__options {
+    max-height: 300px !important;
+    overflow-y: auto;
+    overflow-x: hidden !important;
+    width: 100% !important;
+}
+.select2-results {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+/* Search box trong dropdown */
+.select2-search--dropdown {
+    padding: 8px;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+.select2-search--dropdown .select2-search__field {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    box-sizing: border-box !important;
+}
+</style>
+@endsection
+
 @section('content')
 <div class="content-header">
     <h1>Chi tiết câu lạc bộ: <span class="text-primary">{{ $club->name }}</span></h1>
@@ -63,9 +175,24 @@
                     <div class="mt-4">
                         <h5><i class="fas fa-file-alt me-2"></i>Mô tả</h5>
                         <div class="p-3 bg-light rounded">
-                            {!! nl2br(e($club->description)) !!}
+                            {!! $club->description !!}
                         </div>
                     </div>
+                    
+                    @if($club->status === 'rejected')
+                        <div class="mt-4">
+                            <h5><i class="fas fa-times-circle me-2 text-danger"></i>Lý do từ chối</h5>
+                            <div class="p-3 bg-danger bg-opacity-10 border border-danger rounded">
+                                <p class="mb-0 text-dark">
+                                    @if(!empty($club->rejection_reason))
+                                        {{ $club->rejection_reason }}
+                                    @else
+                                        <em class="text-muted">Chưa có lý do từ chối</em>
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -194,13 +321,22 @@
                                         </td>
                                         <td>
                                             @php
-                                                $role = $member->position ?? $member->role_in_club;
+                                                $role = $member->position ?? $member->role_in_club ?? 'member';
                                                 $badgeColor = 'primary';
-                                                if($role === 'leader' || $role === 'chunhiem') $badgeColor = 'danger';
-                                                elseif($role === 'officer') $badgeColor = 'info';
-                                                elseif($role === 'member' || $role === 'thanhvien') $badgeColor = 'success';
+                                                $roleLabel = 'Member';
+                                                
+                                                if($role === 'leader' || $role === 'chunhiem') {
+                                                    $badgeColor = 'danger';
+                                                    $roleLabel = 'Leader';
+                                                } elseif($role === 'officer') {
+                                                    $badgeColor = 'info';
+                                                    $roleLabel = 'Officer';
+                                                } elseif($role === 'member' || $role === 'thanhvien') {
+                                                    $badgeColor = 'success';
+                                                    $roleLabel = 'Member';
+                                                }
                                             @endphp
-                                            <span class="badge bg-{{ $badgeColor }}">{{ ucfirst($role) }}</span>
+                                            <span class="badge bg-{{ $badgeColor }}">{{ $roleLabel }}</span>
                                         </td>
                                         <td>{{ $member->created_at->format('d/m/Y') }}</td>
                                         <td>
@@ -277,17 +413,25 @@
         <h5 class="modal-title" id="addMemberModalLabel">Thêm thành viên mới vào CLB</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="POST" action="{{ route('admin.clubs.members.add', $club->id) }}">
+      <form method="POST" action="{{ route('admin.clubs.members.add', $club->id) }}" id="addMemberForm">
         @csrf
         <div class="modal-body">
           <div class="mb-3">
-            <label for="user_id" class="form-label">Chọn người dùng <span class="text-danger">*</span></label>
-            <select class="form-select" id="user_id" name="user_id" required>
-                <option value="" disabled selected>-- Chọn người dùng --</option>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label for="user_id" class="form-label mb-0">Chọn người dùng <span class="text-danger">*</span></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllUsers" onchange="toggleSelectAll()">
+                <label class="form-check-label" for="selectAllUsers">
+                  Chọn tất cả
+                </label>
+              </div>
+            </div>
+            <select class="form-select" id="user_id" name="user_id[]" multiple required style="width: 100%;">
                 @foreach($addableUsers as $user)
                     <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                 @endforeach
             </select>
+            <small class="text-muted">Gõ để tìm kiếm người dùng, có thể chọn nhiều người</small>
             @if($addableUsers->isEmpty())
                 <div class="form-text text-muted">Tất cả người dùng đã là thành viên của câu lạc bộ này.</div>
             @endif
@@ -366,6 +510,10 @@
 @endsection
 
 @section('scripts')
+<!-- jQuery (required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <style>
 .table-responsive {
     overflow-x: auto;
@@ -395,6 +543,71 @@ tbody tr td img {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Khởi tạo Select2 cho dropdown user
+    $('#user_id').select2({
+        placeholder: 'Gõ để tìm kiếm người dùng...',
+        allowClear: true,
+        dropdownAutoWidth: false, // Tắt auto width để dùng CSS custom
+        width: '100%', // Full width của container
+        minimumResultsForSearch: 0, // Luôn hiển thị search box, ngay cả với ít options
+        closeOnSelect: false, // Không đóng khi chọn (để chọn nhiều)
+        language: {
+            noResults: function() {
+                return "Không tìm thấy kết quả";
+            },
+            searching: function() {
+                return "Đang tìm kiếm...";
+            },
+            inputTooShort: function() {
+                return "Gõ để tìm kiếm...";
+            }
+        }
+    });
+    
+    // Xử lý khi mở dropdown
+    $('#user_id').on('select2:open', function() {
+        setTimeout(function() {
+            // FORCE dropdown width đủ rộng - ít nhất 500px
+            var dropdown = $('.select2-dropdown');
+            var container = $('.select2-container');
+            // Set dropdown width bằng container width hoặc tối thiểu 500px
+            var minWidth = Math.max(container.outerWidth(), 500);
+            dropdown.css({
+                'width': minWidth + 'px',
+                'min-width': minWidth + 'px',
+                'max-width': '100%'
+            });
+            
+            // Force width cho results
+            dropdown.find('.select2-results').css({
+                'width': '100%',
+                'max-width': '100%',
+                'overflow-x': 'hidden'
+            });
+            
+            // Force width cho mỗi option
+            dropdown.find('.select2-results__option').css({
+                'width': '100%',
+                'max-width': '100%',
+                'white-space': 'normal',
+                'word-wrap': 'break-word',
+                'overflow-wrap': 'break-word'
+            });
+            
+            // Focus vào search box
+            var searchField = $('.select2-search__field');
+            searchField.focus();
+            
+            // Xóa text trong search để hiển thị tất cả options
+            searchField.val('');
+            searchField.trigger('input');
+        }, 150);
+    });
+    
+    // Đảm bảo dropdown không đóng khi click bên trong
+    $(document).on('click', '.select2-container--open .select2-dropdown', function(e) {
+        e.stopPropagation();
+    });
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const memberCheckboxes = document.querySelectorAll('.member-checkbox');
 
@@ -472,6 +685,20 @@ function handleBulkAction(action) {
 
     document.body.appendChild(form);
     form.submit();
+}
+
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllUsers');
+    const userSelect = $('#user_id');
+    
+    if (selectAllCheckbox.checked) {
+        // Chọn tất cả options
+        userSelect.find('option').prop('selected', true);
+        userSelect.trigger('change');
+    } else {
+        // Bỏ chọn tất cả
+        userSelect.val(null).trigger('change');
+    }
 }
 </script>
 @endsection

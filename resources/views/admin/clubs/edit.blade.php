@@ -48,7 +48,7 @@
                     <h5 class="mb-0"><i class="fas fa-edit"></i> Thông tin câu lạc bộ</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.clubs.update', $club->id) }}">
+                    <form method="POST" action="{{ route('admin.clubs.update', $club->id) }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         
@@ -56,13 +56,38 @@
                         <input type="hidden" name="owner_id" value="{{ $club->owner_id }}">
                         
                         <div class="mb-3">
+                            <label class="form-label">Logo câu lạc bộ</label>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                @if($club->logo && file_exists(public_path($club->logo)))
+                                    <img src="{{ asset($club->logo) }}" alt="Logo hiện tại" class="rounded" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #ddd;">
+                                @else
+                                    <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 1.5rem;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                @endif
+                                <div class="flex-grow-1">
+                                    <input type="file" class="form-control" name="logo" accept="image/*">
+                                    @if($club->logo && file_exists(public_path($club->logo)))
+                                        <div class="form-check mt-2">
+                                            <input class="form-check-input" type="checkbox" name="remove_logo" value="1" id="removeLogo">
+                                            <label class="form-check-label text-danger" for="removeLogo">
+                                                <i class="fas fa-trash"></i> Xóa logo hiện tại
+                                            </label>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <small class="text-muted">Chọn ảnh logo mới để thay đổi (JPG, PNG, GIF, max 5MB)</small>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Tên câu lạc bộ <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" value="{{ old('name', $club->name) }}" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Mô tả <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="description" rows="4" required>{{ old('description', $club->description) }}</textarea>
+                            <textarea class="form-control" id="description" name="description" rows="10" required>{{ old('description', $club->description) }}</textarea>
                         </div>
 
                         <div class="row">
@@ -171,4 +196,33 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+<script>
+// Khởi tạo CKEditor cho mô tả
+document.addEventListener('DOMContentLoaded', function() {
+    CKEDITOR.replace('description', {
+        height: 300,
+        language: 'vi',
+        filebrowserBrowseUrl: '/filemanager?type=Images',
+        filebrowserUploadUrl: '/filemanager/upload?type=Images&_token=',
+        toolbar: [
+            { name: 'document', items: ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates'] },
+            { name: 'clipboard', items: ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'] },
+            { name: 'editing', items: ['Find', 'Replace', '-', 'SelectAll', '-', 'Scayt'] },
+            { name: 'forms', items: ['Form', 'Checkbox', 'Radio', 'TextField', 'Textarea', 'Select', 'Button', 'ImageButton', 'HiddenField'] },
+            '/',
+            { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat'] },
+            { name: 'paragraph', items: ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language'] },
+            { name: 'links', items: ['Link', 'Unlink', 'Anchor'] },
+            { name: 'insert', items: ['Image', 'Flash', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'PageBreak', 'Iframe'] },
+            '/',
+            { name: 'styles', items: ['Styles', 'Format', 'Font', 'FontSize'] },
+            { name: 'colors', items: ['TextColor', 'BGColor'] },
+            { name: 'tools', items: ['Maximize', 'ShowBlocks'] },
+            { name: 'about', items: ['About'] }
+        ]
+    });
+});
+</script>
 @endsection
