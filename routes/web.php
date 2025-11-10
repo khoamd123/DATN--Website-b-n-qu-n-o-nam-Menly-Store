@@ -101,62 +101,27 @@ Route::get('/quick-login-student', function () {
 })->name('quick.login.student');
 
 // Student Routes - BYPASS SESSION FOR TESTING
-Route::get('/student/dashboard', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.dashboard', compact('user'));
-})->name('student.dashboard');
+Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard'])->name('student.dashboard');
 
-Route::get('/student/clubs', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.clubs.index', compact('user'));
-})->name('student.clubs.index');
+Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
 
-Route::get('/student/events', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.events.index', compact('user'));
-})->name('student.events.index');
+Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
 Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileController::class, 'edit'])->name('student.profile.edit');
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
-Route::get('/student/notifications', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.notifications.index', compact('user'));
-})->name('student.notifications.index');
+Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
 
-Route::get('/student/contact', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.contact', compact('user'));
-})->name('student.contact.index');
+Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
 // Student Posts Routes
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
 
-Route::get('/student/club-management', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    
-    $hasManagementRole = false;
-    $userPosition = null;
-    $userClub = null;
-    
-    if ($user->clubs->count() > 0) {
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
-        $userPosition = $user->getPositionInClub($clubId);
-        $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
-    }
-    
-    return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
-})->name('student.club-management.index');
+Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 
 // Test route without session check - TEMPORARY
 Route::get('/test-club-management', function () {

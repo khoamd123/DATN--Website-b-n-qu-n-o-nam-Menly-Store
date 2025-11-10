@@ -197,4 +197,125 @@ class StudentController extends Controller
 
         return view('student.posts.show', compact('post', 'user'));
     }
+
+    /**
+     * Hiển thị trang báo cáo và thống kê cho CLB.
+     */
+    public function clubReports(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')->with('error', 'Bạn không thuộc câu lạc bộ nào để xem báo cáo.');
+        }
+
+        // Giả sử sinh viên chỉ quản lý 1 CLB tại một thời điểm
+        $club = $user->clubs->first();
+        $club->load('members', 'events'); // Eager load relationships
+
+        $fund = \App\Models\Fund::where('club_id', $club->id)->first();
+
+        // Kiểm tra quyền xem báo cáo
+        if (!$user->hasPermission('xem_bao_cao', $club->id)) {
+             return redirect()->route('student.club-management.index')->with('error', 'Bạn không có quyền xem báo cáo.');
+        }
+
+        // Thu thập dữ liệu thống kê
+        $totalMembers = $club->members->count();
+        $newMembersThisMonth = $club->members()
+            ->wherePivot('created_at', '>=', \Carbon\Carbon::now()->startOfMonth())
+            ->count();
+        
+        $totalEvents = $club->events->count();
+        $upcomingEvents = $club->events()->where('start_time', '>', \Carbon\Carbon::now())->count();
+        $pastEvents = $totalEvents - $upcomingEvents;
+
+        // Dữ liệu cho biểu đồ tăng trưởng thành viên (3 tháng gần nhất)
+        $memberGrowthData = [];
+        $memberGrowthLabels = [];
+        for ($i = 2; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subMonths($i);
+            $memberGrowthLabels[] = 'Tháng ' . $date->month;
+            $memberGrowthData[] = $club->members()
+                ->wherePivot('created_at', '<=', $date->endOfMonth())
+                ->count();
+        }
+
+        // Thống kê quỹ
+        $fundStats = [
+            'totalIncome' => 0,
+            'totalExpense' => 0,
+            'balance' => 0,
+            'expenseByCategory' => [],
+        ];
+        if ($fund) {
+            $fundStats['totalIncome'] = $fund->transactions()->where('status', 'approved')->where('type', 'income')->sum('amount');
+            $fundStats['totalExpense'] = $fund->transactions()->where('status', 'approved')->where('type', 'expense')->sum('amount');
+            $fundStats['balance'] = $fundStats['totalIncome'] - $fundStats['totalExpense'];
+            $fundStats['expenseByCategory'] = $fund->transactions()
+                ->where('status', 'approved')
+                ->where('type', 'expense')
+                ->groupBy('category')
+                ->selectRaw('category, sum(amount) as total')
+                ->pluck('total', 'category');
+        }
+
+        // Biểu đồ tròn cơ cấu thành viên
+        $memberStructure = \App\Models\ClubMember::where('club_id', $club->id)
+            ->where('status', 'active')
+            ->groupBy('position')
+            ->selectRaw('position, count(*) as count')
+            ->pluck('count', 'position');
+
+        // Biểu đồ cột sự kiện theo tháng (12 tháng gần nhất)
+        $eventsByMonth = \App\Models\Event::where('club_id', $club->id)
+            ->where('start_time', '>=', \Carbon\Carbon::now()->subMonths(11)->startOfMonth())
+            ->selectRaw("DATE_FORMAT(start_time, '%Y-%m') as month, COUNT(*) as count")
+            ->groupBy('month')
+            ->orderBy('month', 'asc')
+            ->get()
+            ->pluck('count', 'month');
+
+        // Biểu đồ đường xu hướng hoạt động (6 tháng gần nhất)
+        $activityTrendLabels = [];
+        $activityTrendNewMembers = [];
+        $activityTrendNewEvents = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subMonths($i);
+            $activityTrendLabels[] = 'Tháng ' . $date->month;
+            $activityTrendNewMembers[] = $club->members()->wherePivot('created_at', '>=', $date->startOfMonth())->wherePivot('created_at', '<=', $date->endOfMonth())->count();
+            $activityTrendNewEvents[] = $club->events()->where('created_at', '>=', $date->startOfMonth())->where('created_at', '<=', $date->endOfMonth())->count();
+        }
+
+        $stats = [
+            'totalMembers' => $totalMembers,
+            'newMembersThisMonth' => $newMembersThisMonth,
+            'totalEvents' => $totalEvents,
+            'upcomingEvents' => $upcomingEvents,
+            'pastEvents' => $pastEvents,
+            'memberGrowth' => [
+                'labels' => $memberGrowthLabels,
+                'data' => $memberGrowthData,
+            ],
+            'fund' => $fundStats,
+            'memberStructure' => [
+                'labels' => $memberStructure->keys(),
+                'data' => $memberStructure->values(),
+            ],
+            'eventsByMonth' => [
+                'labels' => $eventsByMonth->keys(),
+                'data' => $eventsByMonth->values(),
+            ],
+            'activityTrend' => [
+                'labels' => $activityTrendLabels,
+                'newMembers' => $activityTrendNewMembers,
+                'newEvents' => $activityTrendNewEvents,
+            ],
+        ];
+
+        return view('student.club-management.reports', compact('user', 'club', 'stats'));
+    }
 }
