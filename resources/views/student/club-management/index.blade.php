@@ -188,7 +188,7 @@
                                 <small>Sự kiện</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
+                        <a href="{{ route('student.club-management.reports') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-chart-line me-1"></i> Xem báo cáo
                         </a>
                     </div>
