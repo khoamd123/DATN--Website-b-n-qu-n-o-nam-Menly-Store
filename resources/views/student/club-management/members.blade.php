@@ -48,7 +48,10 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <img src="{{ $member->user->avatar_url }}" alt="{{ $member->user->name }}" class="rounded-circle me-3" width="45" height="45">
+                                    @php
+                                        $avatar = optional($member->user)->avatar ?: 'images/default-avatar.png';
+                                    @endphp
+                                    <img src="{{ asset($avatar) }}" alt="{{ $member->user->name ?? 'User' }}" class="rounded-circle me-3" width="45" height="45">
                                     <div>
                                         <div class="fw-semibold">{{ $member->user->name }}</div>
                                         <small class="text-muted">{{ $member->user->email }}</small>

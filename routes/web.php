@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
 use App\Http\Controllers\ClubResourceController;
+use App\Http\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,9 +18,7 @@ use App\Http\Controllers\ClubResourceController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
@@ -97,7 +96,7 @@ Route::get('/quick-login-student', function () {
     // Force save session
     session()->save();
     
-    return redirect()->route('student.dashboard')->with('success', 'Đăng nhập thành công!');
+    return redirect()->route('home')->with('success', 'Đăng nhập thành công!');
 })->name('quick.login.student');
 
 // Student Routes - BYPASS SESSION FOR TESTING
@@ -120,6 +119,68 @@ Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
+// Fallback route for join requests (page may not be implemented yet)
+Route::get(
+    '/student/club-management/{club}/join-requests',
+    [\App\Http\Controllers\StudentController::class, 'clubJoinRequests']
+)->name('student.club-management.join-requests');
+Route::post(
+    '/student/club-management/{club}/join-requests/{request}/approve',
+    [\App\Http\Controllers\StudentController::class, 'approveClubJoinRequest']
+)->name('student.club-management.join-requests.approve');
+Route::post(
+    '/student/club-management/{club}/join-requests/{request}/reject',
+    [\App\Http\Controllers\StudentController::class, 'rejectClubJoinRequest']
+)->name('student.club-management.join-requests.reject');
+// Fallback route for members management (temporary)
+Route::get(
+    '/student/club-management/{club}/members',
+    [\App\Http\Controllers\StudentController::class, 'manageMembers']
+)->name('student.club-management.members');
+// Update permissions for member
+Route::post(
+    '/student/club-management/{club}/members/{member}/permissions',
+    [\App\Http\Controllers\StudentController::class, 'updateMemberPermissions']
+)->name('student.club-management.permissions.update');
+// Remove member
+Route::delete(
+    '/student/club-management/{club}/members/{member}',
+    [\App\Http\Controllers\StudentController::class, 'removeMember']
+)->name('student.club-management.members.remove');
+// Temporary settings routes to avoid missing route errors
+Route::get(
+    '/student/club-management/{club}/settings',
+    [\App\Http\Controllers\StudentController::class, 'clubSettings']
+)->name('student.club-management.settings');
+Route::put(
+    '/student/club-management/{club}/settings',
+    [\App\Http\Controllers\StudentController::class, 'updateClubSettings']
+)->name('student.club-management.settings.update');
+// Fund transactions (student side)
+Route::get(
+    '/student/club-management/fund-transactions',
+    [\App\Http\Controllers\StudentController::class, 'fundTransactions']
+)->name('student.club-management.fund-transactions');
+Route::get(
+    '/student/club-management/fund-transactions/create',
+    [\App\Http\Controllers\StudentController::class, 'fundTransactionCreate']
+)->name('student.club-management.fund-transactions.create');
+Route::post(
+    '/student/club-management/fund-transactions',
+    [\App\Http\Controllers\StudentController::class, 'fundTransactionStore']
+)->name('student.club-management.fund-transactions.store');
+Route::post(
+    '/student/club-management/fund-transactions/{transaction}/approve',
+    [\App\Http\Controllers\StudentController::class, 'approveFundTransaction']
+)->name('student.club-management.fund-transactions.approve');
+Route::post(
+    '/student/club-management/fund-transactions/{transaction}/reject',
+    [\App\Http\Controllers\StudentController::class, 'rejectFundTransaction']
+)->name('student.club-management.fund-transactions.reject');
+Route::get(
+    '/student/club-management/fund-transactions/{transaction}',
+    [\App\Http\Controllers\StudentController::class, 'fundTransactionShow']
+)->name('student.club-management.fund-transactions.show');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 
