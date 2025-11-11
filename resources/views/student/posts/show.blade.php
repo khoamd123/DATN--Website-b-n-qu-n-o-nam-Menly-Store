@@ -28,39 +28,7 @@
                     </small>
                 </div>
 
-                @if($post->image)
-                    @php
-                        $imageUrl = null;
-                        $imageField = $post->image;
-                        if (empty($imageField) && isset($post->attachments) && $post->attachments->count() > 0) {
-                            $firstImageAttachment = $post->attachments->firstWhere('file_type', 'image') ?? $post->attachments->first();
-                            $imageField = $firstImageAttachment->file_url ?? null;
-                        }
-                        if (empty($imageField) && !empty($post->content)) {
-                            if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
-                                $imageField = $m[1] ?? null;
-                            }
-                        }
-                        if (!empty($imageField)) {
-                            if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
-                                $imageUrl = $imageField;
-                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
-                                $imageUrl = asset(ltrim($imageField, '/'));
-                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
-                                $imageUrl = asset(ltrim($imageField, '/'));
-                            } else {
-                                $imageUrl = asset('storage/' . ltrim($imageField, '/'));
-                            }
-                        }
-                    @endphp
-                    @if($imageUrl)
-                        <div class="mb-3" style="border-radius: 12px; overflow: hidden; background: #f8fafc;">
-                            <div style="position: relative; width: 100%; aspect-ratio: 16/9; max-height: 520px;">
-                                <img src="{{ $imageUrl }}" alt="{{ $post->title }}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                        </div>
-                    @endif
-                @endif
+                {{-- Không hiển thị ảnh đại diện trên trang chi tiết theo yêu cầu --}}
 
                 @php
                     // If a featured image is selected, avoid showing the same image again inside content
