@@ -32,7 +32,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nội dung <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="content" rows="10" required>{{ old('content', $post->content) }}</textarea>
+                            <textarea class="form-control" name="content" rows="10">{{ old('content', $post->content) }}</textarea>
                         </div>
                     </div>
                     <div class="col-lg-4">
@@ -95,6 +95,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var contentTextarea = document.querySelector('textarea[name="content"]');
+        var form = document.querySelector('form[action="{{ route('student.posts.update', $post->id) }}"]');
+        var editorInstance = null;
         if (contentTextarea) {
             ClassicEditor.create(contentTextarea, {
                 toolbar: {
@@ -106,8 +108,21 @@
                         'undo', 'redo'
                     ]
                 }
+            }).then(function (editor) {
+                editorInstance = editor;
             }).catch(function (error) {
                 console.error(error);
+            });
+        }
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (editorInstance) {
+                    var textContent = editorInstance.getData().replace(/<[^>]*>/g, '').trim();
+                    if (!textContent) {
+                        e.preventDefault();
+                        alert('Vui lòng nhập nội dung bài viết.');
+                    }
+                }
             });
         }
     });
