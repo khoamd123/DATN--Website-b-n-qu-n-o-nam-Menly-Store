@@ -71,3 +71,26 @@
 @endsection
 
 
+@push('scripts')
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var contentTextarea = document.querySelector('textarea[name="content"]');
+        if (contentTextarea) {
+            ClassicEditor.create(contentTextarea, {
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'blockQuote', 'insertTable', '|',
+                        'undo', 'redo'
+                    ]
+                }
+            }).catch(function (error) {
+                console.error(error);
+            });
+        }
+    });
+    </script>
+@endpush
