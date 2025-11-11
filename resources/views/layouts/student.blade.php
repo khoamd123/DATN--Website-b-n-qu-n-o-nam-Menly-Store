@@ -339,6 +339,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
+                        <i class="fas fa-newspaper me-2"></i> Tin tức
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.profile*') ? 'active' : '' }}" href="{{ route('student.profile.index') }}">
                         <i class="fas fa-user-circle me-2"></i> Hồ sơ
                     </a>

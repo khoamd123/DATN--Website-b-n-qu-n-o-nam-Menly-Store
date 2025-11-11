@@ -14,6 +14,7 @@ use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -1620,6 +1621,111 @@ class AdminController extends Controller
         return view('admin.posts.index', compact('posts', 'clubs'));
     }
 
+    /**
+     * Generate 5 sample posts with images for a specific club
+     */
+    public function generateSamplePostsForClub($clubId)
+    {
+        $club = Club::findOrFail($clubId);
+        
+        // Lấy danh sách ảnh sẵn có trong public/uploads/posts
+        $imagesDir = public_path('uploads/posts');
+        $imagePatterns = ['*.jpg', '*.jpeg', '*.png', '*.webp', '*.gif'];
+        $images = [];
+        foreach ($imagePatterns as $pattern) {
+            $images = array_merge($images, glob($imagesDir . DIRECTORY_SEPARATOR . $pattern));
+        }
+        
+        if (empty($images)) {
+            return redirect()->back()->with('error', 'Không tìm thấy ảnh mẫu trong thư mục uploads/posts');
+        }
+        
+        $titles = [
+            'Hoạt động nổi bật của ' . $club->name,
+            'Nhìn lại tuần qua cùng ' . $club->name,
+            'Thông tin mới từ ' . $club->name,
+            'Điểm tin ' . $club->name,
+            'Sự kiện sắp tới của ' . $club->name,
+        ];
+        
+        for ($i = 0; $i < 5; $i++) {
+            $title = $titles[$i % count($titles)];
+            $slugBase = Str::slug($title);
+            $slug = $slugBase;
+            $k = 1;
+            while (\App\Models\Post::where('slug', $slug)->exists()) {
+                $slug = $slugBase . '-' . time() . '-' . $k;
+                $k++;
+            }
+            
+            // Chọn ảnh theo vòng
+            $chosenImage = $images[$i % count($images)];
+            $relativeImagePath = 'uploads/posts/' . basename($chosenImage);
+            
+            \App\Models\Post::create([
+                'title' => $title,
+                'slug' => $slug,
+                'content' => '<p>Bài viết mẫu tự động tạo cho <strong>' . e($club->name) . '</strong>. Đây là nội dung mô tả ngắn để minh họa giao diện tin tức.</p>',
+                'club_id' => $club->id,
+                'user_id' => session('user_id') ?? 1,
+                'type' => 'post',
+                'status' => 'published',
+                'image' => $relativeImagePath,
+            ]);
+        }
+        
+        return redirect()->back()->with('success', 'Đã tạo 5 bài viết mẫu cho ' . $club->name . '!');
+    }
+    
+    /**
+     * Generate 5 sample posts with images for all clubs
+     */
+    public function generateSamplePostsForAllClubs()
+    {
+        $clubs = Club::all();
+        if ($clubs->isEmpty()) {
+            return redirect()->back()->with('error', 'Không có câu lạc bộ nào để tạo bài viết.');
+        }
+        
+        $imagesDir = public_path('uploads/posts');
+        $imagePatterns = ['*.jpg', '*.jpeg', '*.png', '*.webp', '*.gif'];
+        $images = [];
+        foreach ($imagePatterns as $pattern) {
+            $images = array_merge($images, glob($imagesDir . DIRECTORY_SEPARATOR . $pattern));
+        }
+        if (empty($images)) {
+            return redirect()->back()->with('error', 'Không tìm thấy ảnh mẫu trong thư mục uploads/posts');
+        }
+        
+        foreach ($clubs as $club) {
+            for ($i = 0; $i < 5; $i++) {
+                $title = 'Bài viết mẫu #' . ($i + 1) . ' - ' . $club->name;
+                $slugBase = Str::slug($title);
+                $slug = $slugBase;
+                $k = 1;
+                while (\App\Models\Post::where('slug', $slug)->exists()) {
+                    $slug = $slugBase . '-' . time() . '-' . $k;
+                    $k++;
+                }
+                
+                $chosenImage = $images[($i + $club->id) % count($images)];
+                $relativeImagePath = 'uploads/posts/' . basename($chosenImage);
+                
+                \App\Models\Post::create([
+                    'title' => $title,
+                    'slug' => $slug,
+                    'content' => '<p>Nội dung mẫu cho bài viết của <strong>' . e($club->name) . '</strong>. Ảnh minh họa hiển thị đúng giao diện.</p>',
+                    'club_id' => $club->id,
+                    'user_id' => session('user_id') ?? 1,
+                    'type' => 'post',
+                    'status' => 'published',
+                    'image' => $relativeImagePath,
+                ]);
+            }
+        }
+        
+        return redirect()->back()->with('success', 'Đã tạo 5 bài viết mẫu cho tất cả câu lạc bộ!');
+    }
     /**
      * Hiển thị danh sách bài viết đã xóa (trash)
      */

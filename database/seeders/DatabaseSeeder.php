@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             NotificationReadSeeder::class,
             PermissionSeeder::class,
             UserPermissionClubSeeder::class,
+            PostSampleSeeder::class,
         ]);
         
     }

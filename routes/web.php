@@ -141,7 +141,18 @@ Route::get('/student/contact', function () {
 
 // Student Posts Routes
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
-Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+// Create must be before {id}
+Route::get('/student/posts/create', [\App\Http\Controllers\StudentController::class, 'createPost'])->name('student.posts.create');
+Route::post('/student/posts', [\App\Http\Controllers\StudentController::class, 'storePost'])->name('student.posts.store');
+// Edit must be before {id}
+Route::get('/student/posts/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editPost'])->whereNumber('id')->name('student.posts.edit');
+Route::put('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'updatePost'])->whereNumber('id')->name('student.posts.update');
+// Manage list and delete
+Route::get('/student/my-posts', [\App\Http\Controllers\StudentController::class, 'myPosts'])->name('student.posts.manage');
+Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'deletePost'])->whereNumber('id')->name('student.posts.delete');
+// Show and comments with numeric constraint
+Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
+Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
 
 Route::get('/student/club-management', function () {
     $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
@@ -382,6 +393,9 @@ Route::prefix('admin')->group(function () {
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
     Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
     Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+    // Tạo nhanh 5 bài viết có ảnh cho 1 CLB hoặc cho tất cả CLB
+    Route::post('/clubs/{club}/generate-sample-posts', [AdminController::class, 'generateSamplePostsForClub'])->name('admin.clubs.generate-posts');
+    Route::post('/posts/generate-sample-for-all', [AdminController::class, 'generateSamplePostsForAllClubs'])->name('admin.posts.generate-sample-for-all');
     // Upload ảnh từ trình soạn thảo
     Route::post('/posts/upload-image', [PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
         Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');

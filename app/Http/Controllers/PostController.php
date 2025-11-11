@@ -68,12 +68,16 @@ class PostController extends Controller
         $data['user_id'] = session('user_id');
         $data['type'] = 'post';
 
-        // Xử lý upload ảnh
+        // Xử lý upload ảnh (lưu trực tiếp vào public/uploads để không cần storage:link)
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $filename = time() . '_' . $image->getClientOriginalName();
-            $path = $image->storeAs('public/posts', $filename);
-            $data['image'] = 'posts/' . $filename;
+            $destination = public_path('uploads/posts');
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            $image->move($destination, $filename);
+            $data['image'] = 'uploads/posts/' . $filename;
         }
 
         Post::create($data);
@@ -121,13 +125,21 @@ class PostController extends Controller
         if ($request->hasFile('image')) {
             // Xóa ảnh cũ nếu có
             if ($post->image) {
-                Storage::delete('public/' . $post->image);
+                if (\Illuminate\Support\Str::startsWith($post->image, ['uploads/', '/uploads/'])) {
+                    @unlink(public_path(ltrim($post->image, '/')));
+                } else {
+                    Storage::delete('public/' . ltrim($post->image, '/'));
+                }
             }
 
             $image = $request->file('image');
             $filename = time() . '_' . $image->getClientOriginalName();
-            $path = $image->storeAs('public/posts', $filename);
-            $data['image'] = 'posts/' . $filename;
+            $destination = public_path('uploads/posts');
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            $image->move($destination, $filename);
+            $data['image'] = 'uploads/posts/' . $filename;
         }
 
         $post->update($data);

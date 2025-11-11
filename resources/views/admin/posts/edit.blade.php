@@ -121,7 +121,17 @@
                                         <input type="file" class="form-control mb-2" id="featured-image" name="image" accept="image/*">
                                         <div id="featured-preview" class="text-center" style="display: {{ $post->image ? 'block' : 'none' }};">
                                             @if($post->image)
-                                                <img id="featured-img" src="{{ asset($post->image) }}" alt="Ảnh đại diện" class="img-fluid rounded border" style="max-height: 200px; object-fit: cover;">
+                                                @php
+                                                    $img = $post->image;
+                                                    if (\Illuminate\Support\Str::startsWith($img, ['uploads/', '/uploads/'])) {
+                                                        $previewUrl = asset(ltrim($img, '/'));
+                                                    } elseif (\Illuminate\Support\Str::startsWith($img, ['storage/', '/storage/'])) {
+                                                        $previewUrl = asset(ltrim($img, '/'));
+                                                    } else {
+                                                        $previewUrl = asset('storage/' . ltrim($img, '/'));
+                                                    }
+                                                @endphp
+                                                <img id="featured-img" src="{{ $previewUrl }}" alt="Ảnh đại diện" class="img-fluid rounded border" style="max-height: 200px; object-fit: cover;">
                                             @else
                                                 <img id="featured-img" src="#" alt="Ảnh đại diện" class="img-fluid rounded border" style="max-height: 200px; object-fit: cover; display:none;">
                                             @endif
