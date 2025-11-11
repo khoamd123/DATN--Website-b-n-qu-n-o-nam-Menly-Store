@@ -55,19 +55,19 @@
                                 'cancelled' => 'Đã hủy'
                             ];
                         @endphp
-                        <span class="badge bg-light text-dark fs-6 px-3 py-2">
-                            {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
-                        </span>
-                        @if($event->status === 'cancelled')
-                            <div class="mt-2 p-2 bg-light rounded">
-                                <small class="text-danger d-block">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    <strong>Lý do hủy:</strong> 
-                                </small>
-                                <small class="text-dark">
-                                    {{ $event->cancellation_reason ?? 'Sự kiện đã bị hủy bởi quản trị viên' }}
-                                </small>
-                            </div>
+                        <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }} fs-6 px-3 py-2">
+                                {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
+                            </span>
+                        @if($event->status === 'cancelled' && $event->cancellation_reason)
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <small class="text-danger d-block">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <strong>Lý do hủy:</strong> 
+                                    </small>
+                                    <small class="text-dark">
+                                    {{ $event->cancellation_reason }}
+                                    </small>
+                                </div>
                         @endif
                     </div>
                 </div>
@@ -127,112 +127,467 @@
                         </div>
                     @endif
                     
-                    <!-- Thông tin thời gian -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-primary">
-                                    <i class="fas fa-play"></i>
+                    <!-- Thông tin Câu lạc bộ -->
+                    @if($event->club)
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Câu lạc bộ tổ chức</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="club-avatar me-3">
+                                    @if($event->club->logo)
+                                        <img src="{{ asset('storage/' . $event->club->logo) }}" alt="{{ $event->club->name }}" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+                                    @else
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                                            {{ substr($event->club->name, 0, 1) }}
+                                        </div>
+                                    @endif
                                 </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Thời gian bắt đầu</h6>
-                                    <p class="info-value">{{ $event->start_time ? \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                <div>
+                                    <h5 class="mb-1">{{ $event->club->name }}</h5>
+                                    @if($event->club->description)
+                                        <p class="text-muted mb-0 small">{{ Str::limit($event->club->description, 100) }}</p>
+                                    @endif
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-danger">
-                                    <i class="fas fa-stop"></i>
+                    </div>
+                    @endif
+
+                    <!-- Thông tin thời gian -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Thông tin thời gian</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-play"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Thời gian bắt đầu</h6>
+                                            <p class="info-value mb-1">{{ $event->start_time ? \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                            @if($event->start_time)
+                                                <small class="text-muted">
+                                                    @php
+                                                        $startTime = \Carbon\Carbon::parse($event->start_time);
+                                                        $now = \Carbon\Carbon::now();
+                                                    @endphp
+                                                    @if($startTime->isPast())
+                                                        <i class="fas fa-check-circle text-success me-1"></i>Đã bắt đầu
+                                                    @else
+                                                        <i class="fas fa-clock text-warning me-1"></i>Còn {{ $startTime->diffForHumans() }}
+                                                    @endif
+                                                </small>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Thời gian kết thúc</h6>
-                                    <p class="info-value">{{ $event->end_time ? \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-stop"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Thời gian kết thúc</h6>
+                                            <p class="info-value mb-1">{{ $event->end_time ? \Carbon\Carbon::parse($event->end_time)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                            @if($event->end_time)
+                                                <small class="text-muted">
+                                                    @php
+                                                        $endTime = \Carbon\Carbon::parse($event->end_time);
+                                                    @endphp
+                                                    @if($endTime->isPast())
+                                                        <i class="fas fa-check-circle text-success me-1"></i>Đã kết thúc
+                                                    @else
+                                                        <i class="fas fa-clock text-info me-1"></i>Còn {{ $endTime->diffForHumans() }}
+                                                    @endif
+                                                </small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-calendar-times"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Hạn chót đăng ký tham gia</h6>
+                                            @if($event->registration_deadline)
+                                                <p class="info-value mb-1">{{ $event->registration_deadline->format('d/m/Y H:i') }}</p>
+                                                @php
+                                                    $deadline = \Carbon\Carbon::parse($event->registration_deadline);
+                                                @endphp
+                                                <small class="text-muted">
+                                                    @if($deadline->isPast())
+                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i>Đã hết hạn đăng ký
+                                                    @else
+                                                        <i class="fas fa-clock text-warning me-1"></i>Còn {{ $deadline->diffForHumans() }} để đăng ký
+                                                    @endif
+                                                </small>
+                                            @else
+                                                <p class="info-value text-muted fst-italic">Chưa có thông tin</p>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Thông tin chi tiết -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-info">
-                                    <i class="fas fa-{{ $event->mode === 'offline' ? 'map-marker-alt' : ($event->mode === 'online' ? 'video' : 'users') }}"></i>
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin chi tiết</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-{{ $event->mode === 'offline' ? 'map-marker-alt' : ($event->mode === 'online' ? 'video' : 'users') }}"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Hình thức tổ chức</h6>
+                                            @php
+                                                $modeLabels = [
+                                                    'offline' => 'Tại chỗ',
+                                                    'online' => 'Trực tuyến',
+                                                    'hybrid' => 'Kết hợp'
+                                                ];
+                                            @endphp
+                                            <p class="info-value">{{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Hình thức</h6>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Địa điểm</h6>
+                                            <p class="info-value">{{ $event->location ?? 'Chưa xác định' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Số lượng tối đa</h6>
+                                            <p class="info-value">{{ $event->max_participants ?? 'Không giới hạn' }} người</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-hashtag"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Mã sự kiện</h6>
+                                            <p class="info-value">#{{ $event->id }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin tổ chức -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thông tin tổ chức</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-user-tie me-2"></i>Người phụ trách chính <span class="text-muted">(Chủ nhiệm / Trưởng ban tổ chức)</span></h6>
+                                <p class="ms-4">
+                                    @if($event->main_organizer)
+                                        {{ $event->main_organizer }}
+                                    @else
+                                        <span class="text-muted fst-italic">Chưa có thông tin</span>
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6><i class="fas fa-user-friends me-2"></i>Ban tổ chức / Đội ngũ thực hiện</h6>
+                                <p class="ms-4" style="white-space: pre-line;">
+                                    @if($event->organizing_team)
+                                        {{ $event->organizing_team }}
+                                    @else
+                                        <span class="text-muted fst-italic">Chưa có thông tin</span>
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6><i class="fas fa-handshake me-2"></i>Đơn vị phối hợp hoặc đồng tổ chức <span class="text-muted">(nếu có)</span></h6>
+                                <p class="ms-4" style="white-space: pre-line;">
+                                    @if($event->co_organizers)
+                                        {{ $event->co_organizers }}
+                                    @else
+                                        <span class="text-muted fst-italic">Chưa có thông tin</span>
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6><i class="fas fa-phone-alt me-2"></i>Liên hệ / Thông tin người chịu trách nhiệm</h6>
+                                <div class="ms-4">
                                     @php
-                                        $modeLabels = [
-                                            'offline' => 'Tại chỗ',
-                                            'online' => 'Trực tuyến',
-                                            'hybrid' => 'Kết hợp'
-                                        ];
+                                        $contact = null;
+                                        if ($event->contact_info) {
+                                            $contact = is_array($event->contact_info) ? $event->contact_info : json_decode($event->contact_info, true);
+                                        }
                                     @endphp
-                                    <p class="info-value">{{ $modeLabels[$event->mode] ?? ucfirst($event->mode) }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-warning">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Địa điểm</h6>
-                                    <p class="info-value">{{ $event->location ?? 'Chưa xác định' }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Thông tin bổ sung -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-success">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Số lượng tối đa</h6>
-                                    <p class="info-value">{{ $event->max_participants ?? 'Không giới hạn' }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-secondary">
-                                    <i class="fas fa-building"></i>
-                                </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Câu lạc bộ</h6>
-                                    <p class="info-value">{{ $event->club->name ?? 'N/A' }}</p>
+                                    @if($contact && (isset($contact['phone']) || isset($contact['email'])))
+                                        @if(isset($contact['phone']) && $contact['phone'])
+                                            <p class="mb-2"><i class="fas fa-phone me-2 text-primary"></i>Số điện thoại: <strong>{{ $contact['phone'] }}</strong></p>
+                                        @endif
+                                        @if(isset($contact['email']) && $contact['email'])
+                                            <p class="mb-2"><i class="fas fa-envelope me-2 text-primary"></i>Email: <strong><a href="mailto:{{ $contact['email'] }}">{{ $contact['email'] }}</a></strong></p>
+                                        @endif
+                                    @else
+                                        <p class="text-muted fst-italic"><i class="fas fa-info-circle me-2"></i>Chưa có thông tin liên hệ</p>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Thông tin người tạo -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-dark">
-                                    <i class="fas fa-user"></i>
+                    <!-- Tài liệu và File -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-file me-2"></i>Tài liệu và File</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3 p-3 border rounded {{ !$event->proposal_file ? 'bg-light' : '' }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-file-pdf me-2 text-danger"></i>Kế hoạch chi tiết <span class="text-muted">(Proposal / Plan file)</span></h6>
+                                        @if($event->proposal_file)
+                                            <small class="text-muted">File kế hoạch chi tiết của sự kiện</small>
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->proposal_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
+                                            <div class="mt-1">
+                                                <small class="text-muted"><i class="fas fa-file me-1"></i>Kích thước: {{ $fileSizeFormatted }}</small>
+                                            </div>
+                                        @else
+                                            <small class="text-muted fst-italic">Chưa có file</small>
+                                        @endif
+                                    </div>
+                                    @if($event->proposal_file)
+                                        <a href="{{ asset('storage/' . $event->proposal_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-2"></i>Tải xuống
+                                        </a>
+                                    @else
+                                        <span class="badge bg-secondary">Chưa có</span>
+                                    @endif
                                 </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Người tạo</h6>
-                                    <p class="info-value">{{ $event->creator->name ?? 'N/A' }}</p>
+                            </div>
+
+                            <div class="mb-3 p-3 border rounded {{ !$event->poster_file ? 'bg-light' : '' }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-image me-2 text-primary"></i>Poster / Ấn phẩm truyền thông <span class="text-muted">(nếu có)</span></h6>
+                                        @if($event->poster_file)
+                                            <small class="text-muted">Hình ảnh quảng bá sự kiện</small>
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->poster_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
+                                            <div class="mt-1">
+                                                <small class="text-muted"><i class="fas fa-file me-1"></i>Kích thước: {{ $fileSizeFormatted }}</small>
+                                            </div>
+                                        @else
+                                            <small class="text-muted fst-italic">Chưa có file</small>
+                                        @endif
+                                    </div>
+                                    @if($event->poster_file)
+                                        <div>
+                                            @if(in_array(strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
+                                                <a href="{{ asset('storage/' . $event->poster_file) }}" target="_blank" class="btn btn-sm btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#posterModal">
+                                                    <i class="fas fa-eye me-2"></i>Xem
+                                                </a>
+                                            @endif
+                                            <a href="{{ asset('storage/' . $event->poster_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-download me-2"></i>Tải xuống
+                                            </a>
+                                        </div>
+                                    @else
+                                        <span class="badge bg-secondary">Chưa có</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mb-3 p-3 border rounded {{ !$event->permit_file ? 'bg-light' : '' }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-file-alt me-2 text-warning"></i>Giấy phép / Công văn xin tổ chức <span class="text-muted">(nếu cần)</span></h6>
+                                        @if($event->permit_file)
+                                            <small class="text-muted">Công văn xin tổ chức sự kiện</small>
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->permit_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
+                                            <div class="mt-1">
+                                                <small class="text-muted"><i class="fas fa-file me-1"></i>Kích thước: {{ $fileSizeFormatted }}</small>
+                                            </div>
+                                        @else
+                                            <small class="text-muted fst-italic">Chưa có file</small>
+                                        @endif
+                                    </div>
+                                    @if($event->permit_file)
+                                        <a href="{{ asset('storage/' . $event->permit_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-2"></i>Tải xuống
+                                        </a>
+                                    @else
+                                        <span class="badge bg-secondary">Chưa có</span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="info-card">
-                                <div class="info-icon bg-light text-dark">
-                                    <i class="fas fa-clock"></i>
+                    </div>
+
+                    <!-- Khách mời -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Các khách mời</h5>
+                        </div>
+                        <div class="card-body">
+                            @php
+                                $guestData = null;
+                                if ($event->guests) {
+                                    $guestData = is_array($event->guests) ? $event->guests : (is_string($event->guests) ? json_decode($event->guests, true) : null);
+                                }
+                                $guestTypes = $guestData['types'] ?? [];
+                                $guestLabels = [
+                                    'lecturer' => 'Giảng viên',
+                                    'student' => 'Sinh viên',
+                                    'sponsor' => 'Nhà tài trợ',
+                                    'other' => 'Khác'
+                                ];
+                                $guestIcons = [
+                                    'lecturer' => 'fa-chalkboard-teacher',
+                                    'student' => 'fa-user-graduate',
+                                    'sponsor' => 'fa-hand-holding-usd',
+                                    'other' => 'fa-ellipsis-h'
+                                ];
+                            @endphp
+                            
+                            <div class="mb-3">
+                                <h6><i class="fas fa-list me-2"></i>Loại khách mời:</h6>
+                                <div class="ms-4">
+                                    @if(!empty($guestTypes))
+                                        @foreach($guestTypes as $type)
+                                            @if($type !== 'other')
+                                                <span class="badge bg-primary me-2 mb-2" style="font-size: 0.9rem;">
+                                                    <i class="fas {{ $guestIcons[$type] ?? 'fa-user' }} me-1"></i>
+                                                    {{ $guestLabels[$type] ?? ucfirst($type) }}
+                                                </span>
+                                            @endif
+                                        @endforeach
+                                        @if(in_array('other', $guestTypes))
+                                            <span class="badge bg-info me-2 mb-2" style="font-size: 0.9rem;">
+                                                <i class="fas fa-ellipsis-h me-1"></i>
+                                                Khác
+                                            </span>
+                                        @endif
+                                    @else
+                                        <p class="text-muted fst-italic"><i class="fas fa-info-circle me-2"></i>Chưa có thông tin về loại khách mời</p>
+                                    @endif
                                 </div>
-                                <div class="info-content">
-                                    <h6 class="info-label">Cập nhật lần cuối</h6>
-                                    <p class="info-value">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6><i class="fas fa-info-circle me-2"></i>Thông tin khách mời khác:</h6>
+                                <div class="ms-4">
+                                    @if(!empty($guestData['other_info']))
+                                        <p style="white-space: pre-line; background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #17a2b8;">{{ $guestData['other_info'] }}</p>
+                                    @else
+                                        <p class="text-muted fst-italic" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #dee2e6;">
+                                            <i class="fas fa-info-circle me-2"></i>Chưa có thông tin chi tiết về khách mời khác
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin hệ thống -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-gradient-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-database me-2"></i>Thông tin hệ thống</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Người tạo</h6>
+                                            <p class="info-value">{{ $event->creator->name ?? 'N/A' }}</p>
+                                            @if($event->creator)
+                                                <small class="text-muted">{{ $event->creator->email ?? '' }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Ngày tạo</h6>
+                                            <p class="info-value">{{ $event->created_at ? $event->created_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                                            @if($event->created_at)
+                                                <small class="text-muted">{{ $event->created_at->diffForHumans() }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Cập nhật lần cuối</h6>
+                                            <p class="info-value">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                                            @if($event->updated_at)
+                                                <small class="text-muted">{{ $event->updated_at->diffForHumans() }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-card">
+                                        <div class="info-icon">
+                                            <i class="fas fa-link"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <h6 class="info-label">Slug</h6>
+                                            <p class="info-value">
+                                                <code class="small">{{ $event->slug }}</code>
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -358,24 +713,45 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        @if($event->status === 'pending')
-                            <form method="POST" action="{{ route('admin.events.approve', $event->id) }}">
-                                @csrf
-                                <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                    <i class="fas fa-check me-2"></i>Duyệt sự kiện
+                        @if($event->status !== 'cancelled')
+                            @if($event->status === 'pending')
+                                <form method="POST" action="{{ route('admin.events.approve', $event->id) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                        <i class="fas fa-check me-2"></i>Duyệt sự kiện
+                                    </button>
+                                </form>
+                            @endif
+                            
+                            @if(in_array($event->status, ['pending', 'approved']))
+                                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
+                                    <i class="fas fa-times me-2"></i>Hủy sự kiện
                                 </button>
-                            </form>
-                        @endif
-                        
-                        @if(in_array($event->status, ['pending', 'approved', 'ongoing']))
-                            <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
-                                <i class="fas fa-times me-2"></i>Hủy sự kiện
+                            @elseif($event->status === 'ongoing')
+                                <button type="button" class="btn btn-secondary btn-lg w-100" disabled title="Sự kiện đang diễn ra, không thể hủy">
+                                    <i class="fas fa-ban me-2"></i>Sự kiện đang diễn ra, không thể hủy
+                                </button>
+                            @endif
+                            
+                            <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-edit me-2"></i>Chỉnh sửa
+                            </a>
+                            
+                            @if($event->status === 'ongoing')
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Thông báo:</strong> Sự kiện đang diễn ra, không thể hủy.
+                                </div>
+                            @elseif(!in_array($event->status, ['cancelled', 'completed', 'ongoing']))
+                            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#deleteEventModal">
+                                    <i class="fas fa-ban me-2"></i>Hủy sự kiện
                             </button>
+                            @endif
+                        @else
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle me-2"></i>Sự kiện đã bị hủy và không thể chỉnh sửa.
+                            </div>
                         @endif
-                        
-                        <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg">
-                            <i class="fas fa-edit me-2"></i>Chỉnh sửa
-                        </a>
                         
                         <a href="{{ route('admin.events.create') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-plus me-2"></i>Tạo sự kiện mới
@@ -701,9 +1077,17 @@
     padding: 1rem;
     background: #f8f9fa;
     border-radius: 10px;
-    border: 1px solid #e9ecef;
+    border: none;
     transition: all 0.3s ease;
     margin-bottom: 1rem;
+    position: relative;
+}
+
+/* Xóa bỏ thanh gạch ngang màu nếu có */
+.info-card::before,
+.info-card::after {
+    display: none !important;
+    content: none !important;
 }
 
 .info-card:hover {
@@ -719,8 +1103,74 @@
     align-items: center;
     justify-content: center;
     margin-right: 1rem;
-    color: white;
-    font-size: 1.2rem;
+    color: #6c757d;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    position: relative;
+    background: transparent !important;
+    border: 2px solid #e9ecef;
+    box-shadow: none;
+}
+
+/* Tắt tất cả màu nền của icon */
+.info-icon.bg-primary,
+.info-icon.bg-danger,
+.info-icon.bg-warning,
+.info-icon.bg-info,
+.info-icon.bg-success,
+.info-icon.bg-secondary,
+.info-icon.bg-dark,
+.info-icon.bg-light {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Xóa bỏ thanh gạch ngang màu ở icon nếu có */
+.info-icon::before,
+.info-icon::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Đảm bảo không có border-top tạo thanh gạch ngang */
+.info-card > * {
+    border-top: none !important;
+}
+
+/* Xóa bỏ bất kỳ thanh gạch ngang màu nào */
+.info-card .info-icon,
+.info-card .info-content {
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+/* Đảm bảo icon hiển thị đẹp và không có thanh gạch ngang */
+.info-icon {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Xóa bỏ tất cả các thanh gạch ngang màu có thể xuất hiện */
+.info-card::before,
+.info-card::after,
+.info-icon::before,
+.info-icon::after,
+.info-content::before,
+.info-content::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    border: none !important;
+    background: none !important;
+}
+
+/* Đảm bảo không có element nào tạo thanh gạch ngang */
+.info-card > div::before,
+.info-card > div::after {
+    display: none !important;
+    content: none !important;
 }
 
 .info-content {
@@ -902,7 +1352,8 @@
 </style>
 @endpush
 
-<!-- Modal hủy sự kiện -->
+<!-- Modal hủy sự kiện (hủy nhanh) -->
+@if($event->status !== 'ongoing' && in_array($event->status, ['pending', 'approved']))
 <div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -950,4 +1401,83 @@
         </div>
     </div>
 </div>
+@endif
+
+<!-- Modal hủy sự kiện (với lý do chi tiết) -->
+@if($event->status !== 'ongoing' && $event->status !== 'cancelled' && $event->status !== 'completed')
+<div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteEventModalLabel">
+                    <i class="fas fa-ban me-2"></i>Hủy sự kiện
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.events.delete', $event->id) }}">
+                @csrf
+                @method('DELETE')
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Thông báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Sự kiện sẽ chuyển sang trạng thái "Đã hủy" và vẫn được lưu trữ trong hệ thống. Thông tin sự kiện sẽ không bị xóa.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deletion_reason" class="form-label">
+                            Lý do hủy sự kiện <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control @error('deletion_reason') is-invalid @enderror" 
+                                  id="deletion_reason" 
+                                  name="deletion_reason" 
+                                  rows="4" 
+                                  placeholder="Vui lòng nhập lý do hủy sự kiện (tối thiểu 10 ký tự)..." 
+                                  required>{{ old('deletion_reason') }}</textarea>
+                        @error('deletion_reason')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            Lý do hủy sẽ được lưu trữ trong hệ thống và hiển thị trong thông tin sự kiện.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Đóng
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-ban me-2"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- Modal xem poster -->
+@if($event->poster_file && in_array(strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
+<div class="modal fade" id="posterModal" tabindex="-1" aria-labelledby="posterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="posterModalLabel">
+                    <i class="fas fa-image me-2"></i>Poster sự kiện
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="{{ asset('storage/' . $event->poster_file) }}" alt="Poster sự kiện" class="img-fluid rounded">
+            </div>
+            <div class="modal-footer">
+                <a href="{{ asset('storage/' . $event->poster_file) }}" download class="btn btn-primary">
+                    <i class="fas fa-download me-2"></i>Tải xuống
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection

@@ -15,6 +15,8 @@ class PostComment extends Model
         'parent_id',
         'content',
         'status',
+        'deletion_reason',
+        'deleted_at',
     ];
 
     /**

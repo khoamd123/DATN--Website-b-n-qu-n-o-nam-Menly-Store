@@ -412,6 +412,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/events/{id}', [AdminController::class, 'eventsShow'])->name('admin.events.show');
     Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
     Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');
+    Route::delete('/events/{id}', [AdminController::class, 'deleteEvent'])->name('admin.events.delete');
     
 
     // Bài viết
@@ -423,19 +424,19 @@ Route::prefix('admin')->group(function () {
     Route::post('/posts/generate-sample-for-all', [AdminController::class, 'generateSamplePostsForAllClubs'])->name('admin.posts.generate-sample-for-all');
     // Upload ảnh từ trình soạn thảo
     Route::post('/posts/upload-image', [PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
-        Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
-        Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
-        Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
-        Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
-        
-        // Thùng rác bài viết
-        Route::get('/posts-trash', [AdminController::class, 'postsTrash'])->name('admin.posts.trash');
-        Route::post('/posts/{id}/restore', [AdminController::class, 'restorePost'])->name('admin.posts.restore');
-        Route::delete('/posts/{id}/force-delete', [AdminController::class, 'forceDeletePost'])->name('admin.posts.force-delete');
-
+    Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
+    Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
+    Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');
+    Route::patch('/posts/{id}/status', [AdminController::class, 'updatePostStatus'])->name('admin.posts.status');
+    
+    // Thùng rác bài viết
+    Route::get('/posts-trash', [AdminController::class, 'postsTrash'])->name('admin.posts.trash');
+    Route::post('/posts/{id}/restore', [AdminController::class, 'restorePost'])->name('admin.posts.restore');
+    Route::delete('/posts/{id}/force-delete', [AdminController::class, 'forceDeletePost'])->name('admin.posts.force-delete');
     
     // Bình luận
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');
+    Route::get('/comments/{type}/{id}', [AdminController::class, 'commentsShow'])->name('admin.comments.show');
     Route::delete('/comments/{type}/{id}', [AdminController::class, 'deleteComment'])->name('admin.comments.delete');
     
     // Phân quyền

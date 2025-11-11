@@ -1446,15 +1446,46 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
-                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'description' => 'nullable|string|max:10000',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
                 'location' => 'nullable|string|max:255',
                 'max_participants' => 'nullable|integer|min:1',
                 'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+                'registration_deadline' => 'nullable|date|before_or_equal:start_time',
+                'main_organizer' => 'nullable|string|max:255',
+                'organizing_team' => 'nullable|string|max:5000',
+                'co_organizers' => 'nullable|string|max:2000',
+                'contact_phone' => 'nullable|string|max:20',
+                'contact_email' => 'nullable|email|max:255',
+                'proposal_file' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+                'poster_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'permit_file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+                'guest_types' => 'nullable|array',
+                'guest_types.*' => 'in:lecturer,student,sponsor,other',
+                'guest_other_info' => 'nullable|string|max:5000',
+            ], [
+                'images.*.image' => 'File ảnh không hợp lệ. Vui lòng chọn file ảnh (JPG, JPEG, PNG, WEBP).',
+                'images.*.mimes' => 'Định dạng ảnh không được hỗ trợ. Chỉ chấp nhận: JPG, JPEG, PNG, WEBP.',
+                'images.*.max' => 'Kích thước ảnh không được vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.',
+                'registration_deadline.before_or_equal' => 'Hạn chót đăng ký phải trước hoặc bằng thời gian bắt đầu sự kiện.',
+                'contact_email.email' => 'Email không hợp lệ.',
+                'proposal_file.mimes' => 'File kế hoạch chỉ chấp nhận định dạng: PDF, DOC, DOCX.',
+                'proposal_file.max' => 'File kế hoạch không được vượt quá 10MB.',
+                'poster_file.mimes' => 'File poster chỉ chấp nhận định dạng: PDF, JPG, JPEG, PNG.',
+                'poster_file.max' => 'File poster không được vượt quá 10MB.',
+                'permit_file.mimes' => 'File giấy phép chỉ chấp nhận định dạng: PDF, DOC, DOCX, JPG, JPEG, PNG.',
+                'permit_file.max' => 'File giấy phép không được vượt quá 10MB.',
             ]);
+
+            // Validate guest_other_info khi có chọn "other"
+            if (is_array($request->guest_types) && in_array('other', $request->guest_types)) {
+                if (empty(trim($request->guest_other_info ?? ''))) {
+                    return back()->withErrors(['guest_other_info' => 'Vui lòng nhập thông tin khách mời khi chọn "Khác..."'])->withInput();
+                }
+            }
 
             // Tạo slug từ title
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->title)));
@@ -1469,11 +1500,88 @@ class AdminController extends Controller
                 $counter++;
             }
 
-            $event = Event::create([
+            // Xử lý upload files
+            $proposalFilePath = null;
+            $posterFilePath = null;
+            $permitFilePath = null;
+            
+            if ($request->hasFile('proposal_file')) {
+                $proposalFilePath = $request->file('proposal_file')->store('events/files', 'public');
+            }
+            
+            if ($request->hasFile('poster_file')) {
+                $posterFilePath = $request->file('poster_file')->store('events/posters', 'public');
+            }
+            
+            if ($request->hasFile('permit_file')) {
+                $permitFilePath = $request->file('permit_file')->store('events/permits', 'public');
+            }
+            
+            // Xử lý contact_info
+            $contactInfo = null;
+            if ($request->contact_phone || $request->contact_email) {
+                $contactInfo = json_encode([
+                    'phone' => $request->contact_phone,
+                    'email' => $request->contact_email,
+                ]);
+            }
+            
+            // Xử lý guests data
+            $guestsData = null;
+            $guestTypes = $request->guest_types ?? [];
+            $otherInfo = $request->guest_other_info ?? null;
+            
+            if (!empty($guestTypes) || !empty(trim($otherInfo ?? ''))) {
+                $guestsData = json_encode([
+                    'types' => $guestTypes,
+                    'other_info' => (is_array($guestTypes) && in_array('other', $guestTypes) && !empty(trim($otherInfo ?? ''))) ? trim($otherInfo) : null,
+                ]);
+            }
+            
+            // Tự động thêm các cột nếu chưa tồn tại
+            $columns = DB::select("SHOW COLUMNS FROM events");
+            $columnNames = array_column($columns, 'Field');
+            
+            // Danh sách cột cần thiết
+            $requiredColumns = [
+                'registration_deadline' => 'DATETIME NULL',
+                'main_organizer' => 'VARCHAR(255) NULL',
+                'organizing_team' => 'TEXT NULL',
+                'co_organizers' => 'TEXT NULL',
+                'contact_info' => 'TEXT NULL',
+                'proposal_file' => 'VARCHAR(500) NULL',
+                'poster_file' => 'VARCHAR(500) NULL',
+                'permit_file' => 'VARCHAR(500) NULL',
+                'guests' => 'TEXT NULL',
+            ];
+            
+            // Tự động thêm các cột còn thiếu
+            foreach ($requiredColumns as $colName => $colType) {
+                if (!in_array($colName, $columnNames)) {
+                    try {
+                        DB::statement("ALTER TABLE events ADD COLUMN {$colName} {$colType}");
+                        $columnNames[] = $colName; // Cập nhật danh sách
+                        \Log::info("EventsStore - Auto added column: {$colName}");
+                    } catch (\Exception $e) {
+                        \Log::warning("EventsStore - Failed to add column {$colName}: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // Cập nhật lại danh sách cột sau khi thêm
+            $columns = DB::select("SHOW COLUMNS FROM events");
+            $columnNames = array_column($columns, 'Field');
+            
+            // Log để debug
+            \Log::info('EventsStore - Columns check', [
+                'columns_exists' => $columnNames,
+            ]);
+            
+            $eventData = [
                 'title' => $request->title,
                 'slug' => $slug,
                 'description' => $request->description,
-                'image' => null, // Sẽ không sử dụng field image nữa, dùng event_images table
+                'image' => null,
                 'club_id' => $request->club_id,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -1482,6 +1590,73 @@ class AdminController extends Controller
                 'max_participants' => $request->max_participants,
                 'status' => $request->status,
                 'created_by' => session('user_id'),
+            ];
+            
+            // Thêm tất cả các field mới vào eventData
+            $addedFields = [];
+            if (in_array('registration_deadline', $columnNames)) {
+                $eventData['registration_deadline'] = $request->registration_deadline;
+                $addedFields[] = 'registration_deadline';
+            }
+            if (in_array('main_organizer', $columnNames)) {
+                $eventData['main_organizer'] = $request->main_organizer;
+                $addedFields[] = 'main_organizer';
+            }
+            if (in_array('organizing_team', $columnNames)) {
+                $eventData['organizing_team'] = $request->organizing_team;
+                $addedFields[] = 'organizing_team';
+            }
+            if (in_array('co_organizers', $columnNames)) {
+                $eventData['co_organizers'] = $request->co_organizers;
+                $addedFields[] = 'co_organizers';
+            }
+            if (in_array('contact_info', $columnNames)) {
+                $eventData['contact_info'] = $contactInfo;
+                $addedFields[] = 'contact_info';
+            }
+            if (in_array('proposal_file', $columnNames)) {
+                $eventData['proposal_file'] = $proposalFilePath;
+                $addedFields[] = 'proposal_file';
+            }
+            if (in_array('poster_file', $columnNames)) {
+                $eventData['poster_file'] = $posterFilePath;
+                $addedFields[] = 'poster_file';
+            }
+            if (in_array('permit_file', $columnNames)) {
+                $eventData['permit_file'] = $permitFilePath;
+                $addedFields[] = 'permit_file';
+            }
+            if (in_array('guests', $columnNames)) {
+                $eventData['guests'] = $guestsData;
+                $addedFields[] = 'guests';
+            }
+            
+            // Log dữ liệu sẽ được lưu
+            \Log::info('EventsStore - Data to save', [
+                'added_fields' => $addedFields,
+                'main_organizer' => $request->main_organizer ?? 'null',
+                'organizing_team' => $request->organizing_team ? 'has_data' : 'null',
+                'co_organizers' => $request->co_organizers ? 'has_data' : 'null',
+                'contact_info' => $contactInfo,
+                'proposal_file' => $proposalFilePath,
+                'poster_file' => $posterFilePath,
+                'permit_file' => $permitFilePath,
+                'guests' => $guestsData,
+            ]);
+            
+            $event = Event::create($eventData);
+            
+            // Log sau khi tạo
+            \Log::info('EventsStore - Event created', [
+                'event_id' => $event->id,
+                'main_organizer' => $event->main_organizer ?? 'null',
+                'organizing_team' => $event->organizing_team ? 'has_data' : 'null',
+                'co_organizers' => $event->co_organizers ? 'has_data' : 'null',
+                'contact_info' => $event->contact_info,
+                'proposal_file' => $event->proposal_file,
+                'poster_file' => $event->poster_file,
+                'permit_file' => $event->permit_file,
+                'guests' => $event->guests,
             ]);
 
             // Xử lý upload nhiều ảnh
@@ -1498,8 +1673,11 @@ class AdminController extends Controller
             }
 
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã tạo sự kiện thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            return back()->with('error', 'Có lỗi xảy ra khi tạo sự kiện: ' . $e->getMessage());
+            \Log::error('Create event error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'Có lỗi xảy ra khi tạo sự kiện: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -1536,8 +1714,8 @@ class AdminController extends Controller
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
-                'description' => 'nullable|string|max:10000', // Tăng giới hạn cho HTML content
-                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'description' => 'nullable|string|max:10000',
+                'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', // Tăng lên 5MB
                 'remove_images' => 'nullable|array',
                 'remove_images.*' => 'integer|exists:event_images,id',
                 'start_time' => 'required|date',
@@ -1546,7 +1724,30 @@ class AdminController extends Controller
                 'location' => 'nullable|string|max:255',
                 'max_participants' => 'nullable|integer|min:1',
                 'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+                'registration_deadline' => 'nullable|date|before_or_equal:start_time',
+                'main_organizer' => 'nullable|string|max:255',
+                'organizing_team' => 'nullable|string|max:5000',
+                'co_organizers' => 'nullable|string|max:2000',
+                'contact_phone' => 'nullable|string|max:20',
+                'contact_email' => 'nullable|email|max:255',
+                'proposal_file' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+                'poster_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'permit_file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+                'guest_types' => 'nullable|array',
+                'guest_types.*' => 'in:lecturer,student,sponsor,other',
+                'guest_other_info' => 'nullable|string|max:5000',
+            ], [
+                'images.*.image' => 'File ảnh không hợp lệ. Vui lòng chọn file ảnh (JPG, JPEG, PNG, WEBP).',
+                'images.*.mimes' => 'Định dạng ảnh không được hỗ trợ. Chỉ chấp nhận: JPG, JPEG, PNG, WEBP.',
+                'images.*.max' => 'Kích thước ảnh không được vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.',
             ]);
+
+            // Validate guest_other_info khi có chọn "other"
+            if (is_array($request->guest_types) && in_array('other', $request->guest_types)) {
+                if (empty(trim($request->guest_other_info ?? ''))) {
+                    return back()->withErrors(['guest_other_info' => 'Vui lòng nhập thông tin khách mời khi chọn "Khác..."'])->withInput();
+                }
+            }
 
             $event = Event::findOrFail($id);
 
@@ -1565,6 +1766,100 @@ class AdminController extends Controller
                 $slug = $slugCandidate;
             }
 
+            // Xử lý upload files (chỉ upload nếu có file mới)
+            if ($request->hasFile('proposal_file')) {
+                // Xóa file cũ nếu có
+                if ($event->proposal_file) {
+                    \Storage::disk('public')->delete($event->proposal_file);
+                }
+                $proposalFilePath = $request->file('proposal_file')->store('events/files', 'public');
+            } else {
+                $proposalFilePath = $event->proposal_file;
+            }
+            
+            if ($request->hasFile('poster_file')) {
+                if ($event->poster_file) {
+                    \Storage::disk('public')->delete($event->poster_file);
+                }
+                $posterFilePath = $request->file('poster_file')->store('events/posters', 'public');
+            } else {
+                $posterFilePath = $event->poster_file;
+            }
+            
+            if ($request->hasFile('permit_file')) {
+                if ($event->permit_file) {
+                    \Storage::disk('public')->delete($event->permit_file);
+                }
+                $permitFilePath = $request->file('permit_file')->store('events/permits', 'public');
+            } else {
+                $permitFilePath = $event->permit_file;
+            }
+            
+            // Xử lý contact_info
+            $contactInfo = null;
+            if ($request->contact_phone || $request->contact_email) {
+                $contactInfo = json_encode([
+                    'phone' => $request->contact_phone,
+                    'email' => $request->contact_email,
+                ]);
+            } elseif ($event->contact_info) {
+                $contactInfo = $event->contact_info; // Giữ nguyên nếu không có thay đổi
+            }
+            
+            // Xử lý guests data
+            $guestsData = null;
+            $guestTypes = $request->guest_types ?? [];
+            $otherInfo = $request->guest_other_info ?? null;
+            
+            if (!empty($guestTypes) || !empty(trim($otherInfo ?? ''))) {
+                $guestsData = json_encode([
+                    'types' => $guestTypes,
+                    'other_info' => (is_array($guestTypes) && in_array('other', $guestTypes) && !empty(trim($otherInfo ?? ''))) ? trim($otherInfo) : null,
+                ]);
+            } elseif ($event->guests) {
+                $guestsData = $event->guests; // Giữ nguyên nếu không có thay đổi
+            }
+            
+            // Tự động thêm các cột nếu chưa tồn tại
+            $columns = DB::select("SHOW COLUMNS FROM events");
+            $columnNames = array_column($columns, 'Field');
+            
+            // Danh sách cột cần thiết
+            $requiredColumns = [
+                'registration_deadline' => 'DATETIME NULL',
+                'main_organizer' => 'VARCHAR(255) NULL',
+                'organizing_team' => 'TEXT NULL',
+                'co_organizers' => 'TEXT NULL',
+                'contact_info' => 'TEXT NULL',
+                'proposal_file' => 'VARCHAR(500) NULL',
+                'poster_file' => 'VARCHAR(500) NULL',
+                'permit_file' => 'VARCHAR(500) NULL',
+                'guests' => 'TEXT NULL',
+            ];
+            
+            // Tự động thêm các cột còn thiếu
+            foreach ($requiredColumns as $colName => $colType) {
+                if (!in_array($colName, $columnNames)) {
+                    try {
+                        DB::statement("ALTER TABLE events ADD COLUMN {$colName} {$colType}");
+                        $columnNames[] = $colName; // Cập nhật danh sách
+                        \Log::info("EventsUpdate - Auto added column: {$colName}");
+                    } catch (\Exception $e) {
+                        \Log::warning("EventsUpdate - Failed to add column {$colName}: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // Cập nhật lại danh sách cột sau khi thêm
+            $columns = DB::select("SHOW COLUMNS FROM events");
+            $columnNames = array_column($columns, 'Field');
+            
+            // Log để debug
+            \Log::info('EventsUpdate - Columns check', [
+                'event_id' => $id,
+                'columns_exists' => $columnNames,
+            ]);
+            
             $data = [
                 'title' => $request->title,
                 'slug' => $slug,
@@ -1577,8 +1872,75 @@ class AdminController extends Controller
                 'max_participants' => $request->max_participants,
                 'status' => $request->status,
             ];
+            
+            // Thêm tất cả các field mới vào data
+            $addedFields = [];
+            if (in_array('registration_deadline', $columnNames)) {
+                $data['registration_deadline'] = $request->registration_deadline;
+                $addedFields[] = 'registration_deadline';
+            }
+            if (in_array('main_organizer', $columnNames)) {
+                $data['main_organizer'] = $request->main_organizer;
+                $addedFields[] = 'main_organizer';
+            }
+            if (in_array('organizing_team', $columnNames)) {
+                $data['organizing_team'] = $request->organizing_team;
+                $addedFields[] = 'organizing_team';
+            }
+            if (in_array('co_organizers', $columnNames)) {
+                $data['co_organizers'] = $request->co_organizers;
+                $addedFields[] = 'co_organizers';
+            }
+            if (in_array('contact_info', $columnNames)) {
+                $data['contact_info'] = $contactInfo;
+                $addedFields[] = 'contact_info';
+            }
+            if (in_array('proposal_file', $columnNames)) {
+                $data['proposal_file'] = $proposalFilePath;
+                $addedFields[] = 'proposal_file';
+            }
+            if (in_array('poster_file', $columnNames)) {
+                $data['poster_file'] = $posterFilePath;
+                $addedFields[] = 'poster_file';
+            }
+            if (in_array('permit_file', $columnNames)) {
+                $data['permit_file'] = $permitFilePath;
+                $addedFields[] = 'permit_file';
+            }
+            if (in_array('guests', $columnNames)) {
+                $data['guests'] = $guestsData;
+                $addedFields[] = 'guests';
+            }
+            
+            // Log dữ liệu sẽ được cập nhật
+            \Log::info('EventsUpdate - Data to update', [
+                'event_id' => $id,
+                'added_fields' => $addedFields,
+                'main_organizer' => $request->main_organizer ?? 'null',
+                'organizing_team' => $request->organizing_team ? 'has_data' : 'null',
+                'co_organizers' => $request->co_organizers ? 'has_data' : 'null',
+                'contact_info' => $contactInfo,
+                'proposal_file' => $proposalFilePath,
+                'poster_file' => $posterFilePath,
+                'permit_file' => $permitFilePath,
+                'guests' => $guestsData,
+            ]);
 
             $event->update($data);
+            
+            // Log sau khi cập nhật
+            $event->refresh();
+            \Log::info('EventsUpdate - Event updated', [
+                'event_id' => $event->id,
+                'main_organizer' => $event->main_organizer ?? 'null',
+                'organizing_team' => $event->organizing_team ? 'has_data' : 'null',
+                'co_organizers' => $event->co_organizers ? 'has_data' : 'null',
+                'contact_info' => $event->contact_info,
+                'proposal_file' => $event->proposal_file,
+                'poster_file' => $event->poster_file,
+                'permit_file' => $event->permit_file,
+                'guests' => $event->guests,
+            ]);
 
             // Xử lý xóa ảnh được chọn
             if ($request->has('remove_images')) {
@@ -1719,6 +2081,83 @@ class AdminController extends Controller
             return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
         } catch (\Exception $e) {
             \Log::error('Cancel event error:', ['message' => $e->getMessage()]);
+            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Xóa/Hủy sự kiện (từ route DELETE)
+     */
+    public function deleteEvent(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::findOrFail($id);
+            
+            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
+            if ($event->status === 'ongoing') {
+                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+            }
+            
+            // Kiểm tra dữ liệu đầu vào
+            $cancellationReason = $request->input('deletion_reason') ?? $request->input('cancellation_reason');
+            
+            if (empty(trim($cancellationReason ?? ''))) {
+                return back()->with('error', 'Vui lòng nhập lý do hủy sự kiện.');
+            }
+
+            $cancellationReason = trim($cancellationReason);
+            if (strlen($cancellationReason) < 5) {
+                return back()->with('error', 'Lý do hủy sự kiện phải có ít nhất 5 ký tự.');
+            }
+
+            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
+            if ($event->status === 'ongoing') {
+                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+            }
+            
+            // Kiểm tra trạng thái sự kiện - chỉ cho phép hủy pending và approved
+            if (!in_array($event->status, ['pending', 'approved'])) {
+                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+
+            // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
+            $updateData = [
+                'status' => 'cancelled',
+                'updated_at' => now()
+            ];
+            
+            // Kiểm tra và thêm các trường mới nếu có
+            try {
+                $columns = DB::select("SHOW COLUMNS FROM events");
+                $columnNames = array_column($columns, 'Field');
+                
+                if (in_array('cancellation_reason', $columnNames)) {
+                    $updateData['cancellation_reason'] = $cancellationReason;
+                }
+                
+                if (in_array('cancelled_at', $columnNames)) {
+                    $updateData['cancelled_at'] = now();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Columns check failed: ' . $e->getMessage());
+            }
+            
+            DB::table('events')->where('id', $id)->update($updateData);
+
+            // Log để debug
+            \Log::info('Event deleted/cancelled', [
+                'event_id' => $id,
+                'cancellation_reason' => $cancellationReason,
+            ]);
+
+            return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
+        } catch (\Exception $e) {
+            \Log::error('Delete event error:', ['message' => $e->getMessage()]);
             return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
         }
     }
@@ -1998,6 +2437,28 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị chi tiết bài viết
+     */
+    public function postsShow($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $post = Post::whereIn('type', ['post', 'announcement'])
+                ->with(['club', 'user', 'comments.user', 'comments.replies.user'])
+                ->findOrFail($id);
+            
+            return view('admin.posts.show', compact('post'));
+        } catch (\Exception $e) {
+            \Log::error('Error showing post: ' . $e->getMessage());
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Hiển thị form chỉnh sửa bài viết
      */
     public function postsEdit($id)
@@ -2220,19 +2681,72 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị chi tiết bình luận
+     */
+    public function commentsShow($type, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            // Lấy bình luận dựa trên type
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::with([
+                    'user', 
+                    'parent.user', 
+                    'post.club',
+                    'replies.user'
+                ])->findOrFail($id);
+                $commentable = $comment->post;
+                $commentableType = 'Bài viết';
+                $commentableRoute = 'admin.posts.show';
+            } elseif ($type === 'event') {
+                $comment = \App\Models\EventComment::with([
+                    'user', 
+                    'parent.user', 
+                    'event.club',
+                    'replies.user'
+                ])->findOrFail($id);
+                $commentable = $comment->event;
+                $commentableType = 'Sự kiện';
+                $commentableRoute = 'admin.events.show';
+            } else {
+                return redirect()->route('admin.comments')->with('error', 'Loại bình luận không hợp lệ.');
+            }
+
+            return view('admin.comments.show', compact('comment', 'commentable', 'commentableType', 'commentableRoute', 'type'));
+        } catch (\Exception $e) {
+            \Log::error('Error showing comment: ' . $e->getMessage());
+            return redirect()->route('admin.comments')->with('error', 'Không tìm thấy bình luận: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Delete comment
      */
     public function deleteComment(Request $request, $type, $id)
     {
-        if ($type === 'post') {
-            $comment = \App\Models\PostComment::findOrFail($id);
-        } else {
-            $comment = \App\Models\EventComment::findOrFail($id);
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
-        
-        $comment->delete();
-        
-        return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+
+        try {
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::findOrFail($id);
+            } else {
+                $comment = \App\Models\EventComment::findOrFail($id);
+            }
+            
+            $comment->delete();
+            
+            return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting comment: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xóa bình luận: ' . $e->getMessage());
+        }
     }
 
     /**

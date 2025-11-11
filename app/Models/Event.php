@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Event extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'club_id',
         'created_by',
@@ -23,12 +24,24 @@ class Event extends Model
         'status',
         'cancellation_reason',
         'cancelled_at',
+        'registration_deadline',
+        'main_organizer',
+        'organizing_team',
+        'co_organizers',
+        'contact_info',
+        'proposal_file',
+        'poster_file',
+        'permit_file',
+        'guests',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'cancelled_at' => 'datetime',
+        'registration_deadline' => 'datetime',
+        'contact_info' => 'array', // Lưu dạng JSON: {"phone": "...", "email": "..."}
+        'guests' => 'array', // Lưu dạng JSON: {"types": ["lecturer", "student", "sponsor", "other"], "other_info": "..."}
     ];
 
     /**
