@@ -1633,6 +1633,83 @@ class AdminController extends Controller
     }
 
     /**
+     * Xóa/Hủy sự kiện (từ route DELETE)
+     */
+    public function deleteEvent(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $event = Event::findOrFail($id);
+            
+            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
+            if ($event->status === 'ongoing') {
+                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+            }
+            
+            // Kiểm tra dữ liệu đầu vào
+            $cancellationReason = $request->input('deletion_reason') ?? $request->input('cancellation_reason');
+            
+            if (empty(trim($cancellationReason ?? ''))) {
+                return back()->with('error', 'Vui lòng nhập lý do hủy sự kiện.');
+            }
+
+            $cancellationReason = trim($cancellationReason);
+            if (strlen($cancellationReason) < 5) {
+                return back()->with('error', 'Lý do hủy sự kiện phải có ít nhất 5 ký tự.');
+            }
+
+            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
+            if ($event->status === 'ongoing') {
+                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+            }
+            
+            // Kiểm tra trạng thái sự kiện - chỉ cho phép hủy pending và approved
+            if (!in_array($event->status, ['pending', 'approved'])) {
+                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+
+            // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
+            $updateData = [
+                'status' => 'cancelled',
+                'updated_at' => now()
+            ];
+            
+            // Kiểm tra và thêm các trường mới nếu có
+            try {
+                $columns = DB::select("SHOW COLUMNS FROM events");
+                $columnNames = array_column($columns, 'Field');
+                
+                if (in_array('cancellation_reason', $columnNames)) {
+                    $updateData['cancellation_reason'] = $cancellationReason;
+                }
+                
+                if (in_array('cancelled_at', $columnNames)) {
+                    $updateData['cancelled_at'] = now();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Columns check failed: ' . $e->getMessage());
+            }
+            
+            DB::table('events')->where('id', $id)->update($updateData);
+
+            // Log để debug
+            \Log::info('Event deleted/cancelled', [
+                'event_id' => $id,
+                'cancellation_reason' => $cancellationReason,
+            ]);
+
+            return redirect()->route('admin.plans-schedule')->with('success', 'Đã hủy sự kiện thành công!');
+        } catch (\Exception $e) {
+            \Log::error('Delete event error:', ['message' => $e->getMessage()]);
+            return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Display posts management page
      */
     public function postsManagement(Request $request)
@@ -1825,19 +1902,72 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị chi tiết bình luận
+     */
+    public function commentsShow($type, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            // Lấy bình luận dựa trên type
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::with([
+                    'user', 
+                    'parent.user', 
+                    'post.club',
+                    'replies.user'
+                ])->findOrFail($id);
+                $commentable = $comment->post;
+                $commentableType = 'Bài viết';
+                $commentableRoute = 'admin.posts.show';
+            } elseif ($type === 'event') {
+                $comment = \App\Models\EventComment::with([
+                    'user', 
+                    'parent.user', 
+                    'event.club',
+                    'replies.user'
+                ])->findOrFail($id);
+                $commentable = $comment->event;
+                $commentableType = 'Sự kiện';
+                $commentableRoute = 'admin.events.show';
+            } else {
+                return redirect()->route('admin.comments')->with('error', 'Loại bình luận không hợp lệ.');
+            }
+
+            return view('admin.comments.show', compact('comment', 'commentable', 'commentableType', 'commentableRoute', 'type'));
+        } catch (\Exception $e) {
+            \Log::error('Error showing comment: ' . $e->getMessage());
+            return redirect()->route('admin.comments')->with('error', 'Không tìm thấy bình luận: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Delete comment
      */
     public function deleteComment(Request $request, $type, $id)
     {
-        if ($type === 'post') {
-            $comment = \App\Models\PostComment::findOrFail($id);
-        } else {
-            $comment = \App\Models\EventComment::findOrFail($id);
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
-        
-        $comment->delete();
-        
-        return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+
+        try {
+            if ($type === 'post') {
+                $comment = \App\Models\PostComment::findOrFail($id);
+            } else {
+                $comment = \App\Models\EventComment::findOrFail($id);
+            }
+            
+            $comment->delete();
+            
+            return redirect()->back()->with('success', 'Xóa bình luận thành công!');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting comment: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xóa bình luận: ' . $e->getMessage());
+        }
     }
 
     /**
