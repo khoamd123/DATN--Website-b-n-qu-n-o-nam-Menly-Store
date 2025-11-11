@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Post;
 use App\Models\Club;
 use App\Models\ClubMember;
+use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
@@ -305,6 +306,15 @@ class StudentController extends Controller
         $data = $request->only(['title','content','club_id','status']);
         $data['type'] = $request->input('type', 'post');
         $data['user_id'] = $user->id;
+        // Generate unique slug
+        $baseSlug = Str::slug($data['title']);
+        $slug = $baseSlug;
+        $suffix = 1;
+        while (Post::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+        $data['slug'] = $slug;
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $filename = time() . '_' . $image->getClientOriginalName();
@@ -360,6 +370,17 @@ class StudentController extends Controller
         ]);
         $data = $request->only(['title','content','club_id','status']);
         $data['type'] = $request->input('type', $post->type ?? 'post');
+        // Regenerate slug if title changed or slug missing
+        if ($post->title !== $data['title'] || empty($post->slug)) {
+            $baseSlug = Str::slug($data['title']);
+            $slug = $baseSlug;
+            $suffix = 1;
+            while (Post::where('slug', $slug)->where('id', '!=', $post->id)->exists()) {
+                $slug = $baseSlug . '-' . $suffix;
+                $suffix++;
+            }
+            $data['slug'] = $slug;
+        }
         if ($request->input('remove_image') === '1' && !empty($post->image)) {
             if (\Illuminate\Support\Str::startsWith($post->image, ['uploads/','/uploads/'])) {
                 @unlink(public_path(ltrim($post->image,'/')));
