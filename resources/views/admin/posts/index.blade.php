@@ -152,9 +152,9 @@
                                         </form>
                                     @endif
                                     
-                                    <button class="btn btn-sm btn-info w-100" onclick="viewPost({{ $post->id }})">
+                                    <a href="{{ route('admin.posts.show', $post->id) }}" class="btn btn-sm btn-info w-100">
                                         <i class="fas fa-eye"></i> Xem
-                                    </button>
+                                    </a>
                                 </div>
                             </td>
                         </tr>

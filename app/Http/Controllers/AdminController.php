@@ -1808,6 +1808,28 @@ class AdminController extends Controller
     }
 
     /**
+     * Hiển thị chi tiết bài viết
+     */
+    public function postsShow($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $post = Post::whereIn('type', ['post', 'announcement'])
+                ->with(['club', 'user', 'comments.user', 'comments.replies.user'])
+                ->findOrFail($id);
+            
+            return view('admin.posts.show', compact('post'));
+        } catch (\Exception $e) {
+            \Log::error('Error showing post: ' . $e->getMessage());
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Hiển thị form chỉnh sửa bài viết
      */
     public function postsEdit($id)
