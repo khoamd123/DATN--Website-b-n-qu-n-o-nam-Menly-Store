@@ -407,13 +407,21 @@ class StudentController extends Controller
             $image->move($destination, $filename);
             $data['image'] = 'uploads/posts/' . $filename;
         }
-        // Remove featured image from content if present (handle both newly set image and existing image)
-        $imageForFilter = $data['image'] ?? $post->image ?? null;
-        if (!empty($imageForFilter) && !empty($data['content'])) {
-            $relative = ltrim($imageForFilter, '/');
-            $assetUrl = asset($relative);
-            $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
-            $data['content'] = preg_replace($pattern, '', $data['content']);
+        // Remove featured image(s) from content if present (both old and new featured images)
+        if (!empty($data['content'])) {
+            $imagesToStrip = [];
+            if (!empty($post->image)) {
+                $imagesToStrip[] = $post->image;
+            }
+            if (!empty($data['image'])) {
+                $imagesToStrip[] = $data['image'];
+            }
+            foreach ($imagesToStrip as $imgPath) {
+                $relative = ltrim($imgPath, '/');
+                $assetUrl = asset($relative);
+                $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
+                $data['content'] = preg_replace($pattern, '', $data['content']);
+            }
         }
         $post->update($data);
         return redirect()->route('student.posts.show', $post->id)->with('success', 'Cập nhật bài viết thành công!');
