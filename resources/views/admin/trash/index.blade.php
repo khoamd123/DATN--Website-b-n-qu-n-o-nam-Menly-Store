@@ -123,6 +123,16 @@
                     @endif
                 </div>
                 <div class="card-body">
+                    @if($key === 'posts')
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success btn-sm me-2" onclick="restoreAll('posts')">
+                                <i class="fas fa-undo"></i> Khôi phục tất cả bài viết
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="forceDeleteAll('posts')">
+                                <i class="fas fa-trash"></i> Xóa vĩnh viễn tất cả bài viết
+                            </button>
+                        </div>
+                    @endif
                     @include('admin.trash.partials.' . \Str::kebab($key), ['items' => $data[$key]])
                 </div>
             </div>

@@ -247,7 +247,7 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="border-end">
-                            <h4 class="text-primary mb-1">{{ $post->view_count ?? 0 }}</h4>
+                            <h4 class="text-primary mb-1">{{ number_format($post->views ?? 0) }}</h4>
                             <small class="text-muted">Lượt xem</small>
                         </div>
                     </div>

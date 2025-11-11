@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
@@ -117,9 +119,22 @@ Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 
 
 // Student Posts Routes
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
-Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+// Create must be before {id}
+Route::get('/student/posts/create', [\App\Http\Controllers\StudentController::class, 'createPost'])->name('student.posts.create');
+Route::post('/student/posts', [\App\Http\Controllers\StudentController::class, 'storePost'])->name('student.posts.store');
+// Edit must be before {id}
+Route::get('/student/posts/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editPost'])->whereNumber('id')->name('student.posts.edit');
+Route::put('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'updatePost'])->whereNumber('id')->name('student.posts.update');
+// Manage list and delete
+Route::get('/student/my-posts', [\App\Http\Controllers\StudentController::class, 'myPosts'])->name('student.posts.manage');
+Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'deletePost'])->whereNumber('id')->name('student.posts.delete');
+// Show and comments with numeric constraint
+Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
+Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
+
+// Club Management Routes
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
-// Fallback route for join requests (page may not be implemented yet)
+// Join requests
 Route::get(
     '/student/club-management/{club}/join-requests',
     [\App\Http\Controllers\StudentController::class, 'clubJoinRequests']
@@ -132,22 +147,20 @@ Route::post(
     '/student/club-management/{club}/join-requests/{request}/reject',
     [\App\Http\Controllers\StudentController::class, 'rejectClubJoinRequest']
 )->name('student.club-management.join-requests.reject');
-// Fallback route for members management (temporary)
+// Members management
 Route::get(
     '/student/club-management/{club}/members',
     [\App\Http\Controllers\StudentController::class, 'manageMembers']
 )->name('student.club-management.members');
-// Update permissions for member
 Route::post(
     '/student/club-management/{club}/members/{member}/permissions',
     [\App\Http\Controllers\StudentController::class, 'updateMemberPermissions']
 )->name('student.club-management.permissions.update');
-// Remove member
 Route::delete(
     '/student/club-management/{club}/members/{member}',
     [\App\Http\Controllers\StudentController::class, 'removeMember']
 )->name('student.club-management.members.remove');
-// Temporary settings routes to avoid missing route errors
+// Settings
 Route::get(
     '/student/club-management/{club}/settings',
     [\App\Http\Controllers\StudentController::class, 'clubSettings']
@@ -405,6 +418,11 @@ Route::prefix('admin')->group(function () {
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
     Route::get('/posts/create', [AdminController::class, 'postsCreate'])->name('admin.posts.create');
     Route::post('/posts', [AdminController::class, 'postsStore'])->name('admin.posts.store');
+    // Tạo nhanh 5 bài viết có ảnh cho 1 CLB hoặc cho tất cả CLB
+    Route::post('/clubs/{club}/generate-sample-posts', [AdminController::class, 'generateSamplePostsForClub'])->name('admin.clubs.generate-posts');
+    Route::post('/posts/generate-sample-for-all', [AdminController::class, 'generateSamplePostsForAllClubs'])->name('admin.posts.generate-sample-for-all');
+    // Upload ảnh từ trình soạn thảo
+    Route::post('/posts/upload-image', [PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
         Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
         Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
         Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');

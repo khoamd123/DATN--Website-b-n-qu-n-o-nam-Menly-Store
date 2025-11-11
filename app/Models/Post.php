@@ -18,6 +18,7 @@ class Post extends Model
         'type',
         'status',
         'image',
+        'views',
     ];
 
     /**
