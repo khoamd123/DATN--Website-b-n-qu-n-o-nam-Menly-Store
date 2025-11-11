@@ -62,8 +62,19 @@
                     @endif
                 @endif
 
+                @php
+                    // If a featured image is selected, avoid showing the same image again inside content
+                    $contentForDisplay = $post->content;
+                    if (!empty($post->image)) {
+                        $relativeImage = ltrim($post->image, '/');
+                        $assetImage = asset($relativeImage);
+                        // Remove any <img> tags whose src matches featured image (relative or with asset URL)
+                        $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetImage, '#') . '|' . preg_quote('/' . $relativeImage, '#') . '|' . preg_quote($relativeImage, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
+                        $contentForDisplay = preg_replace($pattern, '', $contentForDisplay);
+                    }
+                @endphp
                 <div class="mt-3" style="line-height: 1.7;">
-                    {!! $post->content !!}
+                    {!! $contentForDisplay !!}
                 </div>
 
                 <hr class="my-4">
