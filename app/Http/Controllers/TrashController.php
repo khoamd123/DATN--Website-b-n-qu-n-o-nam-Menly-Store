@@ -206,9 +206,10 @@ class TrashController extends Controller
                     break;
                 case 'post':
                     $item = Post::onlyTrashed()->findOrFail($id);
-                    // Xóa tất cả attachments trước
-                    \DB::table('post_attachments')->where('post_id', $id)->delete();
-                    // Xóa tất cả bình luận liên kết
+                    // Xóa tất cả bình luận và đính kèm trước khi xóa bài viết
+                    if (method_exists($item, 'attachments')) {
+                        $item->attachments()->forceDelete();
+                    }
                     $item->comments()->forceDelete();
                     break;
                 case 'club-member':
@@ -348,9 +349,9 @@ class TrashController extends Controller
                     // Xóa tất cả attachments và bình luận trước, sau đó xóa bài viết
                     $posts = Post::onlyTrashed()->get();
                     foreach ($posts as $post) {
-                        // Xóa attachments
-                        \DB::table('post_attachments')->where('post_id', $post->id)->delete();
-                        // Xóa bình luận
+                        if (method_exists($post, 'attachments')) {
+                            $post->attachments()->forceDelete();
+                        }
                         $post->comments()->forceDelete();
                         // Xóa bài viết
                         $post->forceDelete();

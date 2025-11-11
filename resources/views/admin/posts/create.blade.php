@@ -49,99 +49,111 @@
                             </div>
                         @endif
                         
-                        <div class="mb-3">
-                            <label class="form-label">Tiêu đề bài viết <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="title" value="{{ old('title') }}" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Nội dung <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="content" name="content" rows="10">{{ old('content') }}</textarea>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> Bạn có thể kéo thả hình ảnh trực tiếp vào vùng soạn thảo hoặc sử dụng nút "Thêm vào nội dung" ở dưới.
-                            </small>
-                        </div>
-                
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Câu lạc bộ <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="club_id" required>
-                                        <option value="">Chọn câu lạc bộ</option>
-                                        @foreach($clubs as $club)
-                                            <option value="{{ $club->id }}" {{ old('club_id') == $club->id ? 'selected' : '' }}>
-                                                {{ $club->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                            <div class="col-lg-8">
+                                <div class="mb-2">
+                                    <label class="form-label">Tiêu đề bài viết <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="title" id="post-title" value="{{ old('title') }}" required>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Loại bài viết <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="type" required>
-                                        <option value="post" {{ old('type') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
-                                        <option value="announcement" {{ old('type') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
 
-                    <div class="mb-3">
-                            <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
-                            <select class="form-select" name="status" required>
-                                <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>Công khai</option>
-                                <option value="members_only" {{ old('status') == 'members_only' ? 'selected' : '' }}>Chỉ thành viên CLB</option>
-                                <option value="hidden" {{ old('status') == 'hidden' ? 'selected' : '' }}>Ẩn</option>
-                                <option value="deleted" {{ old('status') == 'deleted' ? 'selected' : '' }}>Đã xóa</option>
-                        </select>
-                    </div>
-
-                    <!-- Multiple Image Upload Section -->
-                    <div class="mb-3">
-                        <label class="form-label">Hình ảnh bài viết</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <input type="file" class="form-control" id="images" name="images[]" accept="image/*" multiple onchange="previewImages(this)">
-                                <small class="form-text text-muted">Chọn nhiều hình ảnh cùng lúc (JPG, PNG, GIF)</small>
-                                
-                                <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('images').click()">
-                                        <i class="fas fa-upload"></i> Chọn nhiều ảnh
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="addAllImagesToEditor()" disabled id="add-all-to-editor-btn">
-                                        <i class="fas fa-plus"></i> Thêm tất cả vào nội dung
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <!-- Selected Images Preview -->
-                                <div id="images-preview-container" class="mb-3" style="display: none;">
-                                    <h6>Ảnh đã chọn:</h6>
-                                    <div id="images-preview" class="row"></div>
-                                    <div class="mt-2">
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="clearAllImages()">
-                                            <i class="fas fa-trash"></i> Xóa tất cả
-                                        </button>
+                                <!-- Permalink (slug) preview like WordPress -->
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        Liên kết tĩnh: <span class="me-1">{{ url('posts') }}/</span>
+                                        <span id="slug-preview" class="fw-semibold">{{ Str::slug(old('title', 'viet-tieu-de-tai-day')) }}</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="edit-slug-btn">Chỉnh sửa</button>
+                                    </small>
+                                    <div id="slug-edit-row" class="mt-2" style="display:none;">
+                                        <div class="input-group input-group-sm" style="max-width: 420px;">
+                                            <span class="input-group-text">{{ url('posts') }}/</span>
+                                            <input type="text" class="form-control" name="slug" id="slug-input" value="{{ old('slug') ?? Str::slug(old('title')) }}">
+                                            <button type="button" class="btn btn-primary" id="save-slug-btn">OK</button>
+                                            <button type="button" class="btn btn-outline-secondary" id="cancel-slug-btn">Hủy</button>
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <!-- No Image Placeholder -->
-                                <div id="no-image" class="text-center text-muted p-3" style="border: 2px dashed #dee2e6; border-radius: 8px;">
-                                    <i class="fas fa-image fa-2x mb-2"></i>
-                                    <p class="mb-0">Chưa có hình ảnh</p>
+
+                                <!-- Toolbar row: Media button (like WordPress) -->
+                                <div class="d-flex align-items-center mb-2 gap-2">
+                                    <button type="button" id="add-media-btn" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-photo-video"></i> Thêm Media
+                                    </button>
+                                    <input type="file" id="quick-media-input" accept="image/*" multiple style="display:none">
+                                    <small class="text-muted">Nhấp Thêm Media để chọn ảnh và chèn trực tiếp.</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Nội dung <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="content" name="content" rows="10">{{ old('content') }}</textarea>
+                                </div>
+
+                                <!-- Bỏ thư viện ảnh xem trước để đơn giản hóa quy trình chèn ảnh -->
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="card mb-3">
+                                    <div class="card-header"><strong>Đăng bài viết</strong></div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="status" required>
+                                                <option value="published" {{ old('status','published') == 'published' ? 'selected' : '' }}>Công khai</option>
+                                                <option value="members_only" {{ old('status') == 'members_only' ? 'selected' : '' }}>Chỉ thành viên CLB</option>
+                                                <option value="hidden" {{ old('status') == 'hidden' ? 'selected' : '' }}>Ẩn</option>
+                                                <option value="deleted" {{ old('status') == 'deleted' ? 'selected' : '' }}>Đã xóa</option>
+                                            </select>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="fas fa-save"></i> Tạo bài viết
+                                            </button>
+                                            <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
+                                                <i class="fas fa-arrow-left"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-3">
+                                    <div class="card-header"><strong>Chuyên mục</strong></div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Câu lạc bộ <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="club_id" required>
+                                                <option value="">Chọn câu lạc bộ</option>
+                                                @foreach($clubs as $club)
+                                                    <option value="{{ $club->id }}" {{ old('club_id') == $club->id ? 'selected' : '' }}>
+                                                        {{ $club->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="mb-0">
+                                            <label class="form-label">Loại bài viết</label>
+                                            <select class="form-select" name="type" required>
+                                                <option value="post" {{ old('type') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
+                                                <option value="announcement" {{ old('type') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-header"><strong>Ảnh đại diện</strong></div>
+                                    <div class="card-body">
+                                        <input type="file" class="form-control mb-2" id="featured-image" name="image" accept="image/*">
+                                        <div id="featured-preview" class="text-center" style="display:none;">
+                                            <img id="featured-img" src="#" alt="Ảnh đại diện" class="img-fluid rounded border" style="max-height: 200px; object-fit: cover;">
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" id="remove-featured">Xóa ảnh</button>
+                                            </div>
+                                        </div>
+                                        <div id="featured-placeholder" class="text-center text-muted p-3" style="border: 2px dashed #dee2e6; border-radius: 8px;">
+                                            <i class="fas fa-image fa-2x mb-2"></i>
+                                            <p class="mb-0">Chưa chọn ảnh đại diện</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Tạo bài viết
-                            </button>
-                <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Quay lại
-                </a>
                         </div>
                     </form>
                 </div>
@@ -304,139 +316,152 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global variables for selected images
     window.selectedImages = [];
 
-    // Multiple images preview functions
-    window.previewImages = function(input) {
-        if (input.files && input.files.length > 0) {
-            window.selectedImages = Array.from(input.files);
-            displaySelectedImages();
-            
-            // Enable "Add all to editor" button
-            document.getElementById('add-all-to-editor-btn').disabled = false;
-            
-            // Hide no-image placeholder
-            document.getElementById('no-image').style.display = 'none';
-        }
+    // WordPress-like slug + media behaviors
+    const slugify = (str) => {
+        return (str || '')
+            .toString()
+            .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
     };
 
-    window.displaySelectedImages = function() {
-        const container = document.getElementById('images-preview');
-        const previewContainer = document.getElementById('images-preview-container');
-        
-        container.innerHTML = '';
-        
-        if (window.selectedImages.length === 0) {
-            previewContainer.style.display = 'none';
-            document.getElementById('no-image').style.display = 'block';
-            document.getElementById('add-all-to-editor-btn').disabled = true;
-            return;
-        }
-        
-        previewContainer.style.display = 'block';
-        document.getElementById('no-image').style.display = 'none';
-        
-        window.selectedImages.forEach((file, index) => {
+    const titleInput = document.getElementById('post-title');
+    const slugPreview = document.getElementById('slug-preview');
+    const slugEditRow = document.getElementById('slug-edit-row');
+    const slugInput = document.getElementById('slug-input');
+    const editSlugBtn = document.getElementById('edit-slug-btn');
+    const saveSlugBtn = document.getElementById('save-slug-btn');
+    const cancelSlugBtn = document.getElementById('cancel-slug-btn');
+
+    if (titleInput && slugPreview) {
+        titleInput.addEventListener('input', function() {
+            if (slugEditRow && slugEditRow.style.display !== 'block') {
+                const s = slugify(this.value);
+                slugPreview.textContent = s || 'viet-tieu-de-tai-day';
+                if (slugInput) slugInput.value = s;
+            }
+        });
+    }
+
+    if (editSlugBtn) {
+        editSlugBtn.addEventListener('click', function() {
+            slugEditRow.style.display = 'block';
+            slugInput.focus();
+        });
+    }
+    if (saveSlugBtn) {
+        saveSlugBtn.addEventListener('click', function() {
+            const s = slugify(slugInput.value);
+            slugPreview.textContent = s || 'viet-tieu-de-tai-day';
+            slugInput.value = s;
+            slugEditRow.style.display = 'none';
+        });
+    }
+    if (cancelSlugBtn) {
+        cancelSlugBtn.addEventListener('click', function() {
+            slugEditRow.style.display = 'none';
+        });
+    }
+
+    // Media button: choose files and insert immediately
+    const addMediaBtn = document.getElementById('add-media-btn');
+    const quickMediaInput = document.getElementById('quick-media-input');
+    if (addMediaBtn && quickMediaInput) {
+        addMediaBtn.addEventListener('click', function() {
+            quickMediaInput.click();
+        });
+        quickMediaInput.addEventListener('change', async function() {
+            if (!this.files || this.files.length === 0) return;
+            let success = 0;
+            for (const file of this.files) {
+                try { await uploadImageAndInsert(file); success++; } catch (e) {}
+            }
+            showSuccessMessage(`Đã tải và chèn ${success}/${this.files.length} ảnh.`);
+            this.value = '';
+        });
+    }
+
+    // Featured image preview like WordPress
+    const featuredInput = document.getElementById('featured-image');
+    const featuredPreviewWrap = document.getElementById('featured-preview');
+    const featuredImg = document.getElementById('featured-img');
+    const featuredPlaceholder = document.getElementById('featured-placeholder');
+    const removeFeaturedBtn = document.getElementById('remove-featured');
+
+    if (featuredInput) {
+        featuredInput.addEventListener('change', function() {
+            const file = this.files && this.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const col = document.createElement('div');
-                col.className = 'col-md-4 mb-2';
-                col.innerHTML = `
-                    <div class="card" style="position: relative;">
-                        <img src="${e.target.result}" class="card-img-top" style="height: 100px; object-fit: cover;">
-                        <div class="card-body p-2">
-                            <small class="card-text text-truncate d-block" title="${file.name}">${file.name}</small>
-                            <div class="btn-group btn-group-sm mt-1" role="group">
-                                <button type="button" class="btn btn-success btn-sm" onclick="addSingleImageToEditor(${index})" title="Thêm vào nội dung">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm" onclick="removeSelectedImage(${index})" title="Xóa ảnh">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(col);
+                if (featuredImg) {
+                    featuredImg.src = e.target.result;
+                    if (featuredPreviewWrap) featuredPreviewWrap.style.display = 'block';
+                    if (featuredPlaceholder) featuredPlaceholder.style.display = 'none';
+                }
             };
             reader.readAsDataURL(file);
         });
-    };
+    }
 
-    window.removeSelectedImage = function(index) {
-        window.selectedImages.splice(index, 1);
-        displaySelectedImages();
-    };
+    if (removeFeaturedBtn) {
+        removeFeaturedBtn.addEventListener('click', function() {
+            if (featuredInput) featuredInput.value = '';
+            if (featuredPreviewWrap) featuredPreviewWrap.style.display = 'none';
+            if (featuredPlaceholder) featuredPlaceholder.style.display = 'block';
+        });
+    }
 
-    window.clearAllImages = function() {
-        window.selectedImages = [];
-        document.getElementById('images').value = '';
-        displaySelectedImages();
-    };
+    // Bỏ toàn bộ logic xem trước/ quản lý danh sách ảnh được chọn
 
-    window.addSingleImageToEditor = function(index) {
+    async function uploadImageAndInsert(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+        const res = await fetch("{{ route('admin.posts.upload-image') }}", {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token },
+            body: formData
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        const { url } = await res.json();
+        const imageHtml = `<figure class="image"><img src="${url}" alt="${file.name}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></figure>`;
+        window.editor.model.change(writer => {
+            const viewFragment = window.editor.data.processor.toView(imageHtml);
+            const modelFragment = window.editor.data.toModel(viewFragment);
+            const root = window.editor.model.document.getRoot();
+            const lastPosition = writer.createPositionAt(root, 'end');
+            window.editor.model.insertContent(modelFragment, lastPosition);
+        });
+    }
+
+    window.addSingleImageToEditor = async function(index) {
         if (window.editor && window.selectedImages[index]) {
             const file = window.selectedImages[index];
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const imageHtml = `<figure class="image">
-                    <img src="${e.target.result}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <figcaption style="text-align: center; font-style: italic; color: #666; margin-top: 8px;">${file.name}</figcaption>
-                </figure>`;
-                
-                window.editor.model.change(writer => {
-                    const viewFragment = window.editor.data.processor.toView(imageHtml);
-                    const modelFragment = window.editor.data.toModel(viewFragment);
-                    
-                    // Move to the end of the document
-                    const root = window.editor.model.document.getRoot();
-                    const lastPosition = writer.createPositionAt(root, 'end');
-                    window.editor.model.insertContent(modelFragment, lastPosition);
-                });
-                
-                
-                showSuccessMessage(`Hình ảnh "${file.name}" đã được thêm vào nội dung!`);
-                
-                // Remove image from selected images array
-                window.selectedImages.splice(index, 1);
-                displaySelectedImages();
-            };
-            reader.readAsDataURL(file);
+            try {
+                await uploadImageAndInsert(file);
+                showSuccessMessage(`Đã tải và chèn ảnh "${file.name}".`);
+            } catch (e) {
+                alert('Không thể tải ảnh lên. Vui lòng thử lại.');
+            }
+            window.selectedImages.splice(index, 1);
+            displaySelectedImages();
         }
     };
 
-    window.addAllImagesToEditor = function() {
+    window.addAllImagesToEditor = async function() {
         if (window.editor && window.selectedImages.length > 0) {
-            let addedCount = 0;
-            
-            window.selectedImages.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imageHtml = `<figure class="image">
-                        <img src="${e.target.result}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <figcaption style="text-align: center; font-style: italic; color: #666; margin-top: 8px;">${file.name}</figcaption>
-                    </figure>`;
-                    
-                    window.editor.model.change(writer => {
-                        const viewFragment = window.editor.data.processor.toView(imageHtml);
-                        const modelFragment = window.editor.data.toModel(viewFragment);
-                        
-                        // Move to the end of the document
-                        const root = window.editor.model.document.getRoot();
-                        const lastPosition = writer.createPositionAt(root, 'end');
-                        window.editor.model.insertContent(modelFragment, lastPosition);
-                    });
-                    
-                    addedCount++;
-                    if (addedCount === window.selectedImages.length) {
-                        showSuccessMessage(`Đã thêm ${addedCount} hình ảnh vào nội dung!`);
-                        
-                        // Clear all selected images after adding to editor
-                        window.selectedImages = [];
-                        displaySelectedImages();
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
+            const files = [...window.selectedImages];
+            let success = 0;
+            for (const f of files) {
+                try { await uploadImageAndInsert(f); success++; } catch (e) {}
+            }
+            showSuccessMessage(`Đã tải và chèn ${success}/${files.length} ảnh.`);
+            window.selectedImages = [];
+            displaySelectedImages();
         }
     };
 

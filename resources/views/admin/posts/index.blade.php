@@ -103,7 +103,9 @@
                             <tr>
                                 <td>{{ ($posts->currentPage() - 1) * $posts->perPage() + $index + 1 }}</td>
                                 <td>
+                                    <a href="{{ route('student.posts.show', $post->id) }}" class="text-dark text-decoration-none">
                                     <strong>{{ $post->title }}</strong>
+                                    </a>
                                 </td>
                                 <td>
                                     <span class="badge bg-{{ $post->type === 'announcement' ? 'danger' : 'primary' }}">

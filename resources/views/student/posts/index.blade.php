@@ -1,77 +1,122 @@
 @extends('layouts.student')
 
-@section('title', 'Bài viết - UniClubs')
-@section('page_title', 'Bài viết')
+@section('title', 'Tin tức')
 
 @section('content')
-<div class="row">
-    <div class="col-lg-12">
-        <div class="content-card mb-3">
-            <form method="GET" action="{{ route('student.posts') }}" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Từ khóa</label>
-                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Tiêu đề, nội dung...">
+    <div class="row">
+        <div class="col-12">
+            <div class="content-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Tin tức</h4>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Câu lạc bộ</label>
-                    <select class="form-select" name="club_id">
-                        <option value="">Tất cả CLB</option>
-                        @foreach($clubs as $club)
-                            <option value="{{ $club->id }}" @selected(request('club_id') == $club->id)>{{ $club->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Loại</label>
-                    <select class="form-select" name="type">
-                        <option value="">Tất cả</option>
-                        <option value="post" @selected(request('type')=='post')>Bài viết</option>
-                        <option value="announcement" @selected(request('type')=='announcement')>Thông báo</option>
-                        <option value="document" @selected(request('type')=='document')>Tài liệu</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-1"></i> Lọc
-                    </button>
-                </div>
-            </form>
-        </div>
 
-        <div class="content-card">
-            @if($posts->count())
-            <div class="list-group list-group-flush">
-                @foreach($posts as $post)
-                <a href="{{ route('student.posts.show', $post->id) }}" class="list-group-item list-group-item-action py-3">
-                    <h6 class="mb-1 fw-semibold">{{ $post->title }}</h6>
-                    <div class="text-muted small mb-1">
-                        <i class="fas fa-users me-1"></i>{{ $post->club->name ?? 'Cộng đồng UniClubs' }}
-                        <span class="mx-2">•</span>
-                        <i class="fas fa-user-circle me-1"></i>{{ $post->user->name ?? 'Ban quản trị' }}
-                        <span class="mx-2">•</span>
-                        {{ $post->created_at->format('d/m/Y H:i') }}
+                <form method="GET" action="{{ route('student.posts') }}" class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Tìm kiếm bài viết...">
                     </div>
-                    @php
-                        $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
-                        $text = strip_tags($raw);
-                        $text = str_replace("\xc2\xa0", ' ', $text);
-                        $text = preg_replace('/\s+/u', ' ', $text);
-                        $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
-                        $excerpt = trim($text);
-                    @endphp
-                    <p class="mb-0 text-muted">{{ \Illuminate\Support\Str::words($excerpt, 26, '...') }}</p>
-                </a>
-                @endforeach
-            </div>
+                    <div class="col-md-4">
+                        <select name="club_id" class="form-select">
+                            <option value="">Tất cả CLB</option>
+                            @foreach($clubs as $club)
+                                <option value="{{ $club->id }}" {{ (string)request('club_id') === (string)$club->id ? 'selected' : '' }}>
+                                    {{ $club->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Lọc
+                        </button>
+                    </div>
+                </form>
 
-            <div class="mt-3">
-                {{ $posts->links('vendor.pagination.bootstrap-5') }}
+                @forelse($posts as $post)
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="row g-0">
+                            @php
+                                $imageUrl = null;
+                                $imageField = $post->image;
+                                // Fallback: first attachment if image column is empty
+                                if (empty($imageField) && isset($post->attachments) && $post->attachments->count() > 0) {
+                                    // Ưu tiên attachment có file_type là image
+                                    $firstImageAttachment = $post->attachments->firstWhere('file_type', 'image') ?? $post->attachments->first();
+                                    $imageField = $firstImageAttachment->file_url ?? null;
+                                }
+                                // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
+                                if (empty($imageField) && !empty($post->content)) {
+                                    if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
+                                        $imageField = $m[1] ?? null;
+                                    }
+                                }
+                                if (!empty($imageField)) {
+                                    // Absolute URL
+                                    if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                        $imageUrl = $imageField;
+                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                        // If saved path is like "uploads/..." use public path
+                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                    } else {
+                                        // Otherwise assume stored via Storage (public disk)
+                                        $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                    }
+                                }
+                            @endphp
+                            <div class="col-md-4">
+                                <div class="w-100" style="height: 180px; overflow: hidden; border-top-left-radius: .5rem; border-bottom-left-radius: .5rem; background:#f0fdfa; display:flex; align-items:center; justify-content:center;">
+                                    @if($imageUrl)
+                                        <img src="{{ $imageUrl }}" class="img-fluid w-100 h-100" style="object-fit: cover;" alt="{{ $post->title }}">
+                                    @else
+                                        <i class="far fa-image" style="font-size:42px;color:#0d9488;opacity:.6;"></i>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h5 class="card-title mb-2">
+                                            <a href="{{ route('student.posts.show', $post->id) }}" class="text-decoration-none text-dark">
+                                                {{ $post->title }}
+                                            </a>
+                                        </h5>
+                                        <span class="badge bg-teal text-white" style="background-color:#14b8a6;">{{ $post->club->name ?? 'UniClubs' }}</span>
+                                    </div>
+                                    <p class="card-text text-muted mb-2">
+                                        {{ \Illuminate\Support\Str::limit(strip_tags($post->content), 160) }}
+                                    </p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="far fa-user me-1"></i>{{ $post->user->name ?? 'Hệ thống' }}
+                                            <span class="mx-2">•</span>
+                                            <i class="far fa-clock me-1"></i>{{ $post->created_at->format('d/m/Y H:i') }}
+                                            <span class="mx-2">•</span>
+                                            <i class="far fa-eye me-1"></i>{{ number_format($post->views ?? 0) }}
+                                            @if($post->status === 'members_only')
+                                                <span class="mx-2">•</span>
+                                                <i class="fas fa-lock me-1"></i> Chỉ thành viên
+                                            @endif
+                                        </small>
+                                    </p>
+                                    <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-outline-primary btn-sm">
+                                        Đọc tiếp
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-5">
+                        <i class="far fa-newspaper fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Chưa có bài viết nào.</p>
+                    </div>
+                @endforelse
+
+                <div class="mt-3">
+                    {{ $posts->appends(request()->query())->links() }}
+                </div>
             </div>
-            @else
-                <p class="text-muted mb-0">Chưa có bài viết phù hợp.</p>
-            @endif
         </div>
     </div>
-</div>
 @endsection
-

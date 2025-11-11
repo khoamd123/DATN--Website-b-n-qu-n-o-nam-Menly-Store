@@ -144,10 +144,13 @@
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body text-center">
                             <div class="management-icon mb-3">
-                                <i class="fas fa-bullhorn"></i>
+                                <i class="fas fa-newspaper"></i>
                             </div>
-                            <h6 class="card-title">Đăng thông báo</h6>
-                            <p class="card-text small text-muted">Gửi thông báo đến thành viên</p>
+                            <h6 class="card-title">Quản lý bài viết</h6>
+                            <p class="card-text small text-muted">Tạo và quản lý bài viết CLB</p>
+                            <a href="{{ route('student.posts.manage') }}" class="btn btn-sm btn-primary mt-2">
+                                <i class="fas fa-list me-1"></i> Quản lý bài viết
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -147,11 +147,11 @@
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
-                        <i class="fas fa-bullhorn"></i>
+                        <i class="fas fa-newspaper"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Đăng thông báo</h5>
-                        <p class="management-description">Gửi thông báo đến tất cả thành viên CLB</p>
+                        <h5 class="management-title">Quản lý bài viết</h5>
+                        <p class="management-description">Tạo và quản lý bài viết, thông báo của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
                                 <strong>{{ data_get($clubStats, 'announcements.total', 0) }}</strong>
@@ -162,8 +162,8 @@
                                 <small>Hôm nay</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
-                            <i class="fas fa-edit me-1"></i> Viết thông báo
+                        <a href="{{ route('student.posts.manage') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-list me-1"></i> Quản lý bài viết
                         </a>
                     </div>
                 </div>
