@@ -239,6 +239,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/events/{id}', [AdminController::class, 'eventsShow'])->name('admin.events.show');
     Route::post('/events/{id}/approve', [AdminController::class, 'eventsApprove'])->name('admin.events.approve');
     Route::post('/events/{id}/cancel', [AdminController::class, 'eventsCancel'])->name('admin.events.cancel');
+    Route::delete('/events/{id}', [AdminController::class, 'deleteEvent'])->name('admin.events.delete');
     
     // Bài viết
     Route::get('/posts', [AdminController::class, 'postsManagement'])->name('admin.posts');
