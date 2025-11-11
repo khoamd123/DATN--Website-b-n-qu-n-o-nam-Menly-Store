@@ -2130,6 +2130,105 @@ class AdminController extends Controller
     }
 
     /**
+     * List club join requests with filters and pagination
+     */
+    public function joinRequestsIndex(Request $request)
+    {
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $status = $request->get('status', 'pending');
+        $query = \App\Models\ClubJoinRequest::with(['user', 'club', 'reviewer'])->orderByDesc('created_at');
+        if (in_array($status, ['pending', 'approved', 'rejected'])) {
+            $query->where('status', $status);
+        }
+
+        if ($request->filled('club_id')) {
+            $query->where('club_id', $request->club_id);
+        }
+        if ($request->filled('keyword')) {
+            $kw = '%' . trim($request->keyword) . '%';
+            $query->whereHas('user', function ($q) use ($kw) {
+                $q->where('name', 'like', $kw)
+                  ->orWhere('email', 'like', $kw);
+            });
+        }
+
+        $requests = $query->paginate(20)->withQueryString();
+        $clubs = \App\Models\Club::orderBy('name')->get(['id','name']);
+
+        return view('admin.join-requests.index', compact('requests', 'status', 'clubs'));
+    }
+
+    /**
+     * Approve a single join request
+     */
+    public function approveJoinRequest($id)
+    {
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $req = \App\Models\ClubJoinRequest::findOrFail($id);
+        if ($req->isApproved()) {
+            return back()->with('info', 'Đơn này đã được duyệt trước đó.');
+        }
+        $req->approve(session('user_id') ?? 1);
+        return back()->with('success', 'Đã duyệt đơn tham gia.');
+    }
+
+    /**
+     * Reject a single join request
+     */
+    public function rejectJoinRequest($id)
+    {
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $req = \App\Models\ClubJoinRequest::findOrFail($id);
+        if ($req->isRejected()) {
+            return back()->with('info', 'Đơn này đã bị từ chối trước đó.');
+        }
+        $req->reject(session('user_id') ?? 1);
+        return back()->with('success', 'Đã từ chối đơn tham gia.');
+    }
+
+    /**
+     * Bulk process join requests
+     */
+    public function bulkJoinRequests(Request $request)
+    {
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:club_join_requests,id',
+            'action' => 'required|in:approve,reject',
+        ]);
+
+        $ids = $request->ids;
+        $action = $request->action;
+        $reviewer = session('user_id') ?? 1;
+
+        $count = 0;
+        foreach (\App\Models\ClubJoinRequest::whereIn('id', $ids)->get() as $req) {
+            if ($action === 'approve' && !$req->isApproved()) {
+                $req->approve($reviewer);
+                $count++;
+            }
+            if ($action === 'reject' && !$req->isRejected()) {
+                $req->reject($reviewer);
+                $count++;
+            }
+        }
+
+        return back()->with('success', "Đã xử lý {$count} đơn theo hành động '{$action}'.");
+    }
+    /**
      * Display permissions management page
      */
     public function permissionsManagement(Request $request)

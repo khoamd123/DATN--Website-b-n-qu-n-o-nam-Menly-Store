@@ -86,7 +86,7 @@
 
         <!-- Management Cards -->
         <div class="row">
-            @if($user->hasPermission('quan_ly_thanh_vien'))
+            @if($userClub && $clubId && $user->hasPermission('quan_ly_thanh_vien', $clubId))
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
@@ -97,23 +97,27 @@
                         <p class="management-description">Duyệt đơn đăng ký, quản lý thành viên CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>{{ $user->clubs->first()->members->count() ?? 0 }}</strong>
+                                <strong>{{ data_get($clubStats, 'members.active', 0) }}</strong>
                                 <small>Thành viên</small>
                             </span>
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <a href="{{ $clubId ? route('student.club-management.join-requests', ['club' => $clubId]) : '#' }}" class="text-decoration-none">
+                                    <strong>{{ data_get($clubStats, 'members.pending', 0) }}</strong>
+                                </a>
                                 <small>Đang chờ</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
+                        <a href="{{ $clubId ? route('student.club-management.members', ['club' => $clubId]) : '#' }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-arrow-right me-1"></i> Quản lý
+                        </a>
+                        <a href="{{ $clubId ? route('student.club-management.join-requests', ['club' => $clubId]) : '#' }}" class="btn btn-outline-secondary btn-sm ms-2">
+                            <i class="fas fa-inbox me-1"></i> Xem đơn chờ
                         </a>
                     </div>
                 </div>
             </div>
             @endif
-
-            @if($user->hasPermission('tao_su_kien'))
+            @if($userClub && $clubId && $user->hasPermission('tao_su_kien', $clubId))
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
@@ -124,11 +128,11 @@
                         <p class="management-description">Tổ chức và quản lý các sự kiện của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ data_get($clubStats, 'events.total', 0) }}</strong>
                                 <small>Sự kiện</small>
                             </span>
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ data_get($clubStats, 'events.upcoming', 0) }}</strong>
                                 <small>Sắp tới</small>
                             </span>
                         </div>
@@ -139,8 +143,7 @@
                 </div>
             </div>
             @endif
-
-            @if($user->hasPermission('dang_thong_bao'))
+            @if($userClub && $clubId && $user->hasPermission('dang_thong_bao', $clubId))
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
@@ -151,11 +154,11 @@
                         <p class="management-description">Gửi thông báo đến tất cả thành viên CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ data_get($clubStats, 'announcements.total', 0) }}</strong>
                                 <small>Đã gửi</small>
                             </span>
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ data_get($clubStats, 'announcements.today', 0) }}</strong>
                                 <small>Hôm nay</small>
                             </span>
                         </div>
@@ -166,8 +169,7 @@
                 </div>
             </div>
             @endif
-
-            @if($user->hasPermission('xem_bao_cao'))
+            @if($userClub && $clubId && $user->hasPermission('xem_bao_cao', $clubId))
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
@@ -178,11 +180,11 @@
                         <p class="management-description">Xem báo cáo hoạt động và thống kê CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>{{ $user->clubs->first()->members->count() ?? 0 }}</strong>
+                                <strong>{{ data_get($clubStats, 'members.active', 0) }}</strong>
                                 <small>Thành viên</small>
                             </span>
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ data_get($clubStats, 'events.total', 0) }}</strong>
                                 <small>Sự kiện</small>
                             </span>
                         </div>
@@ -193,8 +195,7 @@
                 </div>
             </div>
             @endif
-
-            @if($user->hasPermission('quan_ly_clb') && $user->getPositionInClub($user->clubs->first()->id ?? null) === 'leader')
+            @if($userClub && $clubId && $user->hasPermission('quan_ly_clb', $clubId) && $user->getPositionInClub($clubId) === 'leader')
             <div class="col-md-6 mb-4">
                 <div class="management-card special-card">
                     <div class="management-icon">
@@ -209,11 +210,11 @@
                                 <small>CLB</small>
                             </span>
                             <span class="stat-item">
-                                <strong>{{ $user->clubs->first()->members->count() ?? 0 }}</strong>
+                                <strong>{{ data_get($clubStats, 'members.active', 0) }}</strong>
                                 <small>Thành viên</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-warning btn-sm">
+                        <a href="{{ $clubId ? route('student.club-management.settings', ['club' => $clubId]) : '#' }}" class="btn btn-warning btn-sm">
                             <i class="fas fa-edit me-1"></i> Cài đặt
                         </a>
                     </div>
@@ -221,6 +222,8 @@
             </div>
             @endif
         </div>
+
+        {{-- Phân quyền chi tiết đã chuyển sang trang riêng --}}
 
         <!-- Recent Activity -->
         <div class="content-card">
@@ -278,31 +281,35 @@
                 <i class="fas fa-shield-alt"></i> Quyền hạn của bạn
             </h5>
             <div class="permissions-list">
-                @if($user->hasPermission('quan_ly_thanh_vien'))
+                @if($clubId && $user->hasPermission('quan_ly_thanh_vien', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-users text-success"></i>
-                    <span>Quản lý thành viên</span>
+                    <span>
+                        <a href="{{ route('student.club-management.members', ['club' => $clubId]) }}" class="text-decoration-none text-dark">
+                            Quản lý thành viên
+                        </a>
+                    </span>
                 </div>
                 @endif
-                @if($user->hasPermission('tao_su_kien'))
+                @if($clubId && $user->hasPermission('tao_su_kien', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-calendar-plus text-success"></i>
                     <span>Tạo sự kiện</span>
                 </div>
                 @endif
-                @if($user->hasPermission('dang_thong_bao'))
+                @if($clubId && $user->hasPermission('dang_thong_bao', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-bullhorn text-success"></i>
                     <span>Đăng thông báo</span>
                 </div>
                 @endif
-                @if($user->hasPermission('xem_bao_cao'))
+                @if($clubId && $user->hasPermission('xem_bao_cao', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-chart-bar text-success"></i>
                     <span>Xem báo cáo</span>
                 </div>
                 @endif
-                @if($user->hasPermission('quan_ly_clb'))
+                @if($clubId && $user->hasPermission('quan_ly_clb', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-cogs text-warning"></i>
                     <span>Quản lý CLB</span>
@@ -321,7 +328,7 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <div>
-                        <div class="stat-number">{{ $user->clubs->first()->members->count() ?? 0 }}</div>
+                        <div class="stat-number">{{ data_get($clubStats, 'members.active', 0) }}</div>
                         <div class="stat-label">Thành viên</div>
                     </div>
                 </div>
@@ -330,7 +337,7 @@
                         <i class="fas fa-calendar"></i>
                     </div>
                     <div>
-                        <div class="stat-number">0</div>
+                        <div class="stat-number">{{ data_get($clubStats, 'events.total', 0) }}</div>
                         <div class="stat-label">Sự kiện</div>
                     </div>
                 </div>
@@ -339,7 +346,7 @@
                         <i class="fas fa-bullhorn"></i>
                     </div>
                     <div>
-                        <div class="stat-number">0</div>
+                        <div class="stat-number">{{ data_get($clubStats, 'announcements.total', 0) }}</div>
                         <div class="stat-label">Thông báo</div>
                     </div>
                 </div>
@@ -508,6 +515,14 @@
     .permission-item i {
         margin-right: 0.75rem;
         width: 20px;
+    }
+    
+    .permission-item a {
+        transition: color 0.2s ease;
+    }
+    
+    .permission-item a:hover {
+        color: #14b8a6 !important;
     }
     
     .club-stats .stat-item {

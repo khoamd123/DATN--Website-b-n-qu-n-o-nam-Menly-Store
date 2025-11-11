@@ -324,7 +324,7 @@
         <div class="container">
             <ul class="nav justify-content-center">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" href="{{ route('student.dashboard') }}">
+                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
                         <i class="fas fa-home me-2"></i> Trang chủ
                     </a>
                 </li>
@@ -336,6 +336,11 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.events*') ? 'active' : '' }}" href="{{ route('student.events.index') }}">
                         <i class="fas fa-calendar-alt me-2"></i> Sự kiện
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
+                        <i class="fas fa-newspaper me-2"></i> Bài viết
                     </a>
                 </li>
                 <li class="nav-item">

@@ -499,4 +499,26 @@ class User extends Authenticatable
         
         return $ownedClubs->merge($managedClubs)->unique('id');
     }
+
+    /**
+     * Accessor: normalized avatar URL for display
+     */
+    public function getAvatarUrlAttribute(): string
+    {
+        $avatarPath = (string) ($this->avatar ?? '');
+
+        // If full URL
+        if ($avatarPath && (strpos($avatarPath, 'http://') === 0 || strpos($avatarPath, 'https://') === 0)) {
+            return $avatarPath;
+        }
+
+        // Default avatar fallback
+        if (trim($avatarPath) === '') {
+            return asset('images/avatar/avatar.png');
+        }
+
+        // Normalize: remove leading slash then generate asset URL
+        $normalized = ltrim($avatarPath, '/');
+        return asset($normalized);
+    }
 }

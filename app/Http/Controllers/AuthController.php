@@ -45,8 +45,8 @@ class AuthController extends Controller
                     return redirect()->intended(route('admin.dashboard'));
                 }
                 
-                // Redirect regular users to student dashboard
-                return redirect()->intended(route('student.dashboard'));
+                // Redirect regular users to homepage
+                return redirect()->intended(route('home', [], false));
             }
 
             return back()->withErrors([
@@ -119,6 +119,6 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('student.dashboard')->with('success', 'Đăng ký thành công! Chào mừng bạn đến với UniClubs.');
+        return redirect()->intended(route('home', [], false))->with('success', 'Đăng ký thành công! Chào mừng bạn đến với UniClubs.');
     }
 }

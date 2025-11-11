@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClubManagerController;
 use App\Http\Controllers\ClubResourceController;
+use App\Http\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,9 +18,7 @@ use App\Http\Controllers\ClubResourceController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
@@ -97,14 +96,12 @@ Route::get('/quick-login-student', function () {
     // Force save session
     session()->save();
     
-    return redirect()->route('student.dashboard')->with('success', 'Đăng nhập thành công!');
+    return redirect()->route('home')->with('success', 'Đăng nhập thành công!');
 })->name('quick.login.student');
 
 // Student Routes - BYPASS SESSION FOR TESTING
 Route::get('/student/dashboard', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.dashboard', compact('user'));
+    return redirect()->route('home');
 })->name('student.dashboard');
 
 Route::get('/student/clubs', function () {
@@ -141,23 +138,42 @@ Route::get('/student/contact', function () {
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
 
-Route::get('/student/club-management', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    
-    $hasManagementRole = false;
-    $userPosition = null;
-    $userClub = null;
-    
-    if ($user->clubs->count() > 0) {
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
-        $userPosition = $user->getPositionInClub($clubId);
-        $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
-    }
-    
-    return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
-})->name('student.club-management.index');
+Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])
+    ->name('student.club-management.index');
+Route::get(
+    '/student/club-management/{club}/members',
+    [\App\Http\Controllers\StudentController::class, 'manageMembers']
+)->name('student.club-management.members');
+Route::post(
+    '/student/club-management/{club}/members/{member}/permissions',
+    [\App\Http\Controllers\StudentController::class, 'updateMemberPermissions']
+)->name('student.club-management.permissions.update');
+Route::delete(
+    '/student/club-management/{club}/members/{member}',
+    [\App\Http\Controllers\StudentController::class, 'removeMember']
+)->name('student.club-management.members.remove');
+// Club join requests - for club leader/management on student side
+Route::get(
+    '/student/club-management/{club}/join-requests',
+    [\App\Http\Controllers\StudentController::class, 'clubJoinRequests']
+)->name('student.club-management.join-requests');
+Route::post(
+    '/student/club-management/{club}/join-requests/{request}/approve',
+    [\App\Http\Controllers\StudentController::class, 'approveClubJoinRequest']
+)->name('student.club-management.join-requests.approve');
+Route::post(
+    '/student/club-management/{club}/join-requests/{request}/reject',
+    [\App\Http\Controllers\StudentController::class, 'rejectClubJoinRequest']
+)->name('student.club-management.join-requests.reject');
+// Club settings
+Route::get(
+    '/student/club-management/{club}/settings',
+    [\App\Http\Controllers\StudentController::class, 'clubSettings']
+)->name('student.club-management.settings');
+Route::put(
+    '/student/club-management/{club}/settings',
+    [\App\Http\Controllers\StudentController::class, 'updateClubSettings']
+)->name('student.club-management.settings.update');
 
 // Test route without session check - TEMPORARY
 Route::get('/test-club-management', function () {
@@ -395,6 +411,12 @@ Route::prefix('admin')->group(function () {
     Route::get('/comments', [AdminController::class, 'commentsManagement'])->name('admin.comments');
     Route::delete('/comments/{type}/{id}', [AdminController::class, 'deleteComment'])->name('admin.comments.delete');
     
+    // Đơn tham gia CLB
+    Route::get('/join-requests', [AdminController::class, 'joinRequestsIndex'])->name('admin.join-requests.index');
+    Route::post('/join-requests/{id}/approve', [AdminController::class, 'approveJoinRequest'])->name('admin.join-requests.approve');
+    Route::post('/join-requests/{id}/reject', [AdminController::class, 'rejectJoinRequest'])->name('admin.join-requests.reject');
+    Route::post('/join-requests/bulk', [AdminController::class, 'bulkJoinRequests'])->name('admin.join-requests.bulk');
+
     // Phân quyền
     Route::get('/permissions', [AdminController::class, 'permissionsManagement'])->name('admin.permissions');
     Route::get('/permissions-simple', [AdminController::class, 'permissionsSimple'])->name('admin.permissions.simple');
