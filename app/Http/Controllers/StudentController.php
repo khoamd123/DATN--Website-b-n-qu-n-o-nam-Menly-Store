@@ -325,6 +325,13 @@ class StudentController extends Controller
             $image->move($destination, $filename);
             $data['image'] = 'uploads/posts/' . $filename;
         }
+        // Remove featured image from content if present
+        if (!empty($data['image']) && !empty($data['content'])) {
+            $relative = ltrim($data['image'], '/');
+            $assetUrl = asset($relative);
+            $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
+            $data['content'] = preg_replace($pattern, '', $data['content']);
+        }
         $post = \App\Models\Post::create($data);
         return redirect()->route('student.posts.show', $post->id)->with('success', 'Tạo bài viết thành công!');
     }
@@ -399,6 +406,14 @@ class StudentController extends Controller
             }
             $image->move($destination, $filename);
             $data['image'] = 'uploads/posts/' . $filename;
+        }
+        // Remove featured image from content if present (handle both newly set image and existing image)
+        $imageForFilter = $data['image'] ?? $post->image ?? null;
+        if (!empty($imageForFilter) && !empty($data['content'])) {
+            $relative = ltrim($imageForFilter, '/');
+            $assetUrl = asset($relative);
+            $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
+            $data['content'] = preg_replace($pattern, '', $data['content']);
         }
         $post->update($data);
         return redirect()->route('student.posts.show', $post->id)->with('success', 'Cập nhật bài viết thành công!');
