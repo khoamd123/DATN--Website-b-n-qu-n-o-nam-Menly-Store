@@ -350,7 +350,6 @@
                             </button>
                         </form>
                     @endif
-
                 </div>
             </div>
         </div>
@@ -486,3 +485,27 @@
 </script>
 @endif
 @endsection
+=======
+    .post-content {
+        line-height: 1.8;
+        font-size: 16px;
+        color: #333;
+    }
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+@endsection
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> origin/dung

@@ -130,7 +130,7 @@
                 <div class="col-12">
                     <label for="images" class="form-label">Ảnh sự kiện</label>
                     <input type="file" class="form-control" id="images" name="images[]" accept="image/*" multiple>
-                    <small class="text-muted">Có thể chọn nhiều ảnh cùng lúc. Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh.</small>
+                    <small class="text-muted">Có thể chọn nhiều ảnh cùng lúc. Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 5MB mỗi ảnh.</small>
                 </div>
                 <div class="col-12">
                     <div class="d-flex gap-2">
@@ -380,9 +380,9 @@
                                         'cancelled' => 'Đã hủy'
                                     ];
                                 @endphp
-                                <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
-                                    {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
-                                </span>
+                                    <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
+                                        {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
+                                    </span>
                             </td>
                             <td>
                                 <strong>{{ $event->creator->name ?? 'Không xác định' }}</strong>
@@ -394,21 +394,34 @@
                                     <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-outline-info">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
-                                    @if($event->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                                <i class="fas fa-check"></i> Duyệt
+                                    @if($event->status !== 'cancelled')
+                                        @if($event->status === 'pending')
+                                            <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                                    <i class="fas fa-check"></i> Duyệt
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if(in_array($event->status, ['pending', 'approved']))
+                                            <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Bạn có chắc muốn hủy sự kiện này?')">
+                                                    <i class="fas fa-times"></i> Hủy nhanh
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if($event->status === 'ongoing')
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sự kiện đang diễn ra, không thể hủy">
+                                                <i class="fas fa-ban"></i> Không thể hủy
                                             </button>
-                                        </form>
-                                    @endif
-                                    @if(in_array($event->status, ['pending', 'approved', 'ongoing']))
-                                        <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc muốn hủy sự kiện này?')">
-                                                <i class="fas fa-times"></i> Hủy
-                                            </button>
-                                        </form>
+                                        @elseif(!in_array($event->status, ['cancelled', 'completed', 'ongoing']))
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteEventModal{{ $event->id }}">
+                                                <i class="fas fa-ban"></i> Hủy sự kiện
+                                        </button>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-secondary">Đã hủy</span>
                                     @endif
                                 </div>
                             </td>
@@ -521,4 +534,59 @@ function toggleForm() {
 }
 </script>
 @endpush
+
+<!-- Modal hủy sự kiện cho từng sự kiện -->
+@foreach($events as $event)
+@if($event->status !== 'ongoing' && $event->status !== 'cancelled' && $event->status !== 'completed')
+<div class="modal fade" id="deleteEventModal{{ $event->id }}" tabindex="-1" aria-labelledby="deleteEventModalLabel{{ $event->id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteEventModalLabel{{ $event->id }}">
+                    <i class="fas fa-ban me-2"></i>Hủy sự kiện
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.events.delete', $event->id) }}">
+                @csrf
+                @method('DELETE')
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Thông báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Sự kiện sẽ chuyển sang trạng thái "Đã hủy" và vẫn được lưu trữ trong hệ thống. Thông tin sự kiện sẽ không bị xóa.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deletion_reason{{ $event->id }}" class="form-label">
+                            Lý do hủy sự kiện <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control @error('deletion_reason') is-invalid @enderror" 
+                                  id="deletion_reason{{ $event->id }}" 
+                                  name="deletion_reason" 
+                                  rows="4" 
+                                  placeholder="Vui lòng nhập lý do hủy sự kiện (tối thiểu 10 ký tự)..." 
+                                  required>{{ old('deletion_reason') }}</textarea>
+                        @error('deletion_reason')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            Lý do hủy sẽ được lưu trữ trong hệ thống và hiển thị trong thông tin sự kiện.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Đóng
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-ban me-2"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+@endforeach
+
 @endsection

@@ -15,6 +15,8 @@ class EventComment extends Model
         'parent_id',
         'content',
         'status',
+        'deletion_reason',
+        'deleted_at',
     ];
 
     // Constants for status

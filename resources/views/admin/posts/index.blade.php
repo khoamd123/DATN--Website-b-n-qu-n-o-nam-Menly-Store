@@ -3,7 +3,6 @@
 @section('title', 'Quản lý Bài viết - CLB Admin')
 
 @section('content')
-
     <div class="content-header">
         <div class="d-flex justify-content-between align-items-center">
             <h1>Quản lý Bài viết</h1>

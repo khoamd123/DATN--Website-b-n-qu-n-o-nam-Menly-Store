@@ -66,35 +66,35 @@
             <div class="row">
                 <div class="col-md-4 mb-4">
                     <a href="{{ route('student.club-management.fund-transactions', ['type' => 'income']) }}" class="text-decoration-none">
-                        <div class="stat-card h-100 fund-stat-card border-success">
-                            <div class="stat-icon bg-success"><i class="fas fa-arrow-down"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-number text-success">{{ number_format($stats['fund']['totalIncome'], 0, ',', '.') }} VNĐ</div>
-                                <div class="stat-label">Tổng thu</div>
-                            </div>
+                    <div class="stat-card h-100 fund-stat-card border-success">
+                        <div class="stat-icon bg-success"><i class="fas fa-arrow-down"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-number text-success">{{ number_format($stats['fund']['totalIncome'], 0, ',', '.') }} VNĐ</div>
+                            <div class="stat-label">Tổng thu</div>
                         </div>
+                    </div>
                     </a>
                 </div>
                 <div class="col-md-4 mb-4">
                     <a href="{{ route('student.club-management.fund-transactions', ['type' => 'expense']) }}" class="text-decoration-none">
-                        <div class="stat-card h-100 fund-stat-card border-danger">
-                            <div class="stat-icon bg-danger"><i class="fas fa-arrow-up"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-number text-danger">{{ number_format($stats['fund']['totalExpense'], 0, ',', '.') }} VNĐ</div>
-                                <div class="stat-label">Tổng chi</div>
-                            </div>
+                    <div class="stat-card h-100 fund-stat-card border-danger">
+                        <div class="stat-icon bg-danger"><i class="fas fa-arrow-up"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-number text-danger">{{ number_format($stats['fund']['totalExpense'], 0, ',', '.') }} VNĐ</div>
+                            <div class="stat-label">Tổng chi</div>
                         </div>
+                    </div>
                     </a>
                 </div>
                 <div class="col-md-4 mb-4">
                     <a href="{{ route('student.club-management.fund-transactions') }}" class="text-decoration-none">
-                        <div class="stat-card h-100 fund-stat-card border-primary">
-                            <div class="stat-icon bg-primary"><i class="fas fa-balance-scale"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-number text-primary">{{ number_format($stats['fund']['balance'], 0, ',', '.') }} VNĐ</div>
-                                <div class="stat-label">Số dư</div>
-                            </div>
+                    <div class="stat-card h-100 fund-stat-card border-primary">
+                        <div class="stat-icon bg-primary"><i class="fas fa-balance-scale"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-number text-primary">{{ number_format($stats['fund']['balance'], 0, ',', '.') }} VNĐ</div>
+                            <div class="stat-label">Số dư</div>
                         </div>
+                    </div>
                     </a>
                 </div>
             </div>

@@ -91,7 +91,7 @@
                             <div class="mb-2">
                                 <label class="form-label">Thêm ảnh mới:</label>
                                 <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imagesInput">
-                                <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 2MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
+                                <small class="text-muted">Hỗ trợ: JPG, JPEG, PNG, WEBP. Tối đa 5MB mỗi ảnh. Có thể chọn nhiều ảnh cùng lúc.</small>
                             </div>
                             
                             <div class="mt-2" id="imagesPreviewWrap" style="display:none;">
@@ -143,6 +143,141 @@
                                     <input type="number" class="form-control" name="max_participants" value="{{ old('max_participants', $event->max_participants) }}" placeholder="Số người tham gia tối đa">
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Hạn chót đăng ký tham gia</label>
+                                    <input type="datetime-local" class="form-control" name="registration_deadline" value="{{ old('registration_deadline', $event->registration_deadline ? \Carbon\Carbon::parse($event->registration_deadline)->format('Y-m-d\TH:i') : '') }}">
+                                    <small class="text-muted">Phải trước thời gian bắt đầu sự kiện</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3"><i class="fas fa-users"></i> Thông tin tổ chức</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Người phụ trách chính <span class="text-muted">(Chủ nhiệm / Trưởng ban tổ chức)</span></label>
+                            <input type="text" class="form-control" name="main_organizer" value="{{ old('main_organizer', $event->main_organizer) }}" placeholder="Nhập tên người phụ trách chính">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ban tổ chức / Đội ngũ thực hiện</label>
+                            <textarea class="form-control" name="organizing_team" rows="3" placeholder="Nhập danh sách ban tổ chức, mỗi người một dòng hoặc cách nhau bởi dấu phẩy">{{ old('organizing_team', $event->organizing_team) }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Đơn vị phối hợp hoặc đồng tổ chức <span class="text-muted">(nếu có)</span></label>
+                            <textarea class="form-control" name="co_organizers" rows="2" placeholder="Nhập tên các đơn vị phối hợp">{{ old('co_organizers', $event->co_organizers) }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Số điện thoại liên hệ</label>
+                                    <input type="text" class="form-control" name="contact_phone" value="{{ old('contact_phone', is_array($event->contact_info) ? ($event->contact_info['phone'] ?? '') : '') }}" placeholder="VD: 0123456789">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email liên hệ</label>
+                                    <input type="email" class="form-control" name="contact_email" value="{{ old('contact_email', is_array($event->contact_info) ? ($event->contact_info['email'] ?? '') : '') }}" placeholder="VD: contact@example.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3"><i class="fas fa-file"></i> Tài liệu và File</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Kế hoạch chi tiết <span class="text-muted">(Proposal / Plan file)</span></label>
+                            @if($event->proposal_file)
+                                <div class="mb-2">
+                                    <a href="{{ asset('storage/' . $event->proposal_file) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-file"></i> Xem file hiện tại
+                                    </a>
+                                </div>
+                            @endif
+                            <input type="file" class="form-control" name="proposal_file" accept=".pdf,.doc,.docx">
+                            <small class="text-muted">Định dạng: PDF, DOC, DOCX. Tối đa 10MB. Để trống nếu không thay đổi.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Poster / Ấn phẩm truyền thông <span class="text-muted">(nếu có)</span></label>
+                            @if($event->poster_file)
+                                <div class="mb-2">
+                                    <a href="{{ asset('storage/' . $event->poster_file) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-file"></i> Xem file hiện tại
+                                    </a>
+                                </div>
+                            @endif
+                            <input type="file" class="form-control" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
+                            <small class="text-muted">Định dạng: PDF, JPG, JPEG, PNG. Tối đa 10MB. Để trống nếu không thay đổi.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Giấy phép / Công văn xin tổ chức <span class="text-muted">(nếu cần)</span></label>
+                            @if($event->permit_file)
+                                <div class="mb-2">
+                                    <a href="{{ asset('storage/' . $event->permit_file) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-file"></i> Xem file hiện tại
+                                    </a>
+                                </div>
+                            @endif
+                            <input type="file" class="form-control" name="permit_file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <small class="text-muted">Định dạng: PDF, DOC, DOCX, JPG, JPEG, PNG. Tối đa 10MB. Để trống nếu không thay đổi.</small>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3"><i class="fas fa-user-tie"></i> Khách mời</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Loại khách mời</label>
+                            @php
+                                $guestData = is_array($event->guests) ? $event->guests : (is_string($event->guests) ? json_decode($event->guests, true) : []);
+                                $guestTypes = $guestData['types'] ?? [];
+                                $guestOtherInfo = $guestData['other_info'] ?? '';
+                            @endphp
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="guest_types[]" value="lecturer" id="guest_lecturer" {{ in_array('lecturer', $guestTypes) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="guest_lecturer">
+                                            <i class="fas fa-chalkboard-teacher me-2"></i>Giảng viên
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="guest_types[]" value="student" id="guest_student" {{ in_array('student', $guestTypes) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="guest_student">
+                                            <i class="fas fa-user-graduate me-2"></i>Sinh viên
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="guest_types[]" value="sponsor" id="guest_sponsor" {{ in_array('sponsor', $guestTypes) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="guest_sponsor">
+                                            <i class="fas fa-hand-holding-usd me-2"></i>Nhà tài trợ
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="guest_types[]" value="other" id="guest_other" {{ in_array('other', $guestTypes) ? 'checked' : '' }} onchange="toggleGuestOtherInfo()">
+                                        <label class="form-check-label" for="guest_other">
+                                            <i class="fas fa-ellipsis-h me-2"></i>Khác...
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="guest_other_info_wrapper" style="display: {{ in_array('other', $guestTypes) ? 'block' : 'none' }};">
+                            <label class="form-label">Thông tin khách mời (Khác) <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="guest_other_info" id="guest_other_info" rows="4" placeholder="Nhập thông tin chi tiết về khách mời khác...">{{ old('guest_other_info', $guestOtherInfo) }}</textarea>
+                            <small class="text-muted">Vui lòng nhập thông tin chi tiết về khách mời khi chọn "Khác..."</small>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Trạng thái</label>
@@ -290,7 +425,26 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedFiles = Array.from(files);
         renderPreview();
     });
+
+    // Khởi tạo trạng thái textarea khách mời khác
+    toggleGuestOtherInfo();
 });
+
+function toggleGuestOtherInfo() {
+    const checkbox = document.getElementById('guest_other');
+    const wrapper = document.getElementById('guest_other_info_wrapper');
+    const textarea = document.getElementById('guest_other_info');
+    
+    if (checkbox && wrapper && textarea) {
+        if (checkbox.checked) {
+            wrapper.style.display = 'block';
+            textarea.required = true;
+        } else {
+            wrapper.style.display = 'none';
+            textarea.required = false;
+        }
+    }
+}
 </script>
 @endpush
 @endsection

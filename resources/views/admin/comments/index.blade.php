@@ -135,8 +135,21 @@
                             </td>
                             <td>
                                 @if($commentable)
-                                    <strong>{{ $commentable->title ?? 'Không có tiêu đề' }}</strong>
-                                    <br><small class="text-muted">{{ $commentable->club->name ?? 'Không xác định CLB' }}</small>
+                                    @if($comment->post)
+                                        <a href="{{ route('admin.posts.show', $commentable->id) }}" 
+                                           class="text-decoration-none d-block" 
+                                           style="cursor: pointer; transition: all 0.2s;">
+                                            <strong class="text-primary" style="text-decoration: underline;">{{ $commentable->title ?? 'Không có tiêu đề' }}</strong>
+                                            <br><small class="text-muted">{{ $commentable->club->name ?? 'Không xác định CLB' }}</small>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('admin.events.show', $commentable->id) }}" 
+                                           class="text-decoration-none d-block" 
+                                           style="cursor: pointer; transition: all 0.2s;">
+                                            <strong class="text-primary" style="text-decoration: underline;">{{ $commentable->title ?? 'Không có tiêu đề' }}</strong>
+                                            <br><small class="text-muted">{{ $commentable->club->name ?? 'Không xác định CLB' }}</small>
+                                        </a>
+                                    @endif
                                 @else
                                     <span class="text-muted">Không tìm thấy</span>
                                 @endif
@@ -144,16 +157,61 @@
                             <td>{{ $comment->created_at->format('d/m/Y H:i') }}</td>
                             <td style="min-width: 120px; width: 120px;">
                                 <div class="d-flex flex-column gap-1">
-                                    <button class="btn btn-sm btn-info" onclick="viewComment({{ $comment->id }})">
+                                    <a href="{{ route('admin.comments.show', [$comment->post ? 'post' : 'event', $comment->id]) }}" 
+                                       class="btn btn-sm btn-info">
                                         <i class="fas fa-eye"></i> Xem
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ $comment->id }}">
+                                        <i class="fas fa-trash"></i> Xóa
                                     </button>
-                                    <form method="POST" action="{{ route('admin.comments.delete', [$comment->post ? 'post' : 'event', $comment->id]) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
+
+                                    <!-- Modal xóa bình luận -->
+                                    <div class="modal fade" id="deleteCommentModal{{ $comment->id }}" tabindex="-1" aria-labelledby="deleteCommentModalLabel{{ $comment->id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title" id="deleteCommentModalLabel{{ $comment->id }}">
+                                                        <i class="fas fa-exclamation-triangle"></i> Xóa bình luận
+                                                    </h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form method="POST" action="{{ route('admin.comments.delete', [$comment->post ? 'post' : 'event', $comment->id]) }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <div class="modal-body">
+                                                        <div class="alert alert-warning">
+                                                            <i class="fas fa-info-circle"></i> Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="deletion_reason{{ $comment->id }}" class="form-label">
+                                                                <strong>Lý do xóa bình luận <span class="text-danger">*</span></strong>
+                                                            </label>
+                                                            <textarea class="form-control" 
+                                                                      id="deletion_reason{{ $comment->id }}" 
+                                                                      name="deletion_reason" 
+                                                                      rows="4" 
+                                                                      placeholder="Vui lòng nhập lý do xóa bình luận (tối thiểu 10 ký tự)" 
+                                                                      required 
+                                                                      minlength="10" 
+                                                                      maxlength="1000"></textarea>
+                                                            <small class="form-text text-muted">Tối thiểu 10 ký tự, tối đa 1000 ký tự</small>
+                                                            @error('deletion_reason')
+                                                                <div class="text-danger">{{ $message }}</div>
+                                                            @enderror
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                            <i class="fas fa-times"></i> Hủy
+                                                        </button>
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash"></i> Xác nhận xóa
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -177,10 +235,14 @@
     </div>
 </div>
 
-<script>
-function viewComment(id) {
-    // Logic xem chi tiết bình luận
-    alert('Xem bình luận ID: ' + id);
-}
-</script>
+<style>
+    .table tbody td a:hover strong {
+        color: #0056b3 !important;
+        text-decoration: underline !important;
+    }
+    .table tbody td a:hover {
+        opacity: 0.8;
+    }
+</style>
+
 @endsection

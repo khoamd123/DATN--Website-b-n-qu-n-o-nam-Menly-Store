@@ -124,7 +124,7 @@ class StudentController extends Controller
         ];
         $clubMembers = collect();
         $allPermissions = collect();
-        
+
         if ($user->clubs->count() > 0) {
             $userClub = $user->clubs->first();
             $clubId = $userClub->id;

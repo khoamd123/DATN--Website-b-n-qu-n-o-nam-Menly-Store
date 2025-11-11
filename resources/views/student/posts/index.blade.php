@@ -84,7 +84,20 @@
                                         <span class="badge bg-teal text-white" style="background-color:#14b8a6;">{{ $post->club->name ?? 'UniClubs' }}</span>
                                     </div>
                                     <p class="card-text text-muted mb-2">
-                                        {{ \Illuminate\Support\Str::limit(strip_tags($post->content), 160) }}
+                                        @php
+                                            $content = strip_tags($post->content ?? '');
+                                            $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
+                                            $content = preg_replace('/\s+/u', ' ', $content);
+                                            $content = trim($content);
+                                            // Dùng strlen và substr thay vì mb_* để tránh lỗi nếu extension chưa bật
+                                            $len = function_exists('mb_strlen') ? mb_strlen($content) : strlen($content);
+                                            if ($len > 160) {
+                                                $content = function_exists('mb_substr') 
+                                                    ? mb_substr($content, 0, 157) . '...'
+                                                    : substr($content, 0, 157) . '...';
+                                            }
+                                        @endphp
+                                        {{ $content }}
                                     </p>
                                     <p class="card-text">
                                         <small class="text-muted">
