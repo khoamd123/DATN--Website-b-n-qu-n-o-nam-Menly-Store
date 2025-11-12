@@ -340,17 +340,12 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
-                        <i class="fas fa-newspaper me-2"></i> Bài viết
+                        <i class="fas fa-newspaper me-2"></i> Thông báo và tin tức
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.profile*') ? 'active' : '' }}" href="{{ route('student.profile.index') }}">
                         <i class="fas fa-user-circle me-2"></i> Hồ sơ
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.notifications*') ? 'active' : '' }}" href="{{ route('student.notifications.index') }}">
-                        <i class="fas fa-bell me-2"></i> Thông báo
                     </a>
                 </li>
                 <li class="nav-item">

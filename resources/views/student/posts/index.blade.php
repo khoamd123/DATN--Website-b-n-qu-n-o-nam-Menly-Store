@@ -7,7 +7,7 @@
         <div class="col-12">
             <div class="content-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Tin tức</h4>
+                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Thông báo và tin tức</h4>
                 </div>
 
                 <form method="GET" action="{{ route('student.posts') }}" class="row g-2 mb-3">
