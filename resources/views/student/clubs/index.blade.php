@@ -47,7 +47,7 @@
                                 <p class="card-text">{{ Str::limit($club->description, 100) }}</p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge bg-teal">Đã tham gia</span>
-                                    <a href="#" class="btn btn-outline-primary btn-sm">Xem chi tiết</a>
+                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm">Xem chi tiết</a>
                                 </div>
                             </div>
                         </div>
