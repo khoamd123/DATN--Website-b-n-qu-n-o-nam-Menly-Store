@@ -46,14 +46,62 @@ class StudentController extends Controller
         return view('student.dashboard', compact('user'));
     }
 
-    public function clubs()
+    public function clubs(Request $request) 
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
 
-        return view('student.clubs.index', compact('user'));
+        $search = $request->input('search');
+
+        // Lấy ID các CLB mà người dùng đã tham gia
+        $myClubIds = $user->clubs->pluck('id')->toArray();
+
+        // Luôn lấy đầy đủ danh sách CLB của tôi, không bị ảnh hưởng bởi tìm kiếm
+        $myClubs = Club::whereIn('id', $myClubIds)
+            ->where('status', 'active')
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+
+        // Query các CLB khác (chưa tham gia)
+        $otherClubsQuery = Club::where('status', 'active')
+            ->whereNotIn('id', $myClubIds)
+            ->withCount('members');
+
+        // Áp dụng bộ lọc tìm kiếm cho các CLB khác
+        if ($search) {
+            $otherClubsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Lấy kết quả với phân trang
+        $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8);
+
+        return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search'));
+    }
+
+    public function ajaxSearchClubs(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        // Nếu checkStudentAuth trả về một redirect, nghĩa là chưa đăng nhập, trả về lỗi
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return response('Unauthorized.', 401);
+        }
+
+        $search = $request->input('search', '');
+        $myClubIds = $user->clubs->pluck('id')->toArray();
+
+        $otherClubs = Club::where('status', 'active')
+            ->whereNotIn('id', $myClubIds)
+            ->where('name', 'like', '%' . $search . '%')
+            ->withCount('members')
+            ->orderBy('name')
+            ->paginate(8);
+
+        return view('student.clubs._other_clubs_list', compact('otherClubs', 'search'));
     }
 
     public function events()
