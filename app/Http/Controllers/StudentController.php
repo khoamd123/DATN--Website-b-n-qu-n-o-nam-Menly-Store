@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\Club;
 use App\Models\ClubMember;
 use App\Models\Event;
+use App\Models\ClubJoinRequest;
 
 class StudentController extends Controller
 {
@@ -425,6 +426,63 @@ class StudentController extends Controller
         session(['club_roles' => $clubRoles]);
 
         return redirect()->route('student.clubs.index')->with('success', 'Bạn đã rời khỏi câu lạc bộ ' . $club->name . ' thành công.');
+    }
+
+    /**
+     * Allow a student to send a join request to a club.
+     */
+    public function joinClub(Request $request, Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // 1. Kiểm tra xem user đã là thành viên chưa
+        $isMember = $club->members()->where('user_id', $user->id)->exists();
+        if ($isMember) {
+            return redirect()->back()->with('error', 'Bạn đã là thành viên của câu lạc bộ này.');
+        }
+
+        // 2. Kiểm tra xem user đã có yêu cầu đang chờ xử lý chưa
+        $hasPendingRequest = $club->joinRequests()->where('user_id', $user->id)->where('status', 'pending')->exists();
+        if ($hasPendingRequest) {
+            return redirect()->back()->with('info', 'Bạn đã gửi yêu cầu tham gia câu lạc bộ này rồi. Vui lòng chờ duyệt.');
+        }
+
+        // 3. Tạo yêu cầu tham gia mới
+        ClubJoinRequest::create([
+            'club_id' => $club->id,
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'message' => $request->input('message'), // Tùy chọn: có thể thêm ô lời nhắn
+        ]);
+
+        return redirect()->back()->with('success', 'Đã gửi yêu cầu tham gia thành công! Vui lòng chờ ban quản trị CLB duyệt.');
+    }
+
+    /**
+     * Allow a student to cancel their join request.
+     */
+    public function cancelJoinRequest(Request $request, Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $joinRequest = ClubJoinRequest::where('user_id', $user->id)
+            ->where('club_id', $club->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$joinRequest) {
+            return redirect()->back()->with('error', 'Không tìm thấy yêu cầu tham gia để hủy.');
+        }
+
+        $joinRequest->delete();
+
+        return redirect()->back()->with('success', 'Đã hủy yêu cầu tham gia câu lạc bộ ' . $club->name . '.');
     }
 
     /**

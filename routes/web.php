@@ -109,6 +109,10 @@ Route::get('/student/clubs-ajax-search', [\App\Http\Controllers\StudentControlle
 Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
 // NEW: Route for leaving a club
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
+// NEW: Routes for joining a club
+Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
+Route::delete('/student/clubs/{club}/cancel-join-request', [\App\Http\Controllers\StudentController::class, 'cancelJoinRequest'])->name('student.clubs.cancel_join_request');
+
 
 
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
@@ -323,6 +327,10 @@ Route::prefix('admin')->group(function () {
             Route::delete('/clubs/{club}/members/{member}/reject', [AdminController::class, 'rejectMember'])->name('admin.clubs.members.reject');
             Route::delete('/clubs/{club}/members/{member}/remove', [AdminController::class, 'removeMember'])->name('admin.clubs.members.remove');
             Route::post('/clubs/{club}/members/bulk-update', [AdminController::class, 'bulkUpdateMembers'])->name('admin.clubs.members.bulk-update');
+
+            // Club Join Requests
+            Route::post('/club-join-requests/{joinRequest}/approve', [AdminController::class, 'approveJoinRequest'])->name('admin.club-join-requests.approve');
+
     
 
     // Tài Nguyên CLB
