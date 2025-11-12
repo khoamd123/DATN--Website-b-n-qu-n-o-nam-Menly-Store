@@ -160,6 +160,10 @@
             color: white;
         }
         
+        .text-teal {
+            color: #14b8a6 !important;
+        }
+        
         /* Footer */
         .main-footer {
             background: #ffffff;
@@ -298,13 +302,23 @@
                 </div>
                 <div class="col-md-6 text-end">
                     <div class="d-flex align-items-center justify-content-end">
+                        @if(isset($user) && $user)
                         <div class="me-3">
-                            <div class="user-avatar">{{ substr($user->name, 0, 1) }}</div>
+                            <div class="user-avatar">{{ substr($user->name ?? 'U', 0, 1) }}</div>
                         </div>
                         <div>
-                            <div class="fw-bold">{{ $user->name }}</div>
+                            <div class="fw-bold">{{ $user->name ?? 'Người dùng' }}</div>
                             <small class="opacity-75">{{ $user->student_id ?? 'Sinh viên' }}</small>
                         </div>
+                        @else
+                        <div class="me-3">
+                            <div class="user-avatar">U</div>
+                        </div>
+                        <div>
+                            <div class="fw-bold">Người dùng</div>
+                            <small class="opacity-75">Sinh viên</small>
+                        </div>
+                        @endif
                         <div class="ms-3">
                             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                 @csrf
@@ -355,7 +369,7 @@
                 </li>
                 @php
                     $hasManagementRole = false;
-                    if ($user->clubs->count() > 0) {
+                    if (isset($user) && $user && $user->clubs && $user->clubs->count() > 0) {
                         $clubId = $user->clubs->first()->id;
                         $position = $user->getPositionInClub($clubId);
                         $hasManagementRole = in_array($position, ['leader', 'vice_president', 'officer']);

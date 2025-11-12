@@ -117,10 +117,10 @@
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
-                        <i class="fas fa-calendar-plus"></i>
+                        <i class="fas fa-calendar-alt"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Tạo sự kiện</h5>
+                        <h5 class="management-title">Quản lý sự kiện</h5>
                         <p class="management-description">Tổ chức và quản lý các sự kiện của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
@@ -132,8 +132,8 @@
                                 <small>Sắp tới</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i> Tạo mới
+                        <a href="{{ route('student.events.manage') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-cog me-1"></i> Quản lý
                         </a>
                     </div>
                 </div>

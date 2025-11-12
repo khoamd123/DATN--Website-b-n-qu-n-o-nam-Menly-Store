@@ -95,11 +95,13 @@ Route::get('/student/clubs', function () {
     return view('student.clubs.index', compact('user'));
 })->name('student.clubs.index');
 
-Route::get('/student/events', function () {
-    $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-    if (!$user) return 'User not found';
-    return view('student.events.index', compact('user'));
-})->name('student.events.index');
+Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
+Route::get('/student/events/manage', [\App\Http\Controllers\StudentController::class, 'manageEvents'])->name('student.events.manage');
+Route::get('/student/events/create', [\App\Http\Controllers\StudentController::class, 'createEvent'])->name('student.events.create');
+Route::post('/student/events', [\App\Http\Controllers\StudentController::class, 'storeEvent'])->name('student.events.store');
+Route::get('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->whereNumber('eventId')->name('student.events.show');
+Route::post('/student/events/{eventId}/register', [\App\Http\Controllers\StudentController::class, 'registerEvent'])->whereNumber('eventId')->name('student.events.register');
+Route::post('/student/events/{eventId}/cancel-registration', [\App\Http\Controllers\StudentController::class, 'cancelRegistration'])->whereNumber('eventId')->name('student.events.cancel-registration');
 
 Route::get('/student/profile', function () {
     $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
@@ -170,7 +172,7 @@ Route::get('/test-club-management', function () {
 
 Route::prefix('admin')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
     
             // Quản lý người dùng
             Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
