@@ -14,6 +14,7 @@ use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -534,6 +535,29 @@ class AdminController extends Controller
         $user->delete(); // Soft delete
         
         return redirect()->back()->with('success', 'Người dùng đã được chuyển vào thùng rác!');
+    }
+
+    /**
+     * Reset mật khẩu người dùng về mật khẩu mặc định
+     */
+    public function resetUserPassword($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $user = User::findOrFail($id);
+            
+            // Reset mật khẩu về "password"
+            $user->password = Hash::make('password');
+            $user->save();
+            
+            return redirect()->back()->with('success', 'Đã reset mật khẩu thành công! Mật khẩu mới là: password');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi reset mật khẩu: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -1387,7 +1411,7 @@ class AdminController extends Controller
             $query->whereBetween('start_time', [$dateFilter['start'], $dateFilter['end']]);
         }
         
-        $events = $query->orderBy('start_time', 'asc')->paginate(20);
+        $events = $query->orderBy('created_at', 'desc')->paginate(20);
 
         $clubs = Club::where('status', 'active')->get();
         
@@ -2342,10 +2366,23 @@ class AdminController extends Controller
      */
     public function postsShow($id)
     {
-        // Bao gồm cả bài viết đã xóa (trong thùng rác)
-        $post = Post::withTrashed()->with(['club', 'user', 'attachments'])->findOrFail($id);
-        
-        return view('admin.posts.show', compact('post'));
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            // Bao gồm cả bài viết đã xóa (trong thùng rác)
+            $post = Post::withTrashed()
+                ->whereIn('type', ['post', 'announcement'])
+                ->with(['club', 'user', 'attachments', 'comments.user', 'comments.replies.user'])
+                ->findOrFail($id);
+            
+            return view('admin.posts.show', compact('post'));
+        } catch (\Exception $e) {
+            \Log::error('Error showing post: ' . $e->getMessage());
+            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -2436,27 +2473,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Hiển thị chi tiết bài viết
-     */
-    public function postsShow($id)
-    {
-        // Kiểm tra đăng nhập admin
-        if (!session('logged_in') || !session('is_admin')) {
-            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
-        }
-
-        try {
-            $post = Post::whereIn('type', ['post', 'announcement'])
-                ->with(['club', 'user', 'comments.user', 'comments.replies.user'])
-                ->findOrFail($id);
-            
-            return view('admin.posts.show', compact('post'));
-        } catch (\Exception $e) {
-            \Log::error('Error showing post: ' . $e->getMessage());
-            return redirect()->route('admin.posts')->with('error', 'Không tìm thấy bài viết: ' . $e->getMessage());
-        }
-    }
 
     /**
      * Hiển thị form chỉnh sửa bài viết

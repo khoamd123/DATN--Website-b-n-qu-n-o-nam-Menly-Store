@@ -242,6 +242,7 @@ Route::prefix('admin')->group(function () {
             Route::get('/users-simple', [AdminController::class, 'usersSimple'])->name('admin.users.simple');
             Route::patch('/users/{id}/status', [AdminController::class, 'updateUserStatus'])->name('admin.users.status');
             Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+            Route::post('/users/{id}/reset-password', [AdminController::class, 'resetUserPassword'])->name('admin.users.reset-password');
     
             // Quản lý quỹ
             Route::get('/funds', [App\Http\Controllers\FundController::class, 'index'])->name('admin.funds');

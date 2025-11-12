@@ -291,6 +291,12 @@
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal">
                             <i class="fas fa-edit"></i> Chỉnh sửa thông tin
                         </button>
+                        <form method="POST" action="{{ route('admin.users.reset-password', $user->id) }}" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn reset mật khẩu về \"password\"?')">
+                            @csrf
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-key"></i> Reset mật khẩu
+                            </button>
+                        </form>
                         @if(!$user->is_admin)
                             <form method="POST" action="{{ route('admin.users.delete', $user->id) }}" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?')">
                                 @csrf

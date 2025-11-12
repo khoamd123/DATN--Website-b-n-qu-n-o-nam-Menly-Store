@@ -6,18 +6,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use App\Models\User;
 
 class StudentProfileController extends Controller
 {
+    /**
+     * Check if user is logged in as student
+     */
+    private function checkStudentAuth()
+    {
+        if (!session('user_id') || session('is_admin')) {
+            if (session('is_admin')) {
+                return redirect()->route('admin.dashboard');
+            }
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập với tài khoản sinh viên.');
+        }
+
+        $user = User::with('clubs')->find(session('user_id'));
+        
+        if (!$user) {
+            session()->forget(['user_id', 'user_name', 'user_email', 'is_admin']);
+            return redirect()->route('login')->with('error', 'Phiên đăng nhập đã hết hạn.');
+        }
+
+        return $user;
+    }
+
     /**
      * Show the user's profile.
      */
     public function index()
     {
-        // Tạm thời dùng user cứng, sẽ thay bằng Auth::user() sau khi có auth hoàn chỉnh
-        $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
         }
         return view('student.profile.index', compact('user'));
     }
@@ -27,10 +49,9 @@ class StudentProfileController extends Controller
      */
     public function edit()
     {
-        // Tạm thời dùng user cứng, sẽ thay bằng Auth::user() sau khi có auth hoàn chỉnh
-        $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
         }
         return view('student.profile.edit', compact('user'));
     }
@@ -40,11 +61,9 @@ class StudentProfileController extends Controller
      */
     public function update(Request $request)
     {
-        // Tạm thời dùng user cứng
-        // In a real app, this would be Auth::user()
-        $user = \App\Models\User::where('email', 'khoamdph31863@fpt.edu.vn')->first();
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
         }
 
         $request->validate([

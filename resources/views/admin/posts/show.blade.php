@@ -68,58 +68,7 @@
                     </div>
                 @endif
                 
-                {{-- Hiển thị gallery ảnh với lightbox --}}
-                @if($post->attachments && $post->attachments->count() > 0)
-                    <div class="mb-3">
-                        <h5 class="mb-3">
-                            <i class="fas fa-images text-primary"></i> Thư viện ảnh 
-                            <span class="badge bg-primary">{{ $post->attachments->count() }}</span>
-                        </h5>
-                    </div>
-                    <div class="row g-3 mb-4">
-                        @foreach($post->attachments as $index => $attachment)
-                            <div class="col-md-4 col-sm-6">
-                                <div class="position-relative" style="cursor: pointer;" onclick="openLightbox({{ $index }})">
-                                    <img 
-                                        src="{{ asset($attachment->file_url) }}" 
-                                        alt="Ảnh {{ $index + 1 }}" 
-                                        class="img-fluid rounded border shadow-sm" 
-                                        style="height: 200px; width: 100%; object-fit: cover; transition: transform 0.3s;"
-                                        onmouseover="this.style.transform='scale(1.05)'"
-                                        onmouseout="this.style.transform='scale(1)'"
-                                    >
-                                    <div class="position-absolute top-0 end-0 bg-dark bg-opacity-50 text-white px-2 py-1 rounded-bottom-start">
-                                        <i class="fas fa-search-plus"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    
-                    <!-- Lightbox Modal -->
-                    <div class="modal fade" id="imageLightbox" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered modal-xl">
-                            <div class="modal-content bg-dark">
-                                <div class="modal-header border-secondary">
-                                    <h5 class="modal-title text-white" id="lightboxTitle">Ảnh 1 / {{ $post->attachments->count() }}</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body text-center p-0" style="min-height: 70vh; display: flex; align-items: center; justify-content: center;">
-                                    <img id="lightboxImage" src="" alt="" class="img-fluid" style="max-height: 80vh;">
-                                </div>
-                                <div class="modal-footer border-secondary justify-content-between">
-                                    <button type="button" class="btn btn-outline-light" onclick="previousImage()">
-                                        <i class="fas fa-chevron-left"></i> Trước
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                                    <button type="button" class="btn btn-outline-light" onclick="nextImage()">
-                                        Sau <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @elseif($post->image)
+                @if($post->image)
                     <div class="mb-4 text-center">
                         <img 
                             src="{{ asset($post->image) }}" 
@@ -421,57 +370,6 @@
 .badge-danger { background-color: #dc3545; }
 </style>
 
-@if($post->attachments && $post->attachments->count() > 0)
-<script>
-    // Lưu danh sách ảnh và index hiện tại
-    const imageUrls = [
-        @foreach($post->attachments as $attachment)
-            "{{ asset($attachment->file_url) }}",
-        @endforeach
-    ];
-    let currentImageIndex = 0;
-
-    function openLightbox(index) {
-        currentImageIndex = index;
-        updateLightboxImage();
-        var lightbox = new bootstrap.Modal(document.getElementById('imageLightbox'));
-        lightbox.show();
-    }
-
-    function updateLightboxImage() {
-        const img = document.getElementById('lightboxImage');
-        const title = document.getElementById('lightboxTitle');
-        if (img && title) {
-            img.src = imageUrls[currentImageIndex];
-            title.textContent = `Ảnh ${currentImageIndex + 1} / ${imageUrls.length}`;
-        }
-    }
-
-    function previousImage() {
-        currentImageIndex = (currentImageIndex - 1 + imageUrls.length) % imageUrls.length;
-        updateLightboxImage();
-    }
-
-    function nextImage() {
-        currentImageIndex = (currentImageIndex + 1) % imageUrls.length;
-        updateLightboxImage();
-    }
-
-    // Điều hướng bằng phím
-    document.addEventListener('keydown', function(e) {
-        const lightbox = document.getElementById('imageLightbox');
-        if (lightbox.classList.contains('show')) {
-            if (e.key === 'ArrowLeft') previousImage();
-            if (e.key === 'ArrowRight') nextImage();
-            if (e.key === 'Escape') {
-                const modal = bootstrap.Modal.getInstance(lightbox);
-                if (modal) modal.hide();
-            }
-        }
-    });
-</script>
-@endif
-
 @if($post->image)
 <script>
     function openSingleImage(imageUrl) {
@@ -485,27 +383,3 @@
 </script>
 @endif
 @endsection
-=======
-    .post-content {
-        line-height: 1.8;
-        font-size: 16px;
-        color: #333;
-    }
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-</style>
-@endsection
-
-
-
-
-
-
-
-
-
-
-
-
->>>>>>> origin/dung

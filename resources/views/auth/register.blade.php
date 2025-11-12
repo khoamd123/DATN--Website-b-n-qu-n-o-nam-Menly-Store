@@ -176,8 +176,8 @@
                            required>
                 </div>
                 <small class="text-muted">
-                    <i class="fas fa-magic"></i>
-                    Tên sẽ được tự động điền từ email nếu có thể
+                    <i class="fas fa-info-circle"></i>
+                    Nhập tên đầy đủ của bạn (tên này sẽ được sử dụng)
                 </small>
                 
                 <div class="input-group mt-3">
