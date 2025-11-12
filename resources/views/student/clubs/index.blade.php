@@ -13,11 +13,32 @@
                     <h2 class="mb-1">
                         <i class="fas fa-users text-teal"></i> Câu lạc bộ
                     </h2>
-                    <p class="text-muted mb-0">Khám phá và tham gia các câu lạc bộ thú vị</p>
+                    <p class="text-muted mb-0">Khám phá, tìm kiếm và tham gia các câu lạc bộ thú vị.</p>
                 </div>
-                <a href="#" class="btn btn-primary">
-                    <i class="fas fa-search me-2"></i> Tìm kiếm CLB
-                </a>
+            </div>
+            <!-- Search Form -->
+            <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form">
+                <div class="input-group" id="search-input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Nhập tên câu lạc bộ..." value="{{ $search ?? '' }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search me-1"></i> Tìm kiếm
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Other Clubs / Search Results -->
+        <div class="content-card" id="search-results-section">
+            <h4 class="mb-3" id="search-results-title">
+                @if(isset($search) && !empty($search))
+                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
+                @else
+                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                @endif
+            </h4>
+            
+            <div id="search-results-container">
+                @include('student.clubs._other_clubs_list', ['otherClubs' => $otherClubs, 'search' => $search])
             </div>
         </div>
 
@@ -27,9 +48,9 @@
                 <i class="fas fa-star text-warning me-2"></i> CLB của tôi
             </h4>
             
-            @if($user->clubs->count() > 0)
+            @if($myClubs->count() > 0)
                 <div class="row">
-                    @foreach($user->clubs as $club)
+                    @foreach($myClubs as $club)
                     <div class="col-md-6 mb-4">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-body">
@@ -40,7 +61,7 @@
                                     <div>
                                         <h5 class="card-title mb-1">{{ $club->name }}</h5>
                                         <small class="text-muted">
-                                            <i class="fas fa-user-friends"></i> {{ $club->members->count() }} thành viên
+                                            <i class="fas fa-user-friends"></i> {{ $club->members_count ?? $club->members->count() }} thành viên
                                         </small>
                                     </div>
                                 </div>
@@ -58,7 +79,7 @@
                 <div class="text-center py-5">
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Bạn chưa tham gia câu lạc bộ nào</h5>
-                    <p class="text-muted">Hãy khám phá và tham gia các câu lạc bộ thú vị!</p>
+                    <p class="text-muted">Hãy khám phá và tham gia các câu lạc bộ thú vị ở bên dưới!</p>
                     <a href="#" class="btn btn-primary">
                         <i class="fas fa-search me-2"></i> Tìm kiếm CLB
                     </a>
@@ -66,98 +87,6 @@
             @endif
         </div>
 
-        <!-- Popular Clubs -->
-        <div class="content-card">
-            <h4 class="mb-3">
-                <i class="fas fa-fire text-danger me-2"></i> CLB phổ biến
-            </h4>
-            
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="club-logo me-3">IT</div>
-                                <div>
-                                    <h5 class="card-title mb-1">CLB Công nghệ thông tin</h5>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-friends"></i> 150 thành viên
-                                    </small>
-                                </div>
-                            </div>
-                            <p class="card-text">Khám phá thế giới công nghệ và lập trình cùng các bạn sinh viên IT.</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-success">Đang hoạt động</span>
-                                <a href="#" class="btn btn-primary btn-sm">Tham gia</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="club-logo me-3">GD</div>
-                                <div>
-                                    <h5 class="card-title mb-1">CLB Giải trí & Du lịch</h5>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-friends"></i> 120 thành viên
-                                    </small>
-                                </div>
-                            </div>
-                            <p class="card-text">Tham gia các hoạt động giải trí và du lịch cùng bạn bè.</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-success">Đang hoạt động</span>
-                                <a href="#" class="btn btn-primary btn-sm">Tham gia</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="club-logo me-3">TD</div>
-                                <div>
-                                    <h5 class="card-title mb-1">CLB Thể dục thể thao</h5>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-friends"></i> 200 thành viên
-                                    </small>
-                                </div>
-                            </div>
-                            <p class="card-text">Rèn luyện sức khỏe và tham gia các hoạt động thể thao.</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-success">Đang hoạt động</span>
-                                <a href="#" class="btn btn-primary btn-sm">Tham gia</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="club-logo me-3">NT</div>
-                                <div>
-                                    <h5 class="card-title mb-1">CLB Nghệ thuật</h5>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-friends"></i> 80 thành viên
-                                    </small>
-                                </div>
-                            </div>
-                            <p class="card-text">Thể hiện tài năng nghệ thuật và sáng tạo của bạn.</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-success">Đang hoạt động</span>
-                                <a href="#" class="btn btn-primary btn-sm">Tham gia</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Sidebar -->
@@ -244,5 +173,82 @@
         background-color: #14b8a6 !important;
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.querySelector('input[name="search"]'); // Input tìm kiếm
+    const resultsContainer = document.getElementById('search-results-container'); // Vùng chứa kết quả
+    const resultsTitle = document.getElementById('search-results-title'); // Tiêu đề kết quả
+    const searchForm = document.getElementById('search-form'); // Form tìm kiếm
+    let debounceTimer;
+
+    // 1. Ngăn form submit theo cách truyền thống khi nhấn Enter
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch(searchInput.value.trim());
+    });
+
+    // 2. Tự động tìm kiếm khi người dùng gõ
+    searchInput.addEventListener('keyup', function () {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+
+        debounceTimer = setTimeout(() => {
+            performSearch(query);
+        }, 350); // Đợi 350ms sau khi người dùng ngừng gõ
+    });
+
+    function performSearch(query) {
+        // Tạo URL cho AJAX request, không phải URL của cả trang
+        const ajaxUrl = new URL("{{ route('student.clubs.ajax_search') }}");
+        ajaxUrl.searchParams.set('search', query);
+
+        // Cập nhật URL trên thanh địa chỉ để người dùng có thể copy/paste
+        const browserUrl = new URL(window.location);
+        browserUrl.searchParams.set('search', query);
+        window.history.pushState({path: browserUrl.href}, '', browserUrl.href);
+
+        // Hiển thị loading spinner
+        resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+        
+        // Cập nhật tiêu đề
+        if (query) {
+            resultsTitle.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
+        } else {
+            resultsTitle.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
+        }
+
+        // Gửi yêu cầu AJAX đến route chuyên dụng, chỉ lấy phần HTML cần thiết
+        fetch(ajaxUrl)
+            .then(response => response.text())
+            .then(html => {
+                resultsContainer.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error fetching search results:', error);
+                resultsContainer.innerHTML = `<div class="text-center py-5 text-danger">Đã có lỗi xảy ra khi tìm kiếm. Vui lòng tải lại trang và thử lại.</div>`;
+            });
+    }
+
+    // 3. Xử lý khi người dùng click vào link phân trang AJAX
+    document.body.addEventListener('click', function(e) {
+        const paginationLink = e.target.closest('#pagination-links a');
+        if (paginationLink) {
+            e.preventDefault();
+            const url = paginationLink.href;
+
+            // Hiển thị loading và fetch nội dung trang mới từ link phân trang
+            resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    resultsContainer.innerHTML = html;
+                });
+        }
+    });
+});
+</script>
 @endpush
 @endsection
