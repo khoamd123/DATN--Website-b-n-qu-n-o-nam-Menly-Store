@@ -37,7 +37,7 @@
                 <input type="text" 
                        name="search" 
                        class="form-control" 
-                       placeholder="Tìm kiếm theo tiêu đề, mô tả, CLB..."
+                       placeholder="Tìm kiếm theo sự kiện, mô tả, CLB..."
                        value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
@@ -79,9 +79,8 @@
                     <thead class="table-light">
                         <tr>
                             <th>STT</th>
-                            <th>Tiêu đề</th>
-                            <th>CLB</th>
                             <th>Sự kiện</th>
+                            <th>CLB</th>
                             <th>Số tiền duyệt</th>
                             <th>Ngày duyệt</th>
                             <th>Người duyệt</th>
@@ -94,26 +93,21 @@
                             <tr>
                                 <td>{{ ($requests->currentPage() - 1) * $requests->perPage() + $index + 1 }}</td>
                                 <td>
-                                    <div>
-                                        <strong>{{ $request->title }}</strong>
-                                        @if($request->description)
-                                            <br><small class="text-muted">{{ Str::limit(strip_tags($request->description), 50) }}</small>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td>
-                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" class="badge bg-primary text-white text-decoration-none">
-                                        {{ $request->club->name }}
-                                    </a>
-                                </td>
-                                <td>
                                     @if($request->event)
-                                        <a href="{{ route('admin.events.show', $request->event->id) }}" class="badge bg-info text-white text-decoration-none">
-                                            {{ $request->event->title ?? $request->event->name }}
+                                        <a href="{{ route('admin.events.show', $request->event->id) }}" class="text-dark text-decoration-none">
+                                            <strong>{{ $request->event->title ?? $request->event->name }}</strong>
                                         </a>
                                     @else
                                         <span class="text-muted">Không có</span>
                                     @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" 
+                                       class="text-dark text-decoration-none"
+                                       title="Xem chi tiết câu lạc bộ">
+                                        {{ $request->club->name }}
+                                        <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
+                                    </a>
                                 </td>
                                 <td>
                                     <strong class="text-success">{{ number_format($request->approved_amount) }} VNĐ</strong>
@@ -133,15 +127,15 @@
                                         <i class="fas fa-clock"></i> Chờ quyết toán
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <a href="{{ route('admin.fund-settlements.create', $request->id) }}" 
-                                           class="btn btn-sm btn-success">
-                                            <i class="fas fa-calculator"></i> Quyết toán
-                                        </a>
+                                <td style="min-width: 120px; width: 120px;">
+                                    <div class="d-flex flex-column gap-1">
                                         <a href="{{ route('admin.fund-requests.show', $request->id) }}" 
-                                           class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i> Xem
+                                           class="btn btn-sm btn-primary text-white w-100">
+                                            <i class="fas fa-eye"></i> Xem chi tiết
+                                        </a>
+                                        <a href="{{ route('admin.fund-settlements.create', $request->id) }}" 
+                                           class="btn btn-sm btn-success text-white w-100">
+                                            <i class="fas fa-calculator"></i> Quyết toán
                                         </a>
                                     </div>
                                 </td>
@@ -185,7 +179,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>STT</th>
-                            <th>Tiêu đề</th>
+                            <th>Sự kiện</th>
                             <th>CLB</th>
                             <th>Số tiền duyệt</th>
                             <th>Số tiền thực tế</th>
@@ -200,16 +194,20 @@
                             <tr>
                                 <td>{{ ($settledRequests->currentPage() - 1) * $settledRequests->perPage() + $index + 1 }}</td>
                                 <td>
-                                    <div>
-                                        <strong>{{ $request->title }}</strong>
-                                        @if($request->description)
-                                            <br><small class="text-muted">{{ Str::limit(strip_tags($request->description), 50) }}</small>
-                                        @endif
-                                    </div>
+                                    @if($request->event)
+                                        <a href="{{ route('admin.events.show', $request->event->id) }}" class="text-dark text-decoration-none">
+                                            <strong>{{ $request->event->title ?? $request->event->name }}</strong>
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Không có</span>
+                                    @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" class="badge bg-primary text-white text-decoration-none">
+                                    <a href="{{ route('admin.clubs.show', $request->club->id) }}" 
+                                       class="text-dark text-decoration-none"
+                                       title="Xem chi tiết câu lạc bộ">
                                         {{ $request->club->name }}
+                                        <i class="fas fa-external-link-alt fa-xs ms-1 text-muted"></i>
                                     </a>
                                 </td>
                                 <td>
@@ -233,10 +231,10 @@
                                         <i class="fas fa-check"></i> Đã quyết toán
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="d-flex gap-1">
+                                <td style="min-width: 120px; width: 120px;">
+                                    <div class="d-flex flex-column gap-1">
                                         <a href="{{ route('admin.fund-settlements.show', $request->id) }}" 
-                                           class="btn btn-sm btn-info">
+                                           class="btn btn-sm btn-primary text-white w-100">
                                             <i class="fas fa-eye"></i> Xem chi tiết
                                         </a>
                                     </div>

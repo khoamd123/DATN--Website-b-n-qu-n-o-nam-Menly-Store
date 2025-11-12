@@ -7,46 +7,6 @@
     <h1>Quản lý Bình luận</h1>
 </div>
 
-<!-- Thống kê bình luận -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="stats-card">
-            <div class="stats-icon" style="background-color: #007bff;">
-                <i class="fas fa-comments"></i>
-            </div>
-            <p class="stats-number">{{ $allComments->count() }}</p>
-            <p class="stats-label">Tổng bình luận</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card">
-            <div class="stats-icon" style="background-color: #28a745;">
-                <i class="fas fa-newspaper"></i>
-            </div>
-            <p class="stats-number">{{ $allComments->where('commentable_type', 'App\Models\Post')->count() }}</p>
-            <p class="stats-label">Bình luận bài viết</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card">
-            <div class="stats-icon" style="background-color: #ffc107;">
-                <i class="fas fa-calendar-alt"></i>
-            </div>
-            <p class="stats-number">{{ $allComments->where('commentable_type', 'App\Models\Event')->count() }}</p>
-            <p class="stats-label">Bình luận sự kiện</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card">
-            <div class="stats-icon" style="background-color: #dc3545;">
-                <i class="fas fa-clock"></i>
-            </div>
-            <p class="stats-number">{{ $allComments->where('created_at', '>=', now()->subWeek())->count() }}</p>
-            <p class="stats-label">Tuần này</p>
-        </div>
-    </div>
-</div>
-
 <!-- Bộ lọc và tìm kiếm -->
 <div class="card mb-4">
     <div class="card-body">
@@ -158,10 +118,10 @@
                             <td style="min-width: 120px; width: 120px;">
                                 <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('admin.comments.show', [$comment->post ? 'post' : 'event', $comment->id]) }}" 
-                                       class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye"></i> Xem
+                                       class="btn btn-sm btn-primary text-white w-100">
+                                        <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ $comment->id }}">
+                                    <button type="button" class="btn btn-sm btn-danger w-100 text-white" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ $comment->id }}">
                                         <i class="fas fa-trash"></i> Xóa
                                     </button>
 

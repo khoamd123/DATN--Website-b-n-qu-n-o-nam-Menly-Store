@@ -13,14 +13,23 @@
 
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-user"></i> Chi tiết người dùng</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.users') }}">Quản lý người dùng</a></li>
-                <li class="breadcrumb-item active">Chi tiết</li>
-            </ol>
-        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-user"></i> Chi tiết người dùng</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('admin.users') }}">Quản lý người dùng</a></li>
+                        <li class="breadcrumb-item active">Chi tiết</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ route('admin.users') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))

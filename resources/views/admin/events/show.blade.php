@@ -5,14 +5,41 @@
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-calendar-alt"></i> Chi tiết sự kiện</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.plans-schedule') }}">Kế hoạch</a></li>
-                <li class="breadcrumb-item active">Chi tiết sự kiện</li>
-            </ol>
-        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-calendar-alt"></i> Chi tiết sự kiện</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('admin.plans-schedule') }}">Kế hoạch</a></li>
+                        <li class="breadcrumb-item active">Chi tiết sự kiện</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="d-flex gap-2">
+                @if($event->status !== 'cancelled')
+                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i> Chỉnh sửa
+                    </a>
+                    @if($event->status === 'pending')
+                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                <i class="fas fa-check me-1"></i> Duyệt
+                            </button>
+                        </form>
+                    @endif
+                    @if(in_array($event->status, ['pending', 'approved']))
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
+                            <i class="fas fa-times me-1"></i> Hủy
+                        </button>
+                    @endif
+                @endif
+                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
@@ -706,59 +733,6 @@
                 </div>
             </div>
 
-            <!-- Hành động -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Hành động</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        @if($event->status !== 'cancelled')
-                            @if($event->status === 'pending')
-                                <form method="POST" action="{{ route('admin.events.approve', $event->id) }}">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success btn-lg w-100" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                        <i class="fas fa-check me-2"></i>Duyệt sự kiện
-                                    </button>
-                                </form>
-                            @endif
-                            
-                            @if(in_array($event->status, ['pending', 'approved']))
-                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
-                                    <i class="fas fa-times me-2"></i>Hủy sự kiện
-                                </button>
-                            @elseif($event->status === 'ongoing')
-                                <button type="button" class="btn btn-secondary btn-lg w-100" disabled title="Sự kiện đang diễn ra, không thể hủy">
-                                    <i class="fas fa-ban me-2"></i>Sự kiện đang diễn ra, không thể hủy
-                                </button>
-                            @endif
-                            
-                            <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg w-100">
-                                <i class="fas fa-edit me-2"></i>Chỉnh sửa
-                            </a>
-                            
-                            @if($event->status === 'ongoing')
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Thông báo:</strong> Sự kiện đang diễn ra, không thể hủy.
-                                </div>
-                            @endif
-                        @else
-                            <div class="alert alert-warning">
-                                <i class="fas fa-info-circle me-2"></i>Sự kiện đã bị hủy và không thể chỉnh sửa.
-                            </div>
-                        @endif
-                        
-                        <a href="{{ route('admin.events.create') }}" class="btn btn-primary btn-lg w-100">
-                            <i class="fas fa-plus me-2"></i>Tạo sự kiện mới
-                        </a>
-                        
-                        <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary btn-lg w-100">
-                            <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
-                        </a>
-                    </div>
-                </div>
-            </div>
 
             <!-- Thông tin nhanh -->
             <div class="card">

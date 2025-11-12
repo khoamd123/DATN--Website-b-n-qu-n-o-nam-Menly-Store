@@ -291,15 +291,15 @@
                                     </span>
                                 </td>
                                 <td>{{ $transaction->creator->name ?? 'N/A' }}</td>
-                                <td>
-                                    <div class="d-flex gap-1 flex-wrap">
+                                <td style="min-width: 120px; width: 120px;">
+                                    <div class="d-flex flex-column gap-1">
                                         <a href="{{ route('admin.funds.transactions.show', [$fund->id, $transaction->id]) }}" 
-                                           class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
-                                            <i class="fas fa-eye"></i>
+                                           class="btn btn-sm btn-primary text-white w-100">
+                                            <i class="fas fa-eye"></i> Xem chi tiết
                                         </a>
                                         
                                         <a href="{{ route('admin.funds.transactions.invoice', [$fund->id, $transaction->id]) }}" 
-                                           class="btn btn-sm btn-outline-danger" title="Xuất hóa đơn PDF" target="_blank">
+                                           class="btn btn-sm btn-secondary text-white w-100" target="_blank">
                                             <i class="fas fa-file-pdf"></i> PDF
                                         </a>
                                         
@@ -307,26 +307,23 @@
                                             <!-- Nút Duyệt -->
                                             <form method="POST" action="{{ route('admin.funds.transactions.approve', [$fund->id, $transaction->id]) }}" class="d-inline">
                                                 @csrf
-                                                <button type="submit" class="btn btn-sm btn-success" 
-                                                        title="Duyệt giao dịch"
+                                                <button type="submit" class="btn btn-sm btn-success w-100 text-white"
                                                         onclick="return confirm('Xác nhận duyệt giao dịch này?')">
-                                                    <i class="fas fa-check"></i>
+                                                    <i class="fas fa-check"></i> Duyệt
                                                 </button>
                                             </form>
                                             
-                                            <!-- Nút Từ chối (cần lý do) -->
-                                            <button class="btn btn-sm btn-danger" 
-                                                    title="Từ chối giao dịch (cần nhập lý do)"
-                                                    onclick="showRejectModal({{ $transaction->id }})">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                            
                                             <!-- Nút Chỉnh sửa -->
                                             <a href="{{ route('admin.funds.transactions.edit', [$fund->id, $transaction->id]) }}" 
-                                               class="btn btn-sm btn-warning"
-                                               title="Chỉnh sửa">
-                                                <i class="fas fa-edit"></i>
+                                               class="btn btn-sm btn-warning text-white w-100">
+                                                <i class="fas fa-edit"></i> Sửa
                                             </a>
+                                            
+                                            <!-- Nút Từ chối (cần lý do) -->
+                                            <button class="btn btn-sm btn-danger w-100 text-white"
+                                                    onclick="showRejectModal({{ $transaction->id }})">
+                                                <i class="fas fa-times"></i> Từ chối
+                                            </button>
                                         @endif
                                         
                                         {{-- Không cho phép hủy giao dịch khi đã duyệt --}}

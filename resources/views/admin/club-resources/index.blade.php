@@ -27,6 +27,11 @@
         <div class="content-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h1>Quản lý Tài nguyên CLB</h1>
+                <div class="d-flex gap-2">
+                    <a href="{{ route('admin.club-resources.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Tạo tài nguyên
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -34,11 +39,11 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ route('admin.club-resources.index') }}" class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <input type="text" name="search" class="form-control" placeholder="Tìm kiếm tài nguyên..."
                             value="{{ request('search') }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select name="club_id" class="form-select">
                             <option value="">Tất cả CLB</option>
                             @foreach($clubs as $club)
@@ -56,23 +61,15 @@
                             <option value="archived" {{ request('status') == 'archived' ? 'selected' : '' }}>Lưu trữ</option>
                         </select>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
+                            <i class="fas fa-search"></i> Tìm kiếm
                         </button>
                     </div>
-                    <div class="col-md-2 text-end">
-                        <div class="d-flex flex-column gap-2">
-                            <a href="{{ route('admin.club-resources.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-refresh"></i> Làm mới
-                            </a>
-                            <a href="{{ route('admin.club-resources.create') }}" class="btn btn-success">
-                                <i class="fas fa-plus"></i> Tạo tài nguyên
-                            </a>
-                            <a href="{{ route('admin.club-resources.trash') }}" class="btn btn-warning">
-                                <i class="fas fa-trash"></i> Thùng rác
-                            </a>
-                        </div>
+                    <div class="col-md-auto ms-auto">
+                        <a href="{{ route('admin.club-resources.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-refresh"></i> Làm mới
+                        </a>
                     </div>
                 </form>
             </div>
@@ -94,7 +91,7 @@
                                         <th>Trạng thái</th>
                                         <th>Lượt xem</th>
                                         <th>Ngày tạo</th>
-                                        <th>Thao tác</th>
+                                        <th>Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -178,24 +175,13 @@
                                             </td>
                                             <td>{{ number_format($resource->view_count ?? 0) }}</td>
                                             <td>{{ $resource->created_at->format('d/m/Y H:i') }}</td>
-                                            <td>
-                                                <div class="btn-group" role="group">
+                                            <td style="min-width: 120px; width: 120px;">
+                                                <div class="d-flex flex-column gap-1">
                                                     <a href="{{ route('admin.club-resources.show', $resource->id) }}"
-                                                        class="btn btn-sm btn-info" title="Xem chi tiết">
-                                                        <i class="fas fa-eye"></i> Xem
+                                                        class="btn btn-sm btn-primary text-white w-100">
+                                                        <i class="fas fa-eye"></i> Xem chi tiết
                                                     </a>
-                                                    <a href="{{ route('admin.club-resources.edit', $resource->id) }}"
-                                                        class="btn btn-sm btn-warning" title="Chỉnh sửa">
-                                                        <i class="fas fa-edit"></i> Sửa
-                                                    </a>
-                                                    @if($resource->file_path)
-                                                        <a href="{{ route('admin.club-resources.download', $resource->id) }}"
-                                                            class="btn btn-sm btn-success" title="Tải xuống">
-                                                            <i class="fas fa-download"></i> Tải
-                                                        </a>
-                                                    @endif
-                                                    <button type="button" class="btn btn-sm btn-danger"
-                                                        title="Chuyển vào thùng rác"
+                                                    <button type="button" class="btn btn-sm btn-danger w-100 text-white"
                                                         onclick="deleteResource({{ $resource->id }})">
                                                         <i class="fas fa-trash"></i> Xóa
                                                     </button>

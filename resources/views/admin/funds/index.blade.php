@@ -21,14 +21,14 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.funds') }}" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" 
                        name="search" 
                        class="form-control" 
                        placeholder="Tìm kiếm theo tên CLB..."
                        value="{{ request('search') }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang hoạt động</option>
@@ -36,7 +36,7 @@
                     <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Đã đóng</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="club_id" class="form-select">
                     <option value="">Tất cả CLB</option>
                     @foreach($clubs as $club)
@@ -47,14 +47,14 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <div class="d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="fas fa-search"></i> Tìm kiếm
-                    </button>
-                    <a href="{{ route('admin.funds') }}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-times"></i> Xóa bộ lọc
-                    </a>
-                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+            </div>
+            <div class="col-md-auto ms-auto">
+                <a href="{{ route('admin.funds') }}" class="btn btn-secondary">
+                    <i class="fas fa-refresh"></i> Làm mới
+                </a>
             </div>
         </form>
     </div>
@@ -108,23 +108,19 @@
                                 </span>
                             </td>
                             <td>{{ $fund->created_at ? $fund->created_at->format('d/m/Y') : 'N/A' }}</td>
-                            <td style="min-width: 180px;">
-                                <div class="d-flex gap-1 flex-wrap">
+                            <td style="min-width: 120px; width: 120px;">
+                                <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('admin.funds.show', $fund->id) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i> Chi tiết
-                                    </a>
-                                    <a href="{{ route('admin.funds.edit', $fund->id) }}" 
-                                       class="btn btn-sm btn-outline-warning">
-                                        <i class="fas fa-edit"></i> Sửa
+                                       class="btn btn-sm btn-primary text-white w-100">
+                                        <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
                                     <form method="POST" action="{{ route('admin.funds.destroy', $fund->id) }}" 
                                           class="d-inline" 
                                           onsubmit="return confirm('Bạn có chắc chắn muốn xóa quỹ này?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-trash"></i>
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-white">
+                                            <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>
                                 </div>

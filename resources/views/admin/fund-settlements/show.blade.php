@@ -7,11 +7,11 @@
     <div class="d-flex justify-content-between align-items-center">
         <h1>Chi tiết quyết toán</h1>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.fund-settlements') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Quay lại
+            <a href="{{ route('admin.fund-requests.show', $fundRequest->id) }}" class="btn btn-primary">
+                <i class="fas fa-eye me-1"></i> Xem yêu cầu gốc
             </a>
-            <a href="{{ route('admin.fund-requests.show', $fundRequest->id) }}" class="btn btn-info">
-                <i class="fas fa-eye"></i> Xem yêu cầu gốc
+            <a href="{{ route('admin.fund-settlements') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
             </a>
         </div>
     </div>
