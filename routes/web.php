@@ -104,8 +104,14 @@ Route::get('/quick-login-student', function () {
 Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard'])->name('student.dashboard');
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
+// NEW: Route for showing club details
+Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
+// NEW: Route for leaving a club
+Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
 
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
+// NEW: Route for showing event details (used in student.clubs.show)
+Route::get('/student/events/{event}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
@@ -119,6 +125,8 @@ Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 
 // Student Posts Routes
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->name('student.posts.show');
+// NEW: Route for creating a post in a club forum (used in student.clubs.show)
+Route::get('/student/clubs/{club}/forum/create', [\App\Http\Controllers\StudentController::class, 'createClubPost'])->name('student.club.forum.create');
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
@@ -134,15 +142,20 @@ Route::get('/test-club-management', function () {
     $hasManagementRole = false;
     $userPosition = null;
     $userClub = null;
+    $clubMember = null; // Thêm biến clubMember và khởi tạo là null
     
     if ($user->clubs->count() > 0) {
         $userClub = $user->clubs->first();
         $clubId = $userClub->id;
-        $userPosition = $user->getPositionInClub($clubId);
+
+        // Lấy đối tượng ClubMember đầy đủ
+        $clubMember = \App\Models\ClubMember::where('user_id', $user->id)->where('club_id', $clubId)->first();
+        $userPosition = $clubMember ? $clubMember->position : null;
+
         $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
     }
     
-    return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
+    return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub', 'clubMember'));
 })->name('test.club.management');
 
 /*
