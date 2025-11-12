@@ -382,6 +382,7 @@ Route::prefix('admin')->group(function () {
             Route::post('/clubs/{club}/members/{member}/approve', [AdminController::class, 'approveMember'])->name('admin.clubs.members.approve');
             Route::delete('/clubs/{club}/members/{member}/reject', [AdminController::class, 'rejectMember'])->name('admin.clubs.members.reject');
             Route::delete('/clubs/{club}/members/{member}/remove', [AdminController::class, 'removeMember'])->name('admin.clubs.members.remove');
+            Route::patch('/clubs/{club}/members/{member}/role', [AdminController::class, 'updateMemberRole'])->name('admin.clubs.members.update-role');
             Route::post('/clubs/{club}/members/bulk-update', [AdminController::class, 'bulkUpdateMembers'])->name('admin.clubs.members.bulk-update');
     
 

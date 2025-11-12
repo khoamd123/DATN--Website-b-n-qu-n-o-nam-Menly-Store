@@ -5,14 +5,29 @@
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-wallet"></i> {{ $fund->name }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.funds') }}">Quản lý quỹ</a></li>
-                <li class="breadcrumb-item active">Chi tiết</li>
-            </ol>
-        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-wallet"></i> {{ $fund->name }}</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('admin.funds') }}">Quản lý quỹ</a></li>
+                        <li class="breadcrumb-item active">Chi tiết</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ route('admin.funds.edit', $fund->id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i> Chỉnh sửa
+                </a>
+                <a href="{{ route('admin.funds.transactions.create', $fund->id) }}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i> Thêm giao dịch
+                </a>
+                <a href="{{ route('admin.funds') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
@@ -230,29 +245,5 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('admin.funds') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
-                        </a>
-                        <a href="{{ route('admin.funds.edit', $fund->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Chỉnh sửa
-                        </a>
-                        <a href="{{ route('admin.funds.transactions.create', $fund->id) }}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Thêm giao dịch
-                        </a>
-                        {{-- Bỏ nút tạo yêu cầu cấp kinh phí --}}
-                        <a href="{{ route('admin.funds.show', $fund->id) }}?refresh=true" class="btn btn-primary" title="Cập nhật lại số tiền hiện tại">
-                            <i class="fas fa-sync-alt"></i> Cập nhật số tiền
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 @endsection

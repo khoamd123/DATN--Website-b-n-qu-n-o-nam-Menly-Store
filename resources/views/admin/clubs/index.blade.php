@@ -4,7 +4,12 @@
 
 @section('content')
 <div class="content-header">
-    <h1>Quản lý câu lạc bộ</h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Quản lý câu lạc bộ</h1>
+        <a href="{{ route('admin.clubs.create') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Tạo CLB mới
+        </a>
+    </div>
 </div>
 
 <!-- Bộ lọc và tìm kiếm -->
@@ -33,16 +38,11 @@
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
             </div>
-        <div class="col-md-3 text-end">
-            <div class="d-flex flex-column gap-2">
+            <div class="col-md-auto ms-auto">
                 <a href="{{ route('admin.clubs') }}" class="btn btn-secondary">
                     <i class="fas fa-refresh"></i> Làm mới
                 </a>
-                <a href="{{ route('admin.clubs.create') }}" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Tạo CLB mới
-                </a>
             </div>
-        </div>
         </form>
     </div>
 </div>
@@ -148,77 +148,20 @@
                                 </span>
                             </td>
                             <td>{{ $club->created_at->format('d/m/Y') }}</td>
-            <td style="min-width: 160px; width: 160px;">
+            <td style="min-width: 120px; width: 120px;">
                 <div class="d-flex flex-column gap-1">
-                    <a href="{{ route('admin.clubs.show', $club->id) }}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-eye"></i> Chi tiết
+                    <a href="{{ route('admin.clubs.show', $club->id) }}" class="btn btn-sm btn-primary text-white w-100">
+                        <i class="fas fa-eye"></i> Xem chi tiết
                     </a>
-                    <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-sm btn-warning">
-                        <i class="fas fa-edit"></i> Chỉnh sửa
-                    </a>
-                                    @if($club->status === 'pending')
-                                        <!-- Form Duyệt -->
-                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="approved">
-                                            <button type="submit" class="btn btn-sm btn-success w-100">
-                                                <i class="fas fa-check"></i> Duyệt
-                                            </button>
-                                        </form>
-                                        
-                                        <!-- Form Từ chối -->
-                                        <button type="button" class="btn btn-sm btn-danger w-100" 
-                                                data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
-                                                data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
-                                            <i class="fas fa-times"></i> Từ chối
-                                        </button>
-                                    @endif
-                                    
-                                    {{-- Không hiển thị nút kích hoạt nếu status = active (đã được tự động set khi duyệt) --}}
-                                    
-                                    @if(in_array($club->status, ['active', 'approved']))
-                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="inactive">
-                                            <button type="submit" class="btn btn-sm btn-warning w-100" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
-                                                <i class="fas fa-pause"></i> Tạm dừng
-                                            </button>
-                                        </form>
-                                    @endif
-                                    
-                                    @if($club->status === 'inactive')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="active">
-                                            <button type="submit" class="btn btn-sm btn-success w-100">
-                                                <i class="fas fa-play"></i> Kích hoạt lại
-                                            </button>
-                                        </form>
-                                    @endif
-                                    
-                                    @if($club->status === 'rejected')
-                                        <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="pending">
-                                            <button type="submit" class="btn btn-sm btn-info w-100">
-                                                <i class="fas fa-undo"></i> Khôi phục
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    <button type="button" class="btn btn-sm btn-danger w-100"
-                                            data-bs-toggle="modal" data-bs-target="#deleteClubModal"
-                                            data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}"
-                                            {{ $club->status !== 'inactive' ? 'disabled' : '' }}
-                                            title="{{ $club->status !== 'inactive' ? 'Chỉ có thể xóa câu lạc bộ đã tạm dừng' : 'Xóa câu lạc bộ' }}">
-                                        <i class="fas fa-trash"></i> Xóa
-                                    </button>
-                                </div>
-                            </td>
+                    <button type="button" class="btn btn-sm btn-danger w-100 text-white"
+                            data-bs-toggle="modal" data-bs-target="#deleteClubModal"
+                            data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}"
+                            {{ $club->status !== 'inactive' ? 'disabled' : '' }}
+                            title="{{ $club->status !== 'inactive' ? 'Chỉ có thể xóa câu lạc bộ đã tạm dừng' : 'Xóa câu lạc bộ' }}">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </div>
+            </td>
                         </tr>
                     @empty
                         <tr>

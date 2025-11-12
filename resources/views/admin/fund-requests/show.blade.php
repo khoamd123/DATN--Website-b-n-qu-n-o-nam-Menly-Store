@@ -8,19 +8,21 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-money-bill-wave"></i>
-                        Chi tiết yêu cầu cấp kinh phí
-                    </h3>
-                    <div class="card-tools">
-                        <a href="{{ route('admin.fund-requests') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
-                        </a>
-                        @if($fundRequest->status === 'pending')
-                            <a href="{{ route('admin.fund-requests.edit', $fundRequest->id) }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Chỉnh sửa
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-money-bill-wave"></i>
+                            Chi tiết yêu cầu cấp kinh phí
+                        </h3>
+                        <div class="d-flex gap-2">
+                            @if($fundRequest->status === 'pending')
+                                <a href="{{ route('admin.fund-requests.edit', $fundRequest->id) }}" class="btn btn-warning">
+                                    <i class="fas fa-edit me-1"></i> Chỉnh sửa
+                                </a>
+                            @endif
+                            <a href="{{ route('admin.fund-requests') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Quay lại
                             </a>
-                        @endif
+                        </div>
                     </div>
                 </div>
 

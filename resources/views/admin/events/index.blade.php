@@ -389,39 +389,23 @@
                                 <br><small class="text-muted">ID: {{ $event->created_by }}</small>
                                 <br><small class="text-muted">{{ \Carbon\Carbon::parse($event->created_at)->format('d/m/Y H:i') }}</small>
                             </td>
-                            <td>
-                                <div class="btn-group-vertical" role="group">
-                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-outline-info">
+                            <td style="min-width: 120px; width: 120px;">
+                                <div class="d-flex flex-column gap-1">
+                                    <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-primary text-white w-100">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
-                                    @if($event->status !== 'cancelled')
-                                        @if($event->status === 'pending')
-                                            <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                                    <i class="fas fa-check"></i> Duyệt
-                                                </button>
-                                            </form>
-                                        @endif
-                                        @if(in_array($event->status, ['pending', 'approved']))
-                                            <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Bạn có chắc muốn hủy sự kiện này?')">
-                                                    <i class="fas fa-times"></i> Hủy nhanh
-                                                </button>
-                                            </form>
-                                        @endif
-                                        @if($event->status === 'ongoing')
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sự kiện đang diễn ra, không thể hủy">
-                                                <i class="fas fa-ban"></i> Không thể hủy
+                                    @if($event->status === 'pending')
+                                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success w-100 text-white" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                                <i class="fas fa-check"></i> Duyệt
                                             </button>
-                                        @elseif(!in_array($event->status, ['cancelled', 'completed', 'ongoing']))
-                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteEventModal{{ $event->id }}">
-                                                <i class="fas fa-ban"></i> Hủy sự kiện
+                                        </form>
+                                    @endif
+                                    @if($event->status !== 'cancelled' && !in_array($event->status, ['cancelled', 'completed', 'ongoing']))
+                                        <button type="button" class="btn btn-sm btn-danger w-100 text-white" data-bs-toggle="modal" data-bs-target="#deleteEventModal{{ $event->id }}">
+                                            <i class="fas fa-trash"></i> Xóa
                                         </button>
-                                        @endif
-                                    @else
-                                        <span class="badge bg-secondary">Đã hủy</span>
                                     @endif
                                 </div>
                             </td>
