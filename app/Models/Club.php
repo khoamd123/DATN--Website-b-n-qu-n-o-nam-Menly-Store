@@ -86,4 +86,12 @@ class Club extends Model
     {
         return $this->hasMany(ClubMember::class);
     }
+
+    /**
+     * Get the join requests for the club.
+     */
+    public function joinRequests()
+    {
+        return $this->hasMany(ClubJoinRequest::class);
+    }
 }

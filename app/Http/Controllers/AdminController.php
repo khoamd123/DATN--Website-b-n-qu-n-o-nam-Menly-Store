@@ -11,6 +11,7 @@ use App\Models\Field;
 use App\Models\Notification;
 use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
+use App\Models\ClubJoinRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -2257,6 +2258,11 @@ class AdminController extends Controller
             'events'
         ])->findOrFail($club);
 
+        // Lấy các yêu cầu tham gia đang chờ duyệt cho CLB này
+        $joinRequests = \App\Models\ClubJoinRequest::with('user')
+            ->where('club_id', $club->id)
+            ->where('status', 'pending')
+            ->get();
         // Debug: Log tất cả clubMembers
         \Log::info('Club Members Debug', [
             'club_id' => $club->id,
@@ -2296,7 +2302,7 @@ class AdminController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.clubs.show', compact('club', 'statusColors', 'statusLabels', 'addableUsers'));
+        return view('admin.clubs.show', compact('club', 'statusColors', 'statusLabels', 'addableUsers', 'joinRequests'));
     }
 
     /**
@@ -2484,5 +2490,44 @@ class AdminController extends Controller
         \Log::info('Member deleted successfully');
 
         return redirect()->back()->with('success', 'Đã xóa thành viên thành công!');
+    }
+
+    /**
+     * Approve a club join request.
+     */
+    public function approveJoinRequest(Request $request, ClubJoinRequest $joinRequest)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $club = $joinRequest->club;
+            $user = $joinRequest->user;
+
+            // Kiểm tra xem user đã là thành viên chưa để tránh lỗi
+            $isMember = ClubMember::where('user_id', $user->id)
+                ->where('club_id', $club->id)
+                ->exists();
+
+            if (!$isMember) {
+                // Thêm user vào CLB với vai trò 'member' và trạng thái 'active'
+                ClubMember::create([
+                    'user_id' => $user->id,
+                    'club_id' => $club->id,
+                    'position' => 'member',
+                    'status' => 'active', // Duyệt thẳng thành active
+                    'joined_at' => now(),
+                ]);
+            }
+
+            // Xóa yêu cầu đã được xử lý
+            $joinRequest->delete();
+
+            return redirect()->back()->with('success', "Đã chấp thuận yêu cầu tham gia của {$user->name}.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
     }
 }

@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-@extends('admin.layouts.app')
-=======
-﻿@extends('admin.layouts.app')
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
+﻿﻿@extends('admin.layouts.app')
 
 @section('title', 'Chi tiết câu lạc bộ: ' . $club->name)
 
@@ -24,10 +20,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
-<<<<<<< HEAD
-=======
-
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
@@ -37,10 +29,6 @@
 
 <div class="container-fluid">
     <div class="row">
-<<<<<<< HEAD
-        {{-- Cột thông tin chính --}}
-=======
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -80,13 +68,65 @@
                 </div>
             </div>
 
-<<<<<<< HEAD
-            {{-- Card Yêu cầu tham gia --}}
-            @php
-                // Giả sử thành viên chờ duyệt có status là 'pending'
-                $pendingMembers = $club->clubMembers->where('status', 'pending');
-            @endphp
-=======
+            {{-- YÊU CẦU THAM GIA MỚI (TỪ BẢNG club_join_requests) --}}
+            @if(isset($joinRequests) && $joinRequests->isNotEmpty())
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Yêu cầu tham gia mới ({{ $joinRequests->count() }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Sinh viên</th>
+                                    <th style="width: 25%;">Ngày gửi</th>
+                                    <th style="width: 25%;" class="text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($joinRequests as $request)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                @if($request->user->avatar && file_exists(public_path('uploads/avatars/' . basename($request->user->avatar))))
+                                                    <img src="{{ asset('uploads/avatars/' . basename($request->user->avatar)) }}" alt="{{ $request->user->name }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                                                @else
+                                                    <div class="rounded-circle me-2 bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 16px; font-weight: bold;">
+                                                        {{ strtoupper(substr($request->user->name, 0, 1)) }}
+                                                    </div>
+                                                @endif
+                                                <div style="min-width: 0;">
+                                                    <strong class="text-truncate d-block">{{ $request->user->name }}</strong>
+                                                    <small class="text-muted text-truncate d-block">{{ $request->user->email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ $request->created_at->format('d/m/Y H:i') }}</td>
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <form action="{{ route('admin.club-join-requests.approve', $request->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Chấp thuận"><i class="fas fa-check me-1"></i> Duyệt</button>
+                                                    <button type="button" class="btn btn-sm btn-danger" title="Từ chối"
+                                                            data-bs-toggle="modal" data-bs-target="#rejectJoinRequestModal"
+                                                            data-request-id="{{ $request->id }}"
+                                                            data-user-name="{{ $request->user->name }}"
+                                                            data-club-name="{{ $club->name }}">
+                                                        <i class="fas fa-times me-1"></i> Từ chối
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             @php
                 $pendingMembers = $club->clubMembers->filter(function($member) {
                     return $member->status === 'pending';
@@ -96,7 +136,6 @@
                 })->unique('user_id'); // Loại bỏ trùng lặp theo user_id
             @endphp
 
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             @if($pendingMembers->isNotEmpty())
             <div class="card mb-4 border-warning">
                 <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
@@ -111,17 +150,10 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-<<<<<<< HEAD
-                                    <th><input type="checkbox" id="selectAllCheckbox" title="Chọn tất cả"></th>
-                                    <th>Thành viên</th>
-                                    <th>Ngày gửi yêu cầu</th>
-                                    <th class="text-center">Hành động</th>
-=======
                                     <th style="width: 5%;"><input type="checkbox" id="selectAllCheckbox" title="Chọn tất cả"></th>
                                     <th style="width: 50%;">Thành viên</th>
                                     <th style="width: 25%;">Ngày gửi yêu cầu</th>
                                     <th style="width: 20%;" class="text-center">Hành động</th>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 </tr>
                             </thead>
                             <tbody>
@@ -130,17 +162,6 @@
                                         <td><input type="checkbox" class="member-checkbox" value="{{ $member->id }}"></td>
                                         <td>
                                             <div class="d-flex align-items-center">
-<<<<<<< HEAD
-                                                <img src="{{ $member->user->avatar ?? '/images/avatar/avatar.png' }}" 
-                                                     alt="{{ $member->user->name }}" 
-                                                     class="rounded-circle me-2" 
-                                                     width="40" height="40"
-                                                     onerror="this.src='/images/avatar/avatar.png'">
-                                                <div>
-                                                    <strong>{{ $member->user->name }}</strong>
-                                                    <br>
-                                                    <small class="text-muted">{{ $member->user->email }}</small>
-=======
                                                 @if($member->user->avatar && file_exists(public_path('uploads/avatars/' . basename($member->user->avatar))))
                                                     <img src="{{ asset('uploads/avatars/' . basename($member->user->avatar)) }}" 
                                                          alt="{{ $member->user->name }}" 
@@ -156,28 +177,11 @@
                                                 <div style="min-width: 0;">
                                                     <strong class="text-truncate d-block">{{ $member->user->name }}</strong>
                                                     <small class="text-muted text-truncate d-block">{{ $member->user->email }}</small>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                                 </div>
                                             </div>
                                         </td>
                                         <td>{{ $member->created_at->format('d/m/Y H:i') }}</td>
                                         <td class="text-center">
-<<<<<<< HEAD
-                                            {{-- Form duyệt thành viên --}}
-                                            <form action="{{ route('admin.clubs.members.approve', ['club' => $club->id, 'member' => $member->id]) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-success" title="Duyệt"><i class="fas fa-check"></i></button>
-                                            </form>
-                                            
-                                            {{-- Form từ chối thành viên --}}
-                                            <button type="button" class="btn btn-sm btn-danger" title="Từ chối"
-                                                    data-bs-toggle="modal" data-bs-target="#rejectMemberModal"
-                                                    data-member-id="{{ $member->id }}"
-                                                    data-member-name="{{ $member->user->name }}"
-                                                    data-action-url="{{ route('admin.clubs.members.reject', ['club' => $club->id, 'member' => $member->id]) }}">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-=======
                                             <div class="btn-group" role="group">
                                                 <form action="{{ route('admin.clubs.members.approve', ['club' => $club->id, 'member' => $member->id]) }}" method="POST" class="d-inline">
                                                     @csrf
@@ -192,7 +196,6 @@
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                         </td>
                                     </tr>
                                 @endforeach
@@ -203,17 +206,9 @@
             </div>
             @endif
 
-<<<<<<< HEAD
-            {{-- Card Quản lý thành viên --}}
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    {{-- Chỉ đếm thành viên đã được duyệt, giả sử status là 'approved' --}}
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thành viên đã duyệt ({{ $club->clubMembers->where('status', 'approved')->count() }})</h5>
-=======
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thành viên đã duyệt ({{ $approvedMembers->count() }})</h5>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                     <div>
                         <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                             <i class="fas fa-user-plus me-1"></i> Thêm thành viên
@@ -225,29 +220,6 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-<<<<<<< HEAD
-                                    <th>Thành viên</th>
-                                    <th>Vai trò</th>
-                                    <th>Ngày tham gia</th>
-                                    <th>Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{-- Chỉ hiển thị thành viên đã được duyệt --}}
-                                @forelse($club->clubMembers->where('status', 'approved') as $member)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <img src="{{ $member->user->avatar ?? '/images/avatar/avatar.png' }}" 
-                                                     alt="{{ $member->user->name }}" 
-                                                     class="rounded-circle me-2" 
-                                                     width="40" height="40"
-                                                     onerror="this.src='/images/avatar/avatar.png'">
-                                                <div>
-                                                    <strong>{{ $member->user->name }}</strong>
-                                                    <br>
-                                                    <small class="text-muted">{{ $member->user->email }}</small>
-=======
                                     <th style="width: 40%;">Thành viên</th>
                                     <th style="width: 20%;">Vai trò</th>
                                     <th style="width: 20%;">Ngày tham gia</th>
@@ -275,27 +247,10 @@
                                                 <div style="min-width: 0;">
                                                     <strong class="text-truncate d-block">{{ $member->user->name }}</strong>
                                                     <small class="text-muted text-truncate d-block">{{ $member->user->email }}</small>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-<<<<<<< HEAD
-                                            <span class="badge bg-primary">{{ ucfirst($member->role_in_club) }}</span>
-                                        </td>
-                                        <td>{{ $member->created_at->format('d/m/Y') }}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning" title="Thay đổi vai trò" disabled><i class="fas fa-user-shield"></i></button>
-                                            {{-- Form xóa thành viên --}}
-                                            <button type="button" class="btn btn-sm btn-danger" title="Xóa thành viên"
-                                                    data-bs-toggle="modal" data-bs-target="#removeMemberModal"
-                                                    data-member-id="{{ $member->id }}"
-                                                    data-member-name="{{ $member->user->name }}"
-                                                    {{ $member->user_id == $club->owner_id ? 'disabled' : '' }}>
-                                                <i class="fas fa-user-times"></i></button>
-                                        </td>
-                                    </tr>
-=======
                                             @php
                                                 $role = $member->position ?? $member->role_in_club;
                                                 $badgeColor = 'primary';
@@ -320,7 +275,6 @@
                                         </td>
                                     </tr>
                                     @endif
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                 @empty
                                     <tr>
                                         <td colspan="4" class="text-center text-muted">Chưa có thành viên nào.</td>
@@ -333,10 +287,6 @@
             </div>
         </div>
 
-<<<<<<< HEAD
-        {{-- Cột thông tin phụ và hành động --}}
-=======
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header">
@@ -346,11 +296,7 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Thành viên đã duyệt
-<<<<<<< HEAD
-                            <span class="badge bg-primary rounded-pill">{{ $club->clubMembers->where('status', 'approved')->count() }}</span>
-=======
                             <span class="badge bg-primary rounded-pill">{{ $approvedMembers->count() }}</span>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Bài viết
@@ -405,18 +351,11 @@
             @endif
           </div>
           <div class="mb-3">
-<<<<<<< HEAD
-            <label for="role_in_club" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
-            <select class="form-select" id="role_in_club" name="role_in_club" required>
-                <option value="thanhvien" selected>Thành viên</option>
-                <option value="chunhiem">Chủ nhiệm</option>
-=======
             <label for="position" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
             <select class="form-select" id="position" name="position" required>
                 <option value="member" selected>Thành viên</option>
                 <option value="officer">Cán sự</option>
                 <option value="leader">Trưởng CLB</option>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             </select>
           </div>
         </div>
@@ -482,11 +421,36 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Từ chối Yêu cầu tham gia -->
+<div class="modal fade" id="rejectJoinRequestModal" tabindex="-1" aria-labelledby="rejectJoinRequestModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectJoinRequestModalLabel">Lý do từ chối yêu cầu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="rejectJoinRequestForm" method="POST" action="">
+        @csrf
+        @method('POST') {{-- Route là POST --}}
+        <div class="modal-body">
+          <p>Từ chối yêu cầu của <strong id="userNameToReject"></strong> tham gia CLB <strong id="clubNameToReject"></strong>.</p>
+          <div class="mb-3">
+            <label for="joinRejectionReason" class="form-label">Vui lòng nhập lý do từ chối <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="joinRejectionReason" name="rejection_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection
 
 @section('scripts')
-<<<<<<< HEAD
-=======
 <style>
 .table-responsive {
     overflow-x: auto;
@@ -514,7 +478,6 @@ tbody tr td img {
     gap: 5px;
 }
 </style>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
@@ -555,6 +518,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
             memberNameElement.textContent = memberName;
             form.action = actionUrl;
+        });
+    }
+
+    var rejectJoinRequestModal = document.getElementById('rejectJoinRequestModal');
+    if(rejectJoinRequestModal) {
+        rejectJoinRequestModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var requestId = button.getAttribute('data-request-id');
+            var userName = button.getAttribute('data-user-name');
+            var clubName = button.getAttribute('data-club-name');
+
+            rejectJoinRequestModal.querySelector('#userNameToReject').textContent = userName;
+            rejectJoinRequestModal.querySelector('#clubNameToReject').textContent = clubName;
+            
+            var form = rejectJoinRequestModal.querySelector('#rejectJoinRequestForm');
+            // Cập nhật action của form để trỏ đến route từ chối
+            form.action = '{{ url("admin/club-join-requests") }}/' + requestId + '/reject';
         });
     }
 });
