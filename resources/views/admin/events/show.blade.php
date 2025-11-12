@@ -33,10 +33,10 @@
         <!-- Thông tin sự kiện chính -->
         <div class="col-lg-8">
             <!-- Header sự kiện -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white;">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ $event->title }}</h4>
+                        <h4 class="mb-0">{{ $event->title }}</h4>
                         @php
                             $statusColors = [
                                 'draft' => 'secondary',
@@ -129,9 +129,9 @@
                     
                     <!-- Thông tin Câu lạc bộ -->
                     @if($event->club)
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-secondary text-white">
-                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Câu lạc bộ tổ chức</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Câu lạc bộ tổ chức</h5>
                         </div>
                         <div class="card-body">
                             <div class="d-flex align-items-center">
@@ -156,9 +156,9 @@
                     @endif
 
                     <!-- Thông tin thời gian -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-primary text-white">
-                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Thông tin thời gian</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Thông tin thời gian</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -239,9 +239,9 @@
                     </div>
 
                     <!-- Thông tin chi tiết -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-info text-white">
-                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin chi tiết</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Thông tin chi tiết</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -301,9 +301,9 @@
                     </div>
 
                     <!-- Thông tin tổ chức -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-info text-white">
-                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thông tin tổ chức</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Thông tin tổ chức</h5>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
@@ -364,9 +364,9 @@
                     </div>
 
                     <!-- Tài liệu và File -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-warning text-dark">
-                            <h5 class="mb-0"><i class="fas fa-file me-2"></i>Tài liệu và File</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Tài liệu và File</h5>
                         </div>
                         <div class="card-body">
                             <div class="mb-3 p-3 border rounded {{ !$event->proposal_file ? 'bg-light' : '' }}">
@@ -463,9 +463,9 @@
                     </div>
 
                     <!-- Khách mời -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-success text-white">
-                            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Các khách mời</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Các khách mời</h5>
                         </div>
                         <div class="card-body">
                             @php
@@ -528,9 +528,9 @@
                     </div>
 
                     <!-- Thông tin hệ thống -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-gradient-secondary text-white">
-                            <h5 class="mb-0"><i class="fas fa-database me-2"></i>Thông tin hệ thống</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Thông tin hệ thống</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -603,10 +603,10 @@
             @endphp
             
             @if($hasImages || $hasOldImage)
-            <div class="card shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-images me-2"></i>Hình ảnh sự kiện 
-                        <span class="badge bg-primary ms-2">{{ $totalImages }} ảnh</span>
+                    <h5 class="mb-0">Hình ảnh sự kiện 
+                        <span class="badge bg-secondary ms-2">{{ $totalImages }} ảnh</span>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -673,9 +673,9 @@
         <!-- Sidebar -->
         <div class="col-lg-4">
             <!-- Thống kê -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê sự kiện</h5>
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Thống kê sự kiện</h5>
                 </div>
                 <div class="card-body">
                     @php
@@ -707,9 +707,9 @@
             </div>
 
             <!-- Hành động -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
-                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Hành động</h5>
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Hành động</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
@@ -717,14 +717,14 @@
                             @if($event->status === 'pending')
                                 <form method="POST" action="{{ route('admin.events.approve', $event->id) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                                    <button type="submit" class="btn btn-success btn-lg w-100" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
                                         <i class="fas fa-check me-2"></i>Duyệt sự kiện
                                     </button>
                                 </form>
                             @endif
                             
                             @if(in_array($event->status, ['pending', 'approved']))
-                                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
+                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
                                     <i class="fas fa-times me-2"></i>Hủy sự kiện
                                 </button>
                             @elseif($event->status === 'ongoing')
@@ -733,7 +733,7 @@
                                 </button>
                             @endif
                             
-                            <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg">
+                            <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary btn-lg w-100">
                                 <i class="fas fa-edit me-2"></i>Chỉnh sửa
                             </a>
                             
@@ -742,10 +742,6 @@
                                     <i class="fas fa-info-circle me-2"></i>
                                     <strong>Thông báo:</strong> Sự kiện đang diễn ra, không thể hủy.
                                 </div>
-                            @elseif(!in_array($event->status, ['cancelled', 'completed', 'ongoing']))
-                            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#deleteEventModal">
-                                    <i class="fas fa-ban me-2"></i>Hủy sự kiện
-                            </button>
                             @endif
                         @else
                             <div class="alert alert-warning">
@@ -753,11 +749,11 @@
                             </div>
                         @endif
                         
-                        <a href="{{ route('admin.events.create') }}" class="btn btn-primary btn-lg">
+                        <a href="{{ route('admin.events.create') }}" class="btn btn-primary btn-lg w-100">
                             <i class="fas fa-plus me-2"></i>Tạo sự kiện mới
                         </a>
                         
-                        <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary btn-lg">
+                        <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary btn-lg w-100">
                             <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
                         </a>
                     </div>
@@ -765,9 +761,9 @@
             </div>
 
             <!-- Thông tin nhanh -->
-            <div class="card shadow-sm">
-                <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin nhanh</h5>
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Thông tin nhanh</h5>
                 </div>
                 <div class="card-body">
                     <div class="quick-info">
@@ -794,51 +790,28 @@
 <style>
 /* Event Description */
 .event-description {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
     padding: 0;
     border: 1px solid #dee2e6;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     overflow: hidden;
-    transition: all 0.3s ease;
 }
 
 /* Cancellation Info */
 .cancellation-info {
-    background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
-    border-radius: 15px;
+    background: #fff5f5;
+    border-radius: 8px;
     padding: 0;
     border: 1px solid #feb2b2;
-    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
     overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.cancellation-info:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
 }
 
 .cancellation-header {
-    background: linear-gradient(135deg, #f56565, #e53e3e);
+    background: #dc3545;
     color: white;
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.cancellation-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100px;
-    height: 100px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 50%;
-    transform: translate(30px, -30px);
 }
 
 .cancellation-icon {
@@ -946,31 +919,12 @@
     }
 }
 
-.event-description:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-}
-
 .description-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: #007bff;
     color: white;
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.description-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100px;
-    height: 100px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 50%;
-    transform: translate(30px, -30px);
 }
 
 .description-icon {
@@ -1076,11 +1030,9 @@
     align-items: center;
     padding: 1rem;
     background: #f8f9fa;
-    border-radius: 10px;
-    border: none;
-    transition: all 0.3s ease;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
     margin-bottom: 1rem;
-    position: relative;
 }
 
 /* Xóa bỏ thanh gạch ngang màu nếu có */
@@ -1090,26 +1042,19 @@
     content: none !important;
 }
 
-.info-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
 .info-icon {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 1rem;
     color: #6c757d;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     flex-shrink: 0;
-    position: relative;
-    background: transparent !important;
-    border: 2px solid #e9ecef;
-    box-shadow: none;
+    background: #fff;
+    border: 1px solid #dee2e6;
 }
 
 /* Tắt tất cả màu nền của icon */
@@ -1199,26 +1144,15 @@
 
 .image-container {
     position: relative;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.image-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border: 1px solid #dee2e6;
 }
 
 .image-container img {
     width: 100%;
     height: 200px;
     object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.image-container:hover img {
-    transform: scale(1.05);
 }
 
 .image-overlay {
@@ -1264,15 +1198,15 @@
 }
 
 .stat-icon {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1rem;
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .stat-number {
@@ -1306,22 +1240,6 @@
     font-size: 1rem;
 }
 
-/* Gradient backgrounds */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-}
-
-.bg-gradient-info {
-    background: linear-gradient(135deg, #17a2b8, #138496);
-}
-
-.bg-gradient-warning {
-    background: linear-gradient(135deg, #ffc107, #e0a800);
-}
-
-.bg-gradient-secondary {
-    background: linear-gradient(135deg, #6c757d, #545b62);
-}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -1395,58 +1313,6 @@
                     </button>
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận hủy sự kiện
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
-
-<!-- Modal hủy sự kiện (với lý do chi tiết) -->
-@if($event->status !== 'ongoing' && $event->status !== 'cancelled' && $event->status !== 'completed')
-<div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteEventModalLabel">
-                    <i class="fas fa-ban me-2"></i>Hủy sự kiện
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ route('admin.events.delete', $event->id) }}">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Thông báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Sự kiện sẽ chuyển sang trạng thái "Đã hủy" và vẫn được lưu trữ trong hệ thống. Thông tin sự kiện sẽ không bị xóa.
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="deletion_reason" class="form-label">
-                            Lý do hủy sự kiện <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control @error('deletion_reason') is-invalid @enderror" 
-                                  id="deletion_reason" 
-                                  name="deletion_reason" 
-                                  rows="4" 
-                                  placeholder="Vui lòng nhập lý do hủy sự kiện (tối thiểu 10 ký tự)..." 
-                                  required>{{ old('deletion_reason') }}</textarea>
-                        @error('deletion_reason')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="form-text text-muted">
-                            Lý do hủy sẽ được lưu trữ trong hệ thống và hiển thị trong thông tin sự kiện.
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Đóng
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-ban me-2"></i>Xác nhận hủy
                     </button>
                 </div>
             </form>
