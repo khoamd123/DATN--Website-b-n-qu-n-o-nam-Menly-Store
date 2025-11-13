@@ -2,6 +2,11 @@
 
 @section('title', 'Dashboard - CLB Admin')
 
+<<<<<<< HEAD
+@section('content')
+<div class="content-header">
+    <h1>Dashboard</h1>
+=======
 @section('styles')
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -77,6 +82,7 @@
             </div>
         </div>
     </div>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 </div>
 
 <div class="row">
@@ -86,9 +92,14 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $totalUsers }}</p>
+            <p class="stats-label">Tổng người dùng</p>
+=======
             <p class="stats-number">{{ $usersInPeriod }}</p>
             <p class="stats-label">Người dùng trong khoảng thời gian</p>
             <small class="text-success">+{{ $usersLastMonth }} tháng này</small>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <a href="{{ route('admin.users') }}" class="stats-link">Xem tất cả</a>
         </div>
     </div>
@@ -98,9 +109,14 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $totalClubs }}</p>
+            <p class="stats-label">Tổng câu lạc bộ</p>
+=======
             <p class="stats-number">{{ $clubsInPeriod }}</p>
             <p class="stats-label">Câu lạc bộ trong khoảng thời gian</p>
             <small class="text-info">{{ $activeClubs }} hoạt động, {{ $pendingClubs }} chờ duyệt</small>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <a href="{{ route('admin.clubs') }}" class="stats-link">Xem tất cả</a>
         </div>
     </div>
@@ -110,10 +126,16 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-calendar-alt"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $totalEvents }}</p>
+            <p class="stats-label">Tổng sự kiện</p>
+            <a href="#" class="stats-link">Xem tất cả</a>
+=======
             <p class="stats-number">{{ $eventsInPeriod }}</p>
             <p class="stats-label">Sự kiện trong khoảng thời gian</p>
             <small class="text-warning">{{ $activeEvents }} đang hoạt động</small>
             <a href="{{ route('admin.plans-schedule') }}" class="stats-link">Xem tất cả</a>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         </div>
     </div>
     
@@ -122,6 +144,11 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-newspaper"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $totalPosts }}</p>
+            <p class="stats-label">Tổng bài viết</p>
+            <a href="#" class="stats-link">Xem tất cả</a>
+=======
             <p class="stats-number">{{ $postsInPeriod }}</p>
             <p class="stats-label">Bài viết trong khoảng thời gian</p>
             <small class="text-success">+{{ $postsLastMonth }} tháng này</small>
@@ -193,6 +220,7 @@
                     </table>
                 </div>
             </div>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         </div>
     </div>
 </div>
@@ -206,6 +234,12 @@
             @if($newUsers->count() > 0)
                 @foreach($newUsers as $user)
                     <div class="user-item">
+<<<<<<< HEAD
+                        <img src="{{ $user->avatar ?? '/images/avatar/avatar.png' }}" 
+                             alt="{{ $user->name }}" 
+                             class="user-avatar"
+                             onerror="this.src='/images/avatar/avatar.png'">
+=======
                         @php
                             $avatarPath = $user->avatar ? public_path($user->avatar) : null;
                             $hasAvatar = $avatarPath && file_exists($avatarPath);
@@ -221,13 +255,17 @@
                             </div>
                         @endif
                         
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <div class="user-info">
                             <h6>{{ $user->name }}</h6>
                             <small>{{ $user->email }}</small>
                             @if($user->phone)
                                 <br><small>{{ $user->phone }}</small>
                             @endif
+<<<<<<< HEAD
+=======
                             <br><small class="text-muted">{{ $user->created_at->diffForHumans() }}</small>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         </div>
                     </div>
                 @endforeach
@@ -252,7 +290,10 @@
                             <h6>{{ $club->name }}</h6>
                             <small>{{ $club->field->name ?? 'Không xác định' }}</small>
                             <br><small>Chủ sở hữu: {{ $club->owner->name ?? 'Không xác định' }}</small>
+<<<<<<< HEAD
+=======
                             <br><small class="text-muted">{{ $club->created_at->diffForHumans() }}</small>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         </div>
                     </div>
                 @endforeach
@@ -264,10 +305,17 @@
 </div>
 
 <div class="row mt-4">
+<<<<<<< HEAD
+    <!-- Sự kiện sắp diễn ra -->
+    <div class="col-12">
+        <div class="user-list">
+            <h5 class="mb-3">Sự kiện sắp diễn ra</h5>
+=======
     <!-- Sự kiện gần đây -->
     <div class="col-12">
         <div class="user-list">
             <h5 class="mb-3">Sự kiện gần đây (30 ngày)</h5>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             
             @if($upcomingEvents->count() > 0)
                 <div class="table-responsive">
@@ -297,12 +345,18 @@
                     </table>
                 </div>
             @else
+<<<<<<< HEAD
+                <p class="text-muted">Không có sự kiện sắp diễn ra</p>
+=======
                 <p class="text-muted">Không có sự kiện trong 30 ngày gần đây</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             @endif
         </div>
     </div>
 </div>
 @endsection
+<<<<<<< HEAD
+=======
 
 @section('scripts')
 <script>
@@ -436,3 +490,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
