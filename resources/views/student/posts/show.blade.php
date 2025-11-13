@@ -46,77 +46,77 @@
                 </div>
 
                 @if($post->type !== 'announcement')
-                    <hr class="my-4">
+                <hr class="my-4">
 
-                    <div class="mt-4">
-                        <h5 class="mb-3"><i class="far fa-comments me-2"></i>Bình luận</h5>
-                        
-                        <form method="POST" action="{{ route('student.posts.comment', $post->id) }}" class="mb-4">
-                            @csrf
-                            <div class="mb-2">
-                                <textarea name="content" class="form-control" rows="3" placeholder="Viết bình luận của bạn..." required>{{ old('content') }}</textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-paper-plane me-1"></i> Gửi bình luận
-                            </button>
-                        </form>
+                <div class="mt-4">
+                    <h5 class="mb-3"><i class="far fa-comments me-2"></i>Bình luận</h5>
+                    
+                    <form method="POST" action="{{ route('student.posts.comment', $post->id) }}" class="mb-4">
+                        @csrf
+                        <div class="mb-2">
+                            <textarea name="content" class="form-control" rows="3" placeholder="Viết bình luận của bạn..." required>{{ old('content') }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-paper-plane me-1"></i> Gửi bình luận
+                        </button>
+                    </form>
 
-                        @forelse($post->comments->sortByDesc('created_at') as $comment)
-                            <div class="d-flex mb-3">
-                                <div class="me-3">
-                                    <div class="user-avatar" style="width:36px;height:36px;font-size:14px;">
-                                        {{ isset($comment->user->name) ? substr($comment->user->name, 0, 1) : 'U' }}
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <strong class="me-2">{{ $comment->user->name ?? 'Người dùng' }}</strong>
-                                        <small class="text-muted">{{ $comment->created_at->diffForHumans() }}</small>
-                                    </div>
-                                    <div class="text-muted">{!! nl2br(e($comment->content)) !!}</div>
+                    @forelse($post->comments->sortByDesc('created_at') as $comment)
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <div class="user-avatar" style="width:36px;height:36px;font-size:14px;">
+                                    {{ isset($comment->user->name) ? substr($comment->user->name, 0, 1) : 'U' }}
                                 </div>
                             </div>
-                        @empty
-                            <div class="text-muted">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</div>
-                        @endforelse
-                    </div>
-
-                    @if(isset($relatedPosts) && $relatedPosts->count() > 0)
-                        <hr class="my-4">
-                        <div class="mt-4">
-                            <h5 class="mb-3"><i class="fas fa-link me-2"></i>Bài viết liên quan</h5>
-                            <div class="row g-3">
-                                @foreach($relatedPosts as $rel)
-                                    @php
-                                        $relImage = null;
-                                        if (!empty($rel->image)) {
-                                            if (\Illuminate\Support\Str::startsWith($rel->image, ['uploads/', '/uploads/'])) {
-                                                $relImage = asset(ltrim($rel->image, '/'));
-                                            } else {
-                                                $relImage = asset('storage/' . ltrim($rel->image, '/'));
-                                            }
-                                        }
-                                    @endphp
-                                    <div class="col-sm-6 col-lg-4">
-                                        <a href="{{ route('student.posts.show', $rel->id) }}" class="text-decoration-none text-dark">
-                                            <div class="card h-100 border-0 shadow-sm">
-                                                @if($relImage)
-                                                    <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #f8fafc;">
-                                                        <img src="{{ $relImage }}" alt="{{ $rel->title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-top-left-radius:.5rem;border-top-right-radius:.5rem;">
-                                                    </div>
-                                                @endif
-                                                <div class="card-body">
-                                                    <h6 class="card-title mb-2">{{ \Illuminate\Support\Str::limit($rel->title, 80) }}</h6>
-                                                    <small class="text-muted">
-                                                        <i class="far fa-clock me-1"></i>{{ $rel->created_at->format('d/m/Y') }}
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </div>
-                                @endforeach
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <strong class="me-2">{{ $comment->user->name ?? 'Người dùng' }}</strong>
+                                    <small class="text-muted">{{ $comment->created_at->diffForHumans() }}</small>
+                                </div>
+                                <div class="text-muted">{!! nl2br(e($comment->content)) !!}</div>
                             </div>
                         </div>
+                    @empty
+                        <div class="text-muted">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</div>
+                    @endforelse
+                </div>
+
+                @if(isset($relatedPosts) && $relatedPosts->count() > 0)
+                    <hr class="my-4">
+                    <div class="mt-4">
+                        <h5 class="mb-3"><i class="fas fa-link me-2"></i>Bài viết liên quan</h5>
+                        <div class="row g-3">
+                            @foreach($relatedPosts as $rel)
+                                @php
+                                    $relImage = null;
+                                    if (!empty($rel->image)) {
+                                        if (\Illuminate\Support\Str::startsWith($rel->image, ['uploads/', '/uploads/'])) {
+                                            $relImage = asset(ltrim($rel->image, '/'));
+                                        } else {
+                                            $relImage = asset('storage/' . ltrim($rel->image, '/'));
+                                        }
+                                    }
+                                @endphp
+                                <div class="col-sm-6 col-lg-4">
+                                    <a href="{{ route('student.posts.show', $rel->id) }}" class="text-decoration-none text-dark">
+                                        <div class="card h-100 border-0 shadow-sm">
+                                            @if($relImage)
+                                                <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #f8fafc;">
+                                                    <img src="{{ $relImage }}" alt="{{ $rel->title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-top-left-radius:.5rem;border-top-right-radius:.5rem;">
+                                                </div>
+                                            @endif
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-2">{{ \Illuminate\Support\Str::limit($rel->title, 80) }}</h6>
+                                                <small class="text-muted">
+                                                    <i class="far fa-clock me-1"></i>{{ $rel->created_at->format('d/m/Y') }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                     @endif
                 @endif
             </article>

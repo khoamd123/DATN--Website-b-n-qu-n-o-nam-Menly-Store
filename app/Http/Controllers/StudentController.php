@@ -1607,7 +1607,7 @@ class StudentController extends Controller
         // Thông báo luôn sắp xếp theo mới nhất
         $announcementsQuery->orderBy('created_at', 'desc');
 
-        $posts = $postsQuery->paginate(10);
+        $posts = $postsQuery->paginate(3);
         $announcements = $announcementsQuery->limit(5)->get();
         $clubs = Club::where('status', 'active')->get();
 
