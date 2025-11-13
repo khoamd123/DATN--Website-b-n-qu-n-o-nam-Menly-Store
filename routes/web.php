@@ -112,7 +112,12 @@ Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentContr
 Route::delete('/student/clubs/{club}/cancel-join-request', [\App\Http\Controllers\StudentController::class, 'cancelJoinRequest'])->name('student.clubs.cancel_join_request');
 
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
-Route::get('/student/events/{event}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
+Route::get('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
+Route::post('/student/events/{eventId}/register', [\App\Http\Controllers\StudentController::class, 'registerEvent'])->name('student.events.register');
+Route::delete('/student/events/{eventId}/cancel-registration', [\App\Http\Controllers\StudentController::class, 'cancelRegistration'])->name('student.events.cancel_registration');
+Route::get('/student/events/create', [\App\Http\Controllers\StudentController::class, 'createEvent'])->name('student.events.create');
+Route::post('/student/events', [\App\Http\Controllers\StudentController::class, 'storeEvent'])->name('student.events.store');
+Route::get('/student/events/manage', [\App\Http\Controllers\StudentController::class, 'manageEvents'])->name('student.events.manage');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');

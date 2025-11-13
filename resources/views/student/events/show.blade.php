@@ -1,29 +1,53 @@
-@extends('admin.layouts.app')
+@extends('layouts.student')
 
-@section('title', 'Chi tiết sự kiện')
+@section('title', $event->title . ' - UniClubs')
 
 @section('content')
+<!-- Toast Notification Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2" id="toastIcon"></i>
+            <strong class="me-auto" id="toastTitle">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            <!-- Message will be inserted here -->
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <article class="content-card">
             <!-- Back Button -->
             <div class="mb-3">
-                <a href="{{ route('admin.plans-schedule') }}" class="text-decoration-none">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách sự kiện
-                </a>
+                @if(isset($isClubMember) && $isClubMember)
+                    <a href="{{ route('student.events.manage') }}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại quản lý sự kiện
+                    </a>
+                @else
+                    <a href="{{ route('student.events.index') }}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách sự kiện
+                    </a>
+                @endif
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show">
-                    <i class="fas fa-check-circle"></i> {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <!-- Cancellation Info -->
+            @if($event->status === 'cancelled' && $event->cancellation_reason)
+                <div class="alert alert-danger mb-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Sự kiện đã bị hủy
+                    </h5>
+                    <p class="mb-0">
+                        <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
+                    </p>
+                    @if($event->cancelled_at)
+                        <hr>
+                        <p class="mb-0">
+                            <small>Thời gian hủy: {{ $event->cancelled_at->format('d/m/Y H:i') }}</small>
+                        </p>
+                    @endif
                 </div>
             @endif
 
@@ -63,6 +87,15 @@
                     <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }} me-2">
                         {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
                     </span>
+                    @if($event->status === 'approved' || $event->status === 'ongoing')
+                        @if($event->start_time > now())
+                            <span class="badge bg-info me-2">Sắp diễn ra</span>
+                        @elseif($event->end_time < now())
+                            <span class="badge bg-secondary me-2">Đã kết thúc</span>
+                        @else
+                            <span class="badge bg-success me-2">Đang diễn ra</span>
+                        @endif
+                    @endif
                 </div>
 
                 <!-- Event Images Gallery -->
@@ -219,22 +252,12 @@
                                     @endif
                                 </p>
                             @endif
-                            @if($event->max_participants)
-                                <p class="mb-0 mt-2">
-                                    <strong>Số lượng tối đa:</strong> {{ $event->max_participants }} người
-                                </p>
-                            @endif
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Registration Info -->
-            @php
-                $registrationsCount = \App\Models\EventRegistration::where('event_id', $event->id)->count();
-                $availableSlots = $event->max_participants > 0 ? $event->max_participants - $registrationsCount : null;
-                $isFull = $event->max_participants > 0 && $registrationsCount >= $event->max_participants;
-            @endphp
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
                     <h6 class="card-title text-teal mb-3">
@@ -243,7 +266,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p class="mb-2">
-                                <strong>Số người đã đăng ký:</strong> {{ $registrationsCount }}
+                                <strong>Số người đã đăng ký:</strong> {{ $registrationCount }}
                                 @if($event->max_participants > 0)
                                     / {{ $event->max_participants }}
                                 @endif
@@ -259,6 +282,29 @@
                                 </p>
                             @else
                                 <p class="mb-0 text-info">Không giới hạn số lượng</p>
+                            @endif
+                        </div>
+                        <div class="col-md-6 text-end">
+                            @if($isRegistered)
+                                <span class="badge bg-success fs-6 px-3 py-2 mb-2">
+                                    <i class="fas fa-check me-1"></i>Bạn đã đăng ký
+                                </span>
+                            @elseif($isFull)
+                                <span class="badge bg-danger fs-6 px-3 py-2 mb-2">
+                                    <i class="fas fa-times me-1"></i>Đã đầy
+                                </span>
+                            @elseif($isDeadlinePassed)
+                                <span class="badge bg-secondary fs-6 px-3 py-2 mb-2">
+                                    <i class="fas fa-calendar-times me-1"></i>Hết hạn đăng ký
+                                </span>
+                            @elseif($event->status === 'cancelled')
+                                <span class="badge bg-danger fs-6 px-3 py-2 mb-2">
+                                    <i class="fas fa-ban me-1"></i>Sự kiện đã bị hủy
+                                </span>
+                            @else
+                                <button class="btn btn-primary btn-lg" onclick="registerEvent({{ $event->id }}, this)">
+                                    <i class="fas fa-plus me-1"></i> Đăng ký tham gia
+                                </button>
                             @endif
                         </div>
                     </div>
@@ -299,7 +345,7 @@
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-users-cog me-2"></i>Đội ngũ tổ chức
                                 </h6>
-                                <p class="mb-0" style="white-space: pre-line;">{{ $event->organizing_team }}</p>
+                                <p class="mb-0">{{ $event->organizing_team }}</p>
                             </div>
                         </div>
                     </div>
@@ -312,33 +358,27 @@
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-handshake me-2"></i>Đồng tổ chức
                                 </h6>
-                                <p class="mb-0" style="white-space: pre-line;">{{ $event->co_organizers }}</p>
+                                <p class="mb-0">{{ $event->co_organizers }}</p>
                             </div>
                         </div>
                     </div>
                 @endif
 
-                @php
-                    $contact = null;
-                    if ($event->contact_info) {
-                        $contact = is_array($event->contact_info) ? $event->contact_info : json_decode($event->contact_info, true);
-                    }
-                @endphp
-                @if($contact && (isset($contact['phone']) || isset($contact['email'])))
+                @if($event->contact_info && is_array($event->contact_info))
                     <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-phone me-2"></i>Thông tin liên hệ
                                 </h6>
-                                @if(isset($contact['phone']))
+                                @if(isset($event->contact_info['phone']))
                                     <p class="mb-2">
-                                        <i class="fas fa-phone me-1"></i>{{ $contact['phone'] }}
+                                        <i class="fas fa-phone me-1"></i>{{ $event->contact_info['phone'] }}
                                     </p>
                                 @endif
-                                @if(isset($contact['email']))
+                                @if(isset($event->contact_info['email']))
                                     <p class="mb-0">
-                                        <i class="fas fa-envelope me-1"></i>{{ $contact['email'] }}
+                                        <i class="fas fa-envelope me-1"></i>{{ $event->contact_info['email'] }}
                                     </p>
                                 @endif
                             </div>
@@ -346,23 +386,17 @@
                     </div>
                 @endif
 
-                @php
-                    $guestData = null;
-                    if ($event->guests) {
-                        $guestData = is_array($event->guests) ? $event->guests : (is_string($event->guests) ? json_decode($event->guests, true) : null);
-                    }
-                @endphp
-                @if($guestData && (isset($guestData['types']) || isset($guestData['other_info'])))
+                @if($event->guests && is_array($event->guests))
                     <div class="col-md-12 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-user-friends me-2"></i>Khách mời
                                 </h6>
-                                @if(isset($guestData['types']) && is_array($guestData['types']))
+                                @if(isset($event->guests['types']) && is_array($event->guests['types']))
                                     <p class="mb-2">
                                         <strong>Loại khách mời:</strong>
-                                        @foreach($guestData['types'] as $type)
+                                        @foreach($event->guests['types'] as $type)
                                             <span class="badge bg-info me-1">
                                                 @if($type === 'lecturer')
                                                     Giảng viên
@@ -377,195 +411,27 @@
                                         @endforeach
                                     </p>
                                 @endif
-                                @if(isset($guestData['other_info']))
-                                    <p class="mb-0">{{ $guestData['other_info'] }}</p>
+                                @if(isset($event->guests['other_info']))
+                                    <p class="mb-0">{{ $event->guests['other_info'] }}</p>
                                 @endif
                             </div>
                         </div>
                     </div>
                 @endif
             </div>
-
-            <!-- Tài liệu và File -->
-            @if($event->proposal_file || $event->poster_file || $event->permit_file)
-                <div class="mb-4">
-                    <h4 class="mb-3 text-teal">
-                        <i class="fas fa-file me-2"></i>Tài liệu và File
-                    </h4>
-                    <div class="row">
-                        @if($event->proposal_file)
-                            <div class="col-md-4 mb-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <h6 class="card-title mb-3">
-                                            <i class="fas fa-file-pdf me-2 text-danger"></i>Kế hoạch chi tiết
-                                        </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->proposal_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
-                                        <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
-                                        <a href="{{ asset('storage/' . $event->proposal_file) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                                            <i class="fas fa-download me-2"></i>Tải xuống
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if($event->poster_file)
-                            <div class="col-md-4 mb-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <h6 class="card-title mb-3">
-                                            <i class="fas fa-image me-2 text-primary"></i>Poster / Ấn phẩm
-                                        </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->poster_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
-                                        <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
-                                        <div class="d-flex gap-2">
-                                            @if(in_array(strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
-                                                <a href="{{ asset('storage/' . $event->poster_file) }}" target="_blank" class="btn btn-sm btn-outline-info flex-fill" data-bs-toggle="modal" data-bs-target="#posterModal">
-                                                    <i class="fas fa-eye me-2"></i>Xem
-                                                </a>
-                                            @endif
-                                            <a href="{{ asset('storage/' . $event->poster_file) }}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill">
-                                                <i class="fas fa-download me-2"></i>Tải xuống
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if($event->permit_file)
-                            <div class="col-md-4 mb-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <h6 class="card-title mb-3">
-                                            <i class="fas fa-file-alt me-2 text-warning"></i>Giấy phép / Công văn
-                                        </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->permit_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
-                                        <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
-                                        <a href="{{ asset('storage/' . $event->permit_file) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                                            <i class="fas fa-download me-2"></i>Tải xuống
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            @endif
-
-            <!-- Thông tin hệ thống -->
-            <div class="mb-4">
-                <h4 class="mb-3 text-teal">
-                    <i class="fas fa-database me-2"></i>Thông tin hệ thống
-                </h4>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h6 class="card-title mb-3">
-                                    <i class="fas fa-user me-2"></i>Người tạo
-                                </h6>
-                                <p class="mb-1">{{ $event->creator->name ?? 'N/A' }}</p>
-                                @if($event->creator)
-                                    <small class="text-muted">{{ $event->creator->email ?? '' }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h6 class="card-title mb-3">
-                                    <i class="fas fa-calendar-plus me-2"></i>Ngày tạo
-                                </h6>
-                                <p class="mb-1">{{ $event->created_at ? $event->created_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                                @if($event->created_at)
-                                    <small class="text-muted">{{ $event->created_at->diffForHumans() }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h6 class="card-title mb-3">
-                                    <i class="fas fa-clock me-2"></i>Cập nhật lần cuối
-                                </h6>
-                                <p class="mb-1">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                                @if($event->updated_at)
-                                    <small class="text-muted">{{ $event->updated_at->diffForHumans() }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h6 class="card-title mb-3">
-                                    <i class="fas fa-hashtag me-2"></i>Mã sự kiện
-                                </h6>
-                                <p class="mb-0"><code>#{{ $event->id }}</code></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cancellation Info -->
-            @if($event->status === 'cancelled' && $event->cancellation_reason)
-                <div class="alert alert-danger mb-4">
-                    <h5 class="alert-heading">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Sự kiện đã bị hủy
-                    </h5>
-                    <p class="mb-0">
-                        <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
-                    </p>
-                    @if($event->cancelled_at)
-                        <hr>
-                        <p class="mb-0">
-                            <small>Thời gian hủy: {{ $event->cancelled_at->format('d/m/Y H:i') }}</small>
-                        </p>
-                    @endif
-                </div>
-            @endif
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2 mb-4">
-                @if($event->status !== 'cancelled')
-                    @if($event->status === 'pending')
-                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                <i class="fas fa-check me-1"></i> Duyệt sự kiện
-                            </button>
-                        </form>
-                    @endif
-                    
-                    @if(in_array($event->status, ['pending', 'approved']))
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
-                            <i class="fas fa-times me-1"></i> Hủy sự kiện
-                        </button>
-                    @endif
-                    
-                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-1"></i> Chỉnh sửa
-                    </a>
+                @if($isRegistered)
+                    <button class="btn btn-outline-danger" onclick="cancelRegistration({{ $event->id }}, this)">
+                        <i class="fas fa-times me-1"></i> Hủy đăng ký
+                    </button>
+                @elseif(!$isFull && !$isDeadlinePassed && $event->status !== 'cancelled')
+                    <button class="btn btn-primary" onclick="registerEvent({{ $event->id }}, this)">
+                        <i class="fas fa-plus me-1"></i> Đăng ký tham gia
+                    </button>
                 @endif
-                
-                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('student.events.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
                 </a>
             </div>
@@ -575,13 +441,18 @@
 
 @push('styles')
 <style>
-    .content-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e9ecef;
-        margin-bottom: 2rem;
+    /* Toast Notification Styles */
+    .toast {
+        min-width: 300px;
+        max-width: 400px;
+    }
+    
+    .toast-header {
+        font-weight: 600;
+    }
+    
+    .toast-body {
+        font-size: 0.95rem;
     }
     
     .text-teal {
@@ -672,6 +543,119 @@
 
 @push('scripts')
 <script>
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        const toastElement = document.getElementById('toastNotification');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        // Set icon and title based on type
+        if (type === 'success') {
+            toastIcon.className = 'fas fa-check-circle text-success me-2';
+            toastTitle.textContent = 'Thành công';
+            toastElement.classList.remove('text-bg-danger', 'text-bg-warning');
+            toastElement.classList.add('text-bg-success');
+        } else if (type === 'error') {
+            toastIcon.className = 'fas fa-exclamation-circle text-danger me-2';
+            toastTitle.textContent = 'Lỗi';
+            toastElement.classList.remove('text-bg-success', 'text-bg-warning');
+            toastElement.classList.add('text-bg-danger');
+        } else {
+            toastIcon.className = 'fas fa-info-circle text-info me-2';
+            toastTitle.textContent = 'Thông báo';
+            toastElement.classList.remove('text-bg-success', 'text-bg-danger');
+            toastElement.classList.add('text-bg-warning');
+        }
+        
+        toastMessage.textContent = message;
+        
+        // Show toast
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+    }
+    
+    // Register event function
+    function registerEvent(eventId, buttonElement) {
+        // Disable button to prevent multiple clicks
+        const button = buttonElement;
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
+        
+        fetch(`/student/events/${eventId}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Đăng ký tham gia sự kiện thành công', 'success');
+                // Reload after a short delay to show the toast
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast(data.message || 'Có lỗi xảy ra khi đăng ký', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Có lỗi xảy ra khi đăng ký', 'error');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    }
+    
+    // Cancel event registration function
+    function cancelRegistration(eventId, buttonElement) {
+        if (!confirm('Bạn có chắc chắn muốn hủy đăng ký sự kiện này?')) {
+            return;
+        }
+        
+        // Disable button to prevent multiple clicks
+        const button = buttonElement;
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
+        
+        fetch(`/student/events/${eventId}/cancel-registration`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Hủy đăng ký sự kiện thành công', 'success');
+                // Reload after a short delay to show the toast
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast(data.message || 'Có lỗi xảy ra khi hủy đăng ký', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Có lỗi xảy ra khi hủy đăng ký', 'error');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    }
+    
     // Image Modal Functions
     function openImageModal(imageUrl, imageAlt) {
         const modal = document.getElementById('imageModal');
@@ -719,81 +703,5 @@
     </div>
 </div>
 @endpush
-
-<!-- Modal hủy sự kiện -->
-@if($event->status !== 'ongoing' && in_array($event->status, ['pending', 'approved']))
-<div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="cancelEventModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Hủy sự kiện
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ route('admin.events.cancel', $event->id) }}">
-                @csrf
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Cảnh báo:</strong> Bạn sắp hủy sự kiện "{{ $event->title }}". Hành động này không thể hoàn tác.
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="cancellation_reason" class="form-label">
-                            Lý do hủy sự kiện <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control @error('cancellation_reason') is-invalid @enderror" 
-                                  id="cancellation_reason" 
-                                  name="cancellation_reason" 
-                                  rows="4" 
-                                  placeholder="Vui lòng nhập lý do hủy sự kiện..." 
-                                  required>{{ old('cancellation_reason') }}</textarea>
-                        @error('cancellation_reason')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="form-text text-muted">
-                            Lý do hủy sẽ được hiển thị cho tất cả người dùng và không thể chỉnh sửa sau khi lưu.
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Đóng
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận hủy sự kiện
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
-
-<!-- Modal xem poster -->
-@if($event->poster_file && in_array(strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
-<div class="modal fade" id="posterModal" tabindex="-1" aria-labelledby="posterModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="posterModalLabel">
-                    <i class="fas fa-image me-2"></i>Poster sự kiện
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img src="{{ asset('storage/' . $event->poster_file) }}" alt="Poster sự kiện" class="img-fluid rounded">
-            </div>
-            <div class="modal-footer">
-                <a href="{{ asset('storage/' . $event->poster_file) }}" download class="btn btn-primary">
-                    <i class="fas fa-download me-2"></i>Tải xuống
-                </a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
-
 @endsection
+
