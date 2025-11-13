@@ -124,11 +124,11 @@
                         <p class="management-description">Tổ chức và quản lý các sự kiện của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ $totalEvents ?? 0 }}</strong>
                                 <small>Sự kiện</small>
                             </span>
                             <span class="stat-item">
-                                <strong>0</strong>
+                                <strong>{{ $upcomingEvents ?? 0 }}</strong>
                                 <small>Sắp tới</small>
                             </span>
                         </div>
@@ -285,10 +285,10 @@
                 </div>
                 @endif
                 @if($user->hasPermission('tao_su_kien'))
-                <div class="permission-item">
+                <a href="{{ route('student.events.create') }}" class="permission-item" style="text-decoration: none; color: inherit;">
                     <i class="fas fa-calendar-plus text-success"></i>
                     <span>Tạo sự kiện</span>
-                </div>
+                </a>
                 @endif
                 @if($user->hasPermission('dang_thong_bao'))
                 <div class="permission-item">
@@ -330,7 +330,7 @@
                         <i class="fas fa-calendar"></i>
                     </div>
                     <div>
-                        <div class="stat-number">0</div>
+                        <div class="stat-number">{{ $totalEvents ?? 0 }}</div>
                         <div class="stat-label">Sự kiện</div>
                     </div>
                 </div>
@@ -499,10 +499,17 @@
         align-items: center;
         padding: 0.5rem 0;
         border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
     }
     
     .permission-item:last-child {
         border-bottom: none;
+    }
+    
+    .permission-item:hover {
+        background-color: #f0fdfa;
+        padding-left: 0.5rem;
+        cursor: pointer;
     }
     
     .permission-item i {

@@ -154,17 +154,14 @@
                                 <i class="fas fa-calendar-alt me-2"></i>Thời gian
                             </h6>
                             <p class="mb-2">
-                                <strong>Bắt đầu:</strong><br>
-                                <i class="fas fa-clock me-1"></i>{{ $event->start_time->format('d/m/Y H:i') }}
+                                <strong>Bắt đầu:</strong> {{ $event->start_time->format('d/m/Y H:i') }}
                             </p>
                             <p class="mb-0">
-                                <strong>Kết thúc:</strong><br>
-                                <i class="fas fa-clock me-1"></i>{{ $event->end_time->format('d/m/Y H:i') }}
+                                <strong>Kết thúc:</strong> {{ $event->end_time->format('d/m/Y H:i') }}
                             </p>
                             @if($event->registration_deadline)
                                 <p class="mb-0 mt-2">
-                                    <strong>Hạn đăng ký:</strong><br>
-                                    <i class="fas fa-calendar-times me-1"></i>{{ $event->registration_deadline->format('d/m/Y H:i') }}
+                                    <strong>Hạn đăng ký:</strong> {{ $event->registration_deadline->format('d/m/Y H:i') }}
                                 </p>
                             @endif
                         </div>
@@ -179,18 +176,18 @@
                             </h6>
                             @if($event->location)
                                 <p class="mb-2">
-                                    <strong>Địa điểm:</strong><br>
-                                    <i class="fas fa-map-marker-alt me-1"></i>{{ $event->location }}
+                                    <strong>Địa điểm:</strong> {{ $event->location }}
                                 </p>
                             @endif
                             @if($event->mode)
                                 <p class="mb-0">
-                                    <strong>Hình thức:</strong><br>
-                                    <i class="fas fa-laptop me-1"></i>
+                                    <strong>Hình thức:</strong> 
                                     @if($event->mode === 'online')
                                         Trực tuyến
                                     @elseif($event->mode === 'offline')
                                         Trực tiếp
+                                    @elseif($event->mode === 'hybrid')
+                                        Kết hợp
                                     @else
                                         {{ ucfirst($event->mode) }}
                                     @endif

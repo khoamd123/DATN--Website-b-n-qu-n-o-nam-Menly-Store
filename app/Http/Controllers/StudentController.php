@@ -712,14 +712,25 @@ class StudentController extends Controller
         $clubId = null;
         $userPosition = null;
         $userClub = null;
+        $totalEvents = 0;
+        $upcomingEvents = 0;
         
         if ($user->clubs->count() > 0) {
             $userClub = $user->clubs->first();
             $clubId = $userClub->id;
             $userPosition = $user->getPositionInClub($clubId);
             $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+            
+            // Đếm số sự kiện của CLB (chỉ tính các sự kiện đã được duyệt)
+            $totalEvents = Event::where('club_id', $clubId)
+                ->whereIn('status', ['approved', 'ongoing', 'completed'])
+                ->count();
+            $upcomingEvents = Event::where('club_id', $clubId)
+                ->whereIn('status', ['approved', 'ongoing', 'completed'])
+                ->where('start_time', '>', now())
+                ->count();
         }
 
-        return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub'));
+        return view('student.club-management.index', compact('user', 'hasManagementRole', 'userPosition', 'userClub', 'totalEvents', 'upcomingEvents'));
     }
 }
