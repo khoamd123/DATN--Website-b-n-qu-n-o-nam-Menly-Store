@@ -33,6 +33,24 @@
                 @endif
             </div>
 
+            <!-- Cancellation Info -->
+            @if($event->status === 'cancelled' && $event->cancellation_reason)
+                <div class="alert alert-danger mb-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Sự kiện đã bị hủy
+                    </h5>
+                    <p class="mb-0">
+                        <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
+                    </p>
+                    @if($event->cancelled_at)
+                        <hr>
+                        <p class="mb-0">
+                            <small>Thời gian hủy: {{ $event->cancelled_at->format('d/m/Y H:i') }}</small>
+                        </p>
+                    @endif
+                </div>
+            @endif
+
             <!-- Event Header -->
             <div class="mb-4">
                 <h1 class="mb-3">{{ $event->title }}</h1>
@@ -401,24 +419,6 @@
                     </div>
                 @endif
             </div>
-
-            <!-- Cancellation Info -->
-            @if($event->status === 'cancelled' && $event->cancellation_reason)
-                <div class="alert alert-danger mb-4">
-                    <h5 class="alert-heading">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Sự kiện đã bị hủy
-                    </h5>
-                    <p class="mb-0">
-                        <strong>Lý do hủy:</strong> {{ $event->cancellation_reason }}
-                    </p>
-                    @if($event->cancelled_at)
-                        <hr>
-                        <p class="mb-0">
-                            <small>Thời gian hủy: {{ $event->cancelled_at->format('d/m/Y H:i') }}</small>
-                        </p>
-                    @endif
-                </div>
-            @endif
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2 mb-4">
