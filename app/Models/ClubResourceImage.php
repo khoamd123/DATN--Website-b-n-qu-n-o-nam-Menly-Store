@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ClubResourceImage extends Model
 {
@@ -35,12 +36,20 @@ class ClubResourceImage extends Model
     // Helper methods
     public function getImageUrlAttribute()
     {
+        if (!$this->image_path) {
+            return asset('images/placeholder.jpg');
+        }
         return asset('storage/' . $this->image_path);
     }
 
     public function getThumbnailUrlAttribute()
     {
-        return $this->thumbnail_path ? asset('storage/' . $this->thumbnail_path) : $this->image_url;
+        // Check if thumbnail exists, if not use original image
+        if ($this->thumbnail_path && \Storage::exists('public/' . $this->thumbnail_path)) {
+            return asset('storage/' . $this->thumbnail_path);
+        }
+        // Fallback to original image
+        return $this->image_url;
     }
 
     public function getFormattedSizeAttribute()

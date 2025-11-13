@@ -363,11 +363,6 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.notifications*') ? 'active' : '' }}" href="{{ route('student.notifications.index') }}">
-                        <i class="fas fa-bell me-2"></i> Thông báo
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.contact*') ? 'active' : '' }}" href="{{ route('student.contact.index') }}">
                         <i class="fas fa-phone me-2"></i> Liên hệ
                     </a>
