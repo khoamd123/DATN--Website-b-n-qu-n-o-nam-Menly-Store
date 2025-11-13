@@ -48,6 +48,15 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label">Loại bài viết</label>
+                                    <select class="form-select" name="type">
+                                        <option value="post" {{ old('type', $post->type ?? 'post') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
+                                        <option value="announcement" {{ old('type', $post->type ?? 'post') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
+                                        <option value="document" {{ old('type', $post->type ?? 'post') == 'document' ? 'selected' : '' }}>Tài liệu</option>
+                                    </select>
+                                    <small class="form-text text-muted">Chọn loại bài viết phù hợp</small>
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Trạng thái</label>
                                     <select class="form-select" name="status" required>
                                         <option value="published" {{ old('status', $post->status)=='published'?'selected':'' }}>Công khai</option>

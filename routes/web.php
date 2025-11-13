@@ -131,6 +131,7 @@ Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::c
 // Show and comments with numeric constraint
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
 Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
+Route::post('/student/posts/mark-announcement-viewed', [\App\Http\Controllers\StudentController::class, 'markAnnouncementViewed'])->name('student.posts.mark-announcement-viewed');
 
 // Club Management Routes
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
@@ -196,6 +197,35 @@ Route::get(
 )->name('student.club-management.fund-transactions.show');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
+// Club Resources
+Route::get(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'clubResources']
+)->name('student.club-management.resources');
+Route::get(
+    '/student/club-management/{club}/resources/create',
+    [\App\Http\Controllers\StudentController::class, 'createClubResource']
+)->name('student.club-management.resources.create');
+Route::post(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'storeClubResource']
+)->name('student.club-management.resources.store');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'showClubResource']
+)->name('student.club-management.resources.show');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}/edit',
+    [\App\Http\Controllers\StudentController::class, 'editClubResource']
+)->name('student.club-management.resources.edit');
+Route::put(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'updateClubResource']
+)->name('student.club-management.resources.update');
+Route::delete(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'destroyClubResource']
+)->name('student.club-management.resources.destroy');
 
 // Test route without session check - TEMPORARY
 Route::get('/test-club-management', function () {

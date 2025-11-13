@@ -340,7 +340,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
-                        <i class="fas fa-newspaper me-2"></i> Thông báo và tin tức
+                        <i class="fas fa-newspaper me-2"></i> Bài viết
                     </a>
                 </li>
                 <li class="nav-item">
