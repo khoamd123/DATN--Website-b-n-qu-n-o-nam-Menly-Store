@@ -1791,24 +1791,4 @@ class StudentController extends Controller
 
         return view('student.events.show', compact('user', 'event'));
     }
-
-    /**
-     * Show the form for creating a new post in a club's forum.
-     */
-    public function createClubPost(Club $club)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        // Check if user is a member of the club
-        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
-
-        if (!$isMember) {
-            return redirect()->route('student.clubs.show', $club->id)->with('error', 'Chỉ thành viên mới có thể đăng bài.');
-        }
-
-        return view('student.posts.create', compact('user', 'club'));
-    }
 }
