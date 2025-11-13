@@ -1533,13 +1533,31 @@ class StudentController extends Controller
      * Show the form for creating a new post in a club's forum.
      */
     public function createClubPost(Club $club)
->>>>>>> origin/huy
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-<<<<<<< HEAD
+
+        // Check if user is a member of the club
+        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
+
+        if (!$isMember) {
+            return redirect()->route('student.clubs.show', $club->id)->with('error', 'Chỉ thành viên mới có thể đăng bài.');
+        }
+
+        return view('student.posts.create', compact('user', 'club'));
+    }
+
+    /**
+     * Show edit post form
+     */
+    public function editPost($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
         $post = Post::findOrFail($id);
         if ($post->user_id !== $user->id) {
             return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa bài viết này.');
