@@ -256,7 +256,6 @@ class StudentController extends Controller
             $allPermissions = Permission::orderBy('name')->get();
         }
 
-<<<<<<< HEAD
         // Truyền thêm $clubId để tránh lỗi undefined variable trong view
         return view(
             'student.club-management.index',
