@@ -1550,23 +1550,6 @@ class StudentController extends Controller
     }
 
     /**
-     * Show edit post form
-     */
-    public function editPost($id)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-        $post = Post::findOrFail($id);
-        if ($post->user_id !== $user->id) {
-            return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa bài viết này.');
-        }
-        $clubs = Club::whereIn('id', $user->clubs->pluck('id'))->where('status', 'active')->get();
-        return view('student.posts.edit', compact('user','post','clubs'));
-    }
-
-    /**
      * Update student post
      */
     public function updatePost(Request $request, $id)
