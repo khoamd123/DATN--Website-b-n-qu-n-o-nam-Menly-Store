@@ -3,6 +3,20 @@
 @section('title', $event->title . ' - UniClubs')
 
 @section('content')
+<!-- Toast Notification Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2" id="toastIcon"></i>
+            <strong class="me-auto" id="toastTitle">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            <!-- Message will be inserted here -->
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <article class="content-card">
@@ -427,6 +441,20 @@
 
 @push('styles')
 <style>
+    /* Toast Notification Styles */
+    .toast {
+        min-width: 300px;
+        max-width: 400px;
+    }
+    
+    .toast-header {
+        font-weight: 600;
+    }
+    
+    .toast-body {
+        font-size: 0.95rem;
+    }
+    
     .text-teal {
         color: #14b8a6 !important;
     }
@@ -515,6 +543,41 @@
 
 @push('scripts')
 <script>
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        const toastElement = document.getElementById('toastNotification');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        // Set icon and title based on type
+        if (type === 'success') {
+            toastIcon.className = 'fas fa-check-circle text-success me-2';
+            toastTitle.textContent = 'Thành công';
+            toastElement.classList.remove('text-bg-danger', 'text-bg-warning');
+            toastElement.classList.add('text-bg-success');
+        } else if (type === 'error') {
+            toastIcon.className = 'fas fa-exclamation-circle text-danger me-2';
+            toastTitle.textContent = 'Lỗi';
+            toastElement.classList.remove('text-bg-success', 'text-bg-warning');
+            toastElement.classList.add('text-bg-danger');
+        } else {
+            toastIcon.className = 'fas fa-info-circle text-info me-2';
+            toastTitle.textContent = 'Thông báo';
+            toastElement.classList.remove('text-bg-success', 'text-bg-danger');
+            toastElement.classList.add('text-bg-warning');
+        }
+        
+        toastMessage.textContent = message;
+        
+        // Show toast
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+    }
+    
     // Register event function
     function registerEvent(eventId, buttonElement) {
         // Disable button to prevent multiple clicks
@@ -533,17 +596,20 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Đăng ký tham gia sự kiện thành công');
-                location.reload();
+                showToast('Đăng ký tham gia sự kiện thành công', 'success');
+                // Reload after a short delay to show the toast
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
-                alert(data.message || 'Có lỗi xảy ra khi đăng ký');
+                showToast(data.message || 'Có lỗi xảy ra khi đăng ký', 'error');
                 button.disabled = false;
                 button.innerHTML = originalText;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra khi đăng ký');
+            showToast('Có lỗi xảy ra khi đăng ký', 'error');
             button.disabled = false;
             button.innerHTML = originalText;
         });
@@ -571,17 +637,20 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Hủy đăng ký sự kiện thành công');
-                location.reload();
+                showToast('Hủy đăng ký sự kiện thành công', 'success');
+                // Reload after a short delay to show the toast
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
-                alert(data.message || 'Có lỗi xảy ra khi hủy đăng ký');
+                showToast(data.message || 'Có lỗi xảy ra khi hủy đăng ký', 'error');
                 button.disabled = false;
                 button.innerHTML = originalText;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra khi hủy đăng ký');
+            showToast('Có lỗi xảy ra khi hủy đăng ký', 'error');
             button.disabled = false;
             button.innerHTML = originalText;
         });
