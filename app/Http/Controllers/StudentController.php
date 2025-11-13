@@ -56,14 +56,62 @@ class StudentController extends Controller
         return view('student.dashboard', compact('user'));
     }
 
-    public function clubs()
+    public function clubs(Request $request) 
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
 
-        return view('student.clubs.index', compact('user'));
+        $search = $request->input('search');
+
+        // Lấy ID các CLB mà người dùng đã tham gia
+        $myClubIds = $user->clubs->pluck('id')->toArray();
+
+        // Luôn lấy đầy đủ danh sách CLB của tôi, không bị ảnh hưởng bởi tìm kiếm
+        $myClubs = Club::whereIn('id', $myClubIds)
+            ->where('status', 'active')
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+
+        // Query các CLB khác (chưa tham gia)
+        $otherClubsQuery = Club::where('status', 'active')
+            ->whereNotIn('id', $myClubIds)
+            ->withCount('members');
+
+        // Áp dụng bộ lọc tìm kiếm cho các CLB khác
+        if ($search) {
+            $otherClubsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Lấy kết quả với phân trang
+        $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8);
+
+        return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search'));
+    }
+
+    public function ajaxSearchClubs(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        // Nếu checkStudentAuth trả về một redirect, nghĩa là chưa đăng nhập, trả về lỗi
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return response('Unauthorized.', 401);
+        }
+
+        $search = $request->input('search', '');
+        $myClubIds = $user->clubs->pluck('id')->toArray();
+
+        $otherClubs = Club::where('status', 'active')
+            ->whereNotIn('id', $myClubIds)
+            ->where('name', 'like', '%' . $search . '%')
+            ->withCount('members')
+            ->orderBy('name')
+            ->paginate(8);
+
+        return view('student.clubs._other_clubs_list', compact('otherClubs', 'search'));
     }
 
     public function events()
@@ -127,9 +175,13 @@ class StudentController extends Controller
         $allPermissions = collect();
 
         if ($user->clubs->count() > 0) {
+            // Assuming a user manages only one club for this view
             $userClub = $user->clubs->first();
             $clubId = $userClub->id;
-            $userPosition = $user->getPositionInClub($clubId);
+            
+            // Fetch the full ClubMember object
+            $clubMember = ClubMember::where('user_id', $user->id)->where('club_id', $clubId)->first();
+            $userPosition = $clubMember ? $clubMember->position : null;
             $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
 
             // Tính toán thống kê cơ bản cho view
@@ -204,6 +256,7 @@ class StudentController extends Controller
             $allPermissions = Permission::orderBy('name')->get();
         }
 
+<<<<<<< HEAD
         // Truyền thêm $clubId để tránh lỗi undefined variable trong view
         return view(
             'student.club-management.index',
@@ -1419,6 +1472,7 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
+<<<<<<< HEAD
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
@@ -1469,6 +1523,25 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
+        $post = Post::findOrFail($id);
+        if ($post->user_id !== $user->id) {
+            return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa bài viết này.');
+        }
+        $clubs = Club::whereIn('id', $user->clubs->pluck('id'))->where('status', 'active')->get();
+        return view('student.posts.edit', compact('user','post','clubs'));
+    }
+
+    /**
+     * Show the form for creating a new post in a club's forum.
+     */
+    public function createClubPost(Club $club)
+>>>>>>> origin/huy
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+<<<<<<< HEAD
         $post = Post::findOrFail($id);
         if ($post->user_id !== $user->id) {
             return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa bài viết này.');
@@ -1591,4 +1664,152 @@ class StudentController extends Controller
         return redirect()->route('student.posts.manage')->with('success', 'Đã xóa bài viết.');
     }
 
+    /**
+     * Display a single club's details page.
+     */
+    public function showClub(Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club->load(['posts' => function ($query) {
+            $query->where('status', 'published')->orderBy('created_at', 'desc')->limit(5);
+        }, 'events' => function ($query) {
+            $query->where('status', 'approved')->orderBy('start_time', 'asc');
+        }, 'members']);
+
+        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
+
+        return view('student.clubs.show', compact('user', 'club', 'isMember'));
+    }
+
+    /**
+     * Allow a student to leave a club.
+     */
+    public function leaveClub(Request $request, Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $membership = ClubMember::where('user_id', $user->id)
+            ->where('club_id', $club->id)
+            ->first();
+
+        if (!$membership) {
+            return redirect()->back()->with('error', 'Bạn không phải là thành viên của câu lạc bộ này.');
+        }
+
+        // Prevent leaders from leaving directly
+        if (in_array($membership->position, ['leader', 'owner'])) {
+            return redirect()->back()->with('error', 'Trưởng/Chủ nhiệm CLB không thể rời đi. Vui lòng chuyển giao vai trò trước.');
+        }
+
+        $membership->delete();
+
+        // Update session
+        $clubRoles = session('club_roles', []);
+        unset($clubRoles[$club->id]);
+        session(['club_roles' => $clubRoles]);
+
+        return redirect()->route('student.clubs.index')->with('success', 'Bạn đã rời khỏi câu lạc bộ ' . $club->name . ' thành công.');
+    }
+
+    /**
+     * Allow a student to send a join request to a club.
+     */
+    public function joinClub(Request $request, Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // 1. Kiểm tra xem user đã là thành viên chưa
+        $isMember = $club->members()->where('user_id', $user->id)->exists();
+        if ($isMember) {
+            return redirect()->back()->with('error', 'Bạn đã là thành viên của câu lạc bộ này.');
+        }
+
+        // 2. Kiểm tra xem user đã có yêu cầu đang chờ xử lý chưa
+        $hasPendingRequest = $club->joinRequests()->where('user_id', $user->id)->where('status', 'pending')->exists();
+        if ($hasPendingRequest) {
+            return redirect()->back()->with('info', 'Bạn đã gửi yêu cầu tham gia câu lạc bộ này rồi. Vui lòng chờ duyệt.');
+        }
+
+        // 3. Tạo yêu cầu tham gia mới
+        ClubJoinRequest::create([
+            'club_id' => $club->id,
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'message' => $request->input('message'), // Tùy chọn: có thể thêm ô lời nhắn
+        ]);
+
+        return redirect()->back()->with('success', 'Đã gửi yêu cầu tham gia thành công! Vui lòng chờ ban quản trị CLB duyệt.');
+    }
+
+    /**
+     * Allow a student to cancel their join request.
+     */
+    public function cancelJoinRequest(Request $request, Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $joinRequest = ClubJoinRequest::where('user_id', $user->id)
+            ->where('club_id', $club->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$joinRequest) {
+            return redirect()->back()->with('error', 'Không tìm thấy yêu cầu tham gia để hủy.');
+        }
+
+        $joinRequest->delete();
+
+        return redirect()->back()->with('success', 'Đã hủy yêu cầu tham gia câu lạc bộ ' . $club->name . '.');
+    }
+
+    /**
+     * Display a single event's details page.
+     */
+    public function showEvent(Event $event)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $event->load('club', 'participants');
+
+        // Check if user can view (e.g., if it's a members-only event)
+        // This logic can be expanded based on requirements
+
+        return view('student.events.show', compact('user', 'event'));
+    }
+
+    /**
+     * Show the form for creating a new post in a club's forum.
+     */
+    public function createClubPost(Club $club)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Check if user is a member of the club
+        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
+
+        if (!$isMember) {
+            return redirect()->route('student.clubs.show', $club->id)->with('error', 'Chỉ thành viên mới có thể đăng bài.');
+        }
+
+        return view('student.posts.create', compact('user', 'club'));
+    }
 }

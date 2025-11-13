@@ -14,7 +14,11 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-user-shield"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $users->where('is_admin', true)->count() }}</p>
+=======
             <p class="stats-number">{{ \App\Models\User::where('is_admin', true)->count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Admin</p>
         </div>
     </div>
@@ -23,7 +27,11 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $users->where('is_admin', false)->count() }}</p>
+=======
             <p class="stats-number">{{ \App\Models\User::where('is_admin', false)->count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">User thường</p>
         </div>
     </div>
@@ -32,7 +40,11 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $clubs->count() }}</p>
+=======
             <p class="stats-number">{{ \App\Models\Club::count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Câu lạc bộ</p>
         </div>
     </div>
@@ -41,7 +53,11 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-key"></i>
             </div>
+<<<<<<< HEAD
+            <p class="stats-number">{{ $permissions->count() }}</p>
+=======
             <p class="stats-number">{{ \App\Models\Permission::count() }}</p>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Loại quyền</p>
         </div>
     </div>
@@ -54,7 +70,11 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+<<<<<<< HEAD
+                        <th>ID</th>
+=======
                         <th>STT</th>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Quyền Admin</th>
@@ -64,6 +84,19 @@
                     </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
+                    @forelse($users as $user)
+                        <tr>
+                            <td>{{ $user->id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ $user->avatar ?? '/images/avatar/avatar.png' }}" 
+                                         alt="{{ $user->name }}" 
+                                         class="rounded-circle me-2" 
+                                         width="30" 
+                                         height="30"
+                                         onerror="this.src='/images/avatar/avatar.png'">
+=======
                     @forelse($users as $index => $user)
                         <tr>
                             <td>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</td>
@@ -81,6 +114,7 @@
                                             {{ strtoupper(substr($user->name, 0, 1)) }}
                                         </div>
                                     @endif
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     <div>
                                         <strong>{{ $user->name }}</strong>
                                         @if($user->is_admin)
@@ -102,7 +136,11 @@
                                     <span class="text-muted">Không có</span>
                                 @endif
                             </td>
+<<<<<<< HEAD
+                            <td>{{ $user->created_at->format('d/m/Y') }}</td>
+=======
                             <td>{{ $user->created_at ? $user->created_at->format('d/m/Y') : 'N/A' }}</td>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editPermissionsModal{{ $user->id }}">
@@ -172,6 +210,9 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4">
+<<<<<<< HEAD
+                {{ $users->appends(request()->query())->links() }}
+=======
                 <nav aria-label="Page navigation">
                     <ul class="pagination">
                         @if($users->onFirstPage())
@@ -202,6 +243,7 @@
             </div>
             <div class="text-center text-muted mt-2">
                 Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} results
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             </div>
         @endif
     </div>
@@ -228,6 +270,8 @@
         </div>
     </div>
 </div>
+<<<<<<< HEAD
+=======
 
 <style>
 /* Pagination styling */
@@ -264,4 +308,5 @@
     border-color: #dee2e6;
 }
 </style>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 @endsection
