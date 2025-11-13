@@ -327,8 +327,14 @@ class StudentController extends Controller
         try {
             $event = Event::with(['club', 'creator', 'images'])->findOrFail($eventId);
 
-            // Kiểm tra sự kiện đã được duyệt chưa
-            if ($event->status !== 'approved') {
+            // Kiểm tra nếu user là thành viên của CLB tổ chức sự kiện
+            $isClubMember = false;
+            if ($event->club_id && $user->clubs->contains('id', $event->club_id)) {
+                $isClubMember = true;
+            }
+
+            // Nếu sự kiện chưa được duyệt, chỉ cho phép xem nếu user là thành viên của CLB tổ chức
+            if ($event->status !== 'approved' && !$isClubMember) {
                 return redirect()->route('student.events.index')
                     ->with('error', 'Sự kiện này chưa được duyệt hoặc không khả dụng.');
             }
@@ -355,7 +361,8 @@ class StudentController extends Controller
                 'registrationCount',
                 'availableSlots',
                 'isFull',
-                'isDeadlinePassed'
+                'isDeadlinePassed',
+                'isClubMember'
             ));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->route('student.events.index')->with('error', 'Không tìm thấy sự kiện.');
@@ -601,7 +608,7 @@ class StudentController extends Controller
             }
 
             return redirect()->route('student.club-management.index')
-                ->with('success', 'Tạo sự kiện thành công! Sự kiện đang chờ được duyệt bởi quản trị viên.');
+                ->with('success', 'Tạo sự kiện thành công! Sự kiện của bạn đang chờ quản trị viên duyệt.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();

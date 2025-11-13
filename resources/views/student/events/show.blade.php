@@ -8,9 +8,15 @@
         <article class="content-card">
             <!-- Back Button -->
             <div class="mb-3">
-                <a href="{{ route('student.events.index') }}" class="text-decoration-none">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách sự kiện
-                </a>
+                @if(isset($isClubMember) && $isClubMember)
+                    <a href="{{ route('student.events.manage') }}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại quản lý sự kiện
+                    </a>
+                @else
+                    <a href="{{ route('student.events.index') }}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách sự kiện
+                    </a>
+                @endif
             </div>
 
             <!-- Event Header -->
@@ -28,14 +34,35 @@
                     <small class="me-3">
                         <i class="far fa-clock me-1"></i>{{ $event->created_at->format('d/m/Y H:i') }}
                     </small>
-                    @if($event->status === 'cancelled')
-                        <span class="badge bg-danger me-2">Đã hủy</span>
-                    @elseif($event->start_time > now())
-                        <span class="badge bg-info me-2">Sắp diễn ra</span>
-                    @elseif($event->end_time < now())
-                        <span class="badge bg-secondary me-2">Đã kết thúc</span>
-                    @else
-                        <span class="badge bg-success me-2">Đang diễn ra</span>
+                    @php
+                        $statusColors = [
+                            'draft' => 'secondary',
+                            'pending' => 'warning',
+                            'approved' => 'info',
+                            'ongoing' => 'success',
+                            'completed' => 'primary',
+                            'cancelled' => 'danger'
+                        ];
+                        $statusLabels = [
+                            'draft' => 'Bản nháp',
+                            'pending' => 'Chờ duyệt',
+                            'approved' => 'Đã duyệt',
+                            'ongoing' => 'Đang diễn ra',
+                            'completed' => 'Hoàn thành',
+                            'cancelled' => 'Đã hủy'
+                        ];
+                    @endphp
+                    <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }} me-2">
+                        {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
+                    </span>
+                    @if($event->status === 'approved' || $event->status === 'ongoing')
+                        @if($event->start_time > now())
+                            <span class="badge bg-info me-2">Sắp diễn ra</span>
+                        @elseif($event->end_time < now())
+                            <span class="badge bg-secondary me-2">Đã kết thúc</span>
+                        @else
+                            <span class="badge bg-success me-2">Đang diễn ra</span>
+                        @endif
                     @endif
                 </div>
 

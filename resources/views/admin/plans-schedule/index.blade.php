@@ -111,7 +111,6 @@
                         <th>Thời gian</th>
                         <th>Chế độ</th>
                         <th>Trạng thái</th>
-                        <th>Người tạo</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -121,7 +120,6 @@
                             <td>{{ ($events->currentPage() - 1) * $events->perPage() + $index + 1 }}</td>
                             <td>
                                 <strong>{{ $event->title }}</strong>
-                                <br><small class="text-muted">{{ Str::limit(strip_tags($event->description), 50) }}</small>
                                 @if($event->status === 'cancelled' && $event->cancellation_reason)
                                     <br>
                                     <div class="alert alert-danger alert-sm mb-0 mt-1 p-2">
@@ -180,7 +178,6 @@
                                     {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
                                 </span>
                             </td>
-                            <td>{{ $event->creator->name ?? 'Không xác định' }}</td>
                             <td style="min-width: 140px; width: 140px;">
                                 <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-sm btn-warning w-100">
@@ -194,7 +191,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 <i class="fas fa-calendar-times fa-3x mb-3"></i>
                                 <br>Không tìm thấy sự kiện nào
                             </td>
