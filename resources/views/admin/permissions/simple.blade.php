@@ -78,8 +78,8 @@
         <h5 class="mb-0">Danh sách người dùng và quyền hạn</h5>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped">
+        <div class="table-responsive" style="overflow-x: visible !important; overflow: visible !important;">
+            <table class="table table-hover table-striped" style="width: 100% !important; table-layout: auto !important;">
                 <thead class="table-dark">
                     <tr>
                         <th>STT</th>
@@ -87,7 +87,6 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Quyền Admin</th>
-                        <th>Câu lạc bộ sở hữu</th>
                         <th>Câu lạc bộ tham gia</th>
                         <th>Ngày tạo</th>
                     </tr>
@@ -124,15 +123,6 @@
                                 @endif
                             </td>
                             <td>
-                                @if($user->ownedClubs && $user->ownedClubs->count() > 0)
-                                    @foreach($user->ownedClubs as $club)
-                                        <span class="badge bg-primary me-1">{{ $club->name }}</span>
-                                    @endforeach
-                                @else
-                                    <span class="text-muted">Không có</span>
-                                @endif
-                            </td>
-                            <td>
                                 @if($user->clubs && $user->clubs->count() > 0)
                                     @foreach($user->clubs->take(2) as $club)
                                         <span class="badge bg-info me-1">{{ $club->name }}</span>
@@ -148,7 +138,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 <i class="fas fa-users fa-2x mb-3 d-block"></i>
                                 Không có người dùng nào
                             </td>
@@ -232,6 +222,19 @@
 * {
     transition: none !important;
     animation: none !important;
+}
+
+/* Không cho scroll ngang */
+div.table-responsive {
+    overflow-x: visible !important;
+    overflow: visible !important;
+    -ms-overflow-x: visible !important;
+}
+
+table.table {
+    width: 100% !important;
+    table-layout: auto !important;
+    max-width: 100% !important;
 }
 
 /* Avatar tĩnh */

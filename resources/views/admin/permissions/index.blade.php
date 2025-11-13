@@ -58,7 +58,6 @@
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Quyền Admin</th>
-                        <th>Câu lạc bộ sở hữu</th>
                         <th>Câu lạc bộ tham gia</th>
                         <th>Ngày tạo</th>
                         <th>Hành động</th>
@@ -95,15 +94,6 @@
                                 <span class="badge bg-{{ $user->is_admin ? 'danger' : 'success' }}">
                                     {{ $user->is_admin ? 'Admin' : 'User' }}
                                 </span>
-                            </td>
-                            <td>
-                                @if($user->ownedClubs->count() > 0)
-                                    @foreach($user->ownedClubs as $club)
-                                        <span class="badge bg-primary me-1">{{ $club->name }}</span>
-                                    @endforeach
-                                @else
-                                    <span class="text-muted">Không có</span>
-                                @endif
                             </td>
                             <td>
                                 @if($user->clubs->count() > 0)
@@ -170,7 +160,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 Không có người dùng nào
                             </td>
                         </tr>
