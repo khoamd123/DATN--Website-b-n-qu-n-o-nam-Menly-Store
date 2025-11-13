@@ -1471,7 +1471,6 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-<<<<<<< HEAD
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
