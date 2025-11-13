@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\ClubJoinRequest as JoinReq;
 use App\Models\Fund;
 use App\Models\FundTransaction;
+use App\Models\FundRequest;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -151,10 +152,40 @@ class StudentController extends Controller
                 ->whereDate('created_at', now()->toDateString())
                 ->count();
 
+            // Fund requests stats
+            $totalFundRequests = FundRequest::where('club_id', $clubId)->count();
+            $pendingFundRequests = FundRequest::where('club_id', $clubId)->where('status', 'pending')->count();
+
+            // Fund stats
+            $fund = \App\Models\Fund::where('club_id', $clubId)->first();
+            $fundId = $fund?->id ?? null;
+            $totalIncome = 0;
+            $totalExpense = 0;
+            $balance = 0;
+
+            if ($fundId) {
+                $totalIncome = \App\Models\FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'income')
+                    ->where('status', 'approved')
+                    ->sum('amount');
+                $totalExpense = \App\Models\FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'expense')
+                    ->where('status', 'approved')
+                    ->sum('amount');
+                $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
+            }
+
             $clubStats = [
                 'members' => ['active' => $activeMembers, 'pending' => $pendingMembers],
                 'events' => ['total' => $totalEvents, 'upcoming' => $upcomingEvents],
                 'announcements' => ['total' => $totalAnnouncements, 'today' => $todayAnnouncements],
+                'fundRequests' => ['total' => $totalFundRequests, 'pending' => $pendingFundRequests],
+                'fund' => [
+                    'balance' => $balance,
+                    'income' => $totalIncome,
+                    'expense' => $totalExpense,
+                    'exists' => $fund !== null,
+                ],
             ];
 
             // Danh sách thành viên (phục vụ các thẻ hoặc view cần)
@@ -322,7 +353,7 @@ class StudentController extends Controller
     }
 
     /**
-     * Update member permissions in a club
+     * Update member permissions and position in a club
      */
     public function updateMemberPermissions(Request $request, $clubId, $memberId)
     {
@@ -340,6 +371,7 @@ class StudentController extends Controller
         $request->validate([
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|exists:permissions,name',
+            'position' => 'nullable|in:member,officer,vice_president',
         ]);
 
         $clubMember = ClubMember::with('user')
@@ -351,26 +383,327 @@ class StudentController extends Controller
             return redirect()->back()->with('error', 'Không hợp lệ.');
         }
 
+        // Không cho phép thay đổi position của leader hoặc owner
+        if (in_array($clubMember->position, ['leader', 'owner'])) {
+            return redirect()->back()->with('error', 'Không thể thay đổi vai trò của Trưởng CLB hoặc Chủ nhiệm.');
+        }
+
         $permissionNames = $request->input('permissions', []);
+        
+        // Nếu không có quyền nào được chọn, tự động gán quyền "xem báo cáo"
+        if (empty($permissionNames)) {
+            $permissionNames = ['xem_bao_cao'];
+        }
+        
         $permissionIds = Permission::whereIn('name', (array) $permissionNames)->pluck('id');
 
-        DB::transaction(function () use ($clubMember, $clubId, $permissionIds) {
-            DB::table('user_permissions_club')
-                ->where('user_id', $clubMember->user_id)
-                ->where('club_id', $clubId)
-                ->delete();
-            foreach ($permissionIds as $pid) {
-                DB::table('user_permissions_club')->insert([
-                    'user_id' => $clubMember->user_id,
-                    'club_id'  => $clubId,
-                    'permission_id' => $pid,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        });
+        try {
+            DB::transaction(function () use ($clubMember, $clubId, $permissionIds, $request) {
+                // Cập nhật permissions
+                DB::table('user_permissions_club')
+                    ->where('user_id', $clubMember->user_id)
+                    ->where('club_id', $clubId)
+                    ->delete();
+                    
+                // Đảm bảo luôn có ít nhất quyền "xem báo cáo"
+                $xemBaoCaoId = Permission::where('name', 'xem_bao_cao')->first();
+                if ($xemBaoCaoId) {
+                    $permissionIdsArray = $permissionIds->toArray();
+                    if (!in_array($xemBaoCaoId->id, $permissionIdsArray)) {
+                        $permissionIdsArray[] = $xemBaoCaoId->id;
+                    }
+                    $permissionIds = collect($permissionIdsArray);
+                }
+                
+                foreach ($permissionIds as $pid) {
+                    DB::table('user_permissions_club')->insert([
+                        'user_id' => $clubMember->user_id,
+                        'club_id'  => $clubId,
+                        'permission_id' => $pid,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                
+                // Query lại từ database để đảm bảo tính toán position chính xác
+                $permissionCount = DB::table('user_permissions_club')
+                    ->where('user_id', $clubMember->user_id)
+                    ->where('club_id', $clubId)
+                    ->count();
+                
+                $permissionNames = DB::table('user_permissions_club')
+                    ->where('user_id', $clubMember->user_id)
+                    ->where('club_id', $clubId)
+                    ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
+                    ->pluck('permissions.name')
+                    ->toArray();
+                
+                $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
+                
+                $calculatedPosition = 'member'; // Mặc định
+                
+                // Xác định vai trò mới dựa trên số quyền
+                if ($permissionCount >= 5) {
+                    // Có đủ 5 quyền -> Leader (Trưởng CLB)
+                    $calculatedPosition = 'leader';
+                } elseif ($permissionCount === 4 && $hasOtherPermissions) {
+                    // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
+                    $calculatedPosition = 'vice_president';
+                } elseif ($hasOtherPermissions && $permissionCount >= 2) {
+                    // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
+                    $calculatedPosition = 'officer';
+                } else {
+                    // Chỉ có xem_bao_cao -> Member
+                    $calculatedPosition = 'member';
+                }
+                
+                // Kiểm tra giới hạn số lượng officer (tối đa 2)
+                if ($calculatedPosition === 'officer') {
+                    $officerCount = ClubMember::where('club_id', $clubId)
+                        ->whereIn('status', ['approved', 'active'])
+                        ->where('position', 'officer')
+                        ->where('id', '!=', $clubMember->id)
+                        ->count();
+                    
+                    if ($officerCount >= 2) {
+                        // Nếu đã đủ officer, chuyển về member
+                        $calculatedPosition = 'member';
+                    }
+                }
+                
+                // Kiểm tra giới hạn số lượng vice_president (chỉ 1)
+                if ($calculatedPosition === 'vice_president') {
+                    $vicePresidentCount = ClubMember::where('club_id', $clubId)
+                        ->whereIn('status', ['approved', 'active'])
+                        ->where('position', 'vice_president')
+                        ->where('id', '!=', $clubMember->id)
+                        ->count();
+                    
+                    if ($vicePresidentCount >= 1) {
+                        // Nếu đã có vice president, chuyển về officer nếu có >= 2 quyền, nếu không thì member
+                        $calculatedPosition = ($hasOtherPermissions && $permissionCount >= 2) ? 'officer' : 'member';
+                    }
+                }
+                
+                // Cập nhật position dựa trên quyền (ưu tiên position được tính toán từ quyền)
+                // Nếu user chọn position trong form, vẫn cập nhật theo quyền để đảm bảo đồng bộ
+                ClubMember::where('id', $clubMember->id)
+                    ->update(['position' => $calculatedPosition]);
+                
+                // Log để debug
+                \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$calculatedPosition} (permission count: {$permissionCount}, has other permissions: " . ($hasOtherPermissions ? 'true' : 'false') . ")");
+            });
 
-        return redirect()->back()->with('success', 'Đã cập nhật phân quyền.');
+            return redirect()->back()->with('success', 'Đã cập nhật thành công.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Show form to create fund request
+     */
+    public function fundRequestCreate()
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $clubId = $club->id;
+        $position = $user->getPositionInClub($clubId);
+
+        // Chỉ leader mới được tạo yêu cầu
+        if ($position !== 'leader') {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Chỉ Trưởng CLB mới có quyền tạo yêu cầu cấp kinh phí.');
+        }
+
+        // Lấy các sự kiện của CLB
+        $events = Event::where('club_id', $clubId)
+            ->orderBy('start_time', 'desc')
+            ->get();
+
+        return view('student.club-management.fund-request-create', [
+            'user' => $user,
+            'club' => $club,
+            'events' => $events,
+        ]);
+    }
+
+    /**
+     * Store fund request
+     */
+    public function fundRequestStore(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $clubId = $club->id;
+        $position = $user->getPositionInClub($clubId);
+
+        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn không có quyền tạo yêu cầu cấp kinh phí.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'requested_amount' => 'required|numeric|min:0',
+            'event_id' => 'required|exists:events,id',
+            'expense_items' => 'nullable|array',
+            'expense_items.*.item' => 'required_with:expense_items|string|max:255',
+            'expense_items.*.amount' => 'required_with:expense_items|numeric|min:0',
+        ]);
+
+        // Kiểm tra sự kiện thuộc về CLB của user
+        $event = Event::findOrFail($request->event_id);
+        if ($event->club_id != $clubId) {
+            return redirect()->back()
+                ->with('error', 'Sự kiện không thuộc về CLB của bạn.')
+                ->withInput();
+        }
+
+        $data = [
+            'title' => $request->title,
+            'description' => $request->description,
+            'requested_amount' => $request->requested_amount,
+            'event_id' => $request->event_id,
+            'club_id' => $clubId,
+            'created_by' => $user->id,
+            'status' => 'pending',
+            'expense_items' => $request->expense_items ?? null,
+        ];
+
+        // Xử lý tài liệu hỗ trợ
+        if ($request->hasFile('supporting_documents')) {
+            $documents = [];
+            $uploadPath = public_path('storage/fund-requests');
+            
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+            
+            foreach ($request->file('supporting_documents') as $index => $document) {
+                if (!$document || !$document->isValid() || $document->getSize() == 0) {
+                    continue;
+                }
+                
+                try {
+                    $filename = time() . '_' . $index . '_' . $document->getClientOriginalName();
+                    $document->move($uploadPath, $filename);
+                    $documents[] = 'fund-requests/' . $filename;
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            $data['supporting_documents'] = $documents;
+        }
+
+        try {
+            FundRequest::create($data);
+            return redirect()->route('student.club-management.fund-requests')
+                ->with('success', 'Yêu cầu cấp kinh phí đã được tạo thành công!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * List fund requests for student's club
+     */
+    public function fundRequests(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $clubId = $club->id;
+
+        $query = FundRequest::with(['event', 'creator', 'approver', 'settler'])
+            ->where('club_id', $clubId);
+
+        // Filter by settlement status
+        if ($request->filled('settlement') && $request->settlement === 'settled') {
+            $query->where('settlement_status', 'settled');
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('event', function($eventQuery) use ($search) {
+                      $eventQuery->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+
+        return view('student.club-management.fund-requests', [
+            'user' => $user,
+            'club' => $club,
+            'requests' => $requests,
+        ]);
+    }
+
+    /**
+     * Show fund request detail
+     */
+    public function fundRequestShow($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::with(['event', 'club', 'creator', 'approver', 'settler'])
+            ->where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        return view('student.club-management.fund-request-show', [
+            'user' => $user,
+            'club' => $club,
+            'fundRequest' => $fundRequest,
+        ]);
     }
 
     /**
@@ -541,7 +874,8 @@ class StudentController extends Controller
                 ->where('type', 'expense')
                 ->where('status', 'approved')
                 ->sum('amount');
-            $balance = max(0, (int) $totalIncome - (int) $totalExpense);
+            // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
+            $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
             // breakdown by category (if field exists)
             $expenseByCategory = FundTransaction::where('fund_id', $fundId)
                 ->where('type', 'expense')
@@ -664,6 +998,7 @@ class StudentController extends Controller
         }
 
         $fund = Fund::where('club_id', $club->id)->first();
+        $position = $user->getPositionInClub($club->id);
         if (!$fund) {
             return view('student.club-management.fund-transactions', [
                 'user' => $user,
@@ -671,6 +1006,7 @@ class StudentController extends Controller
                 'transactions' => collect(),
                 'summary' => ['income' => 0, 'expense' => 0, 'balance' => 0],
                 'filterType' => $request->input('type'),
+                'position' => $position,
             ]);
         }
 
@@ -689,18 +1025,22 @@ class StudentController extends Controller
             ->where('status', 'approved')->where('type', 'income')->sum('amount');
         $expense = FundTransaction::where('fund_id', $fund->id)
             ->where('status', 'approved')->where('type', 'expense')->sum('amount');
+        // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
         $summary = [
             'income' => (int) $income,
             'expense' => (int) $expense,
-            'balance' => (int) $income - (int) $expense,
+            'balance' => (int) ($fund->initial_amount ?? 0) + (int) $income - (int) $expense,
         ];
 
+        $position = $user->getPositionInClub($club->id);
+        
         return view('student.club-management.fund-transactions', [
             'user' => $user,
             'club' => $club,
             'transactions' => $transactions,
             'summary' => $summary,
             'filterType' => $filterType,
+            'position' => $position,
         ]);
     }
 

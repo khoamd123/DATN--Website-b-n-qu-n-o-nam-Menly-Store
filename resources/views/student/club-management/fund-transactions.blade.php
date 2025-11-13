@@ -10,11 +10,19 @@
         <small class="text-muted">Tổng thu: {{ number_format($summary['income'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Tổng chi: {{ number_format($summary['expense'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Số dư: {{ number_format($summary['balance'], 0, ',', '.') }} VNĐ</small>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ route('student.club-management.fund-transactions.create') }}" class="btn btn-primary btn-sm">
+        @if(isset($position) && $position === 'leader')
+            <a href="{{ route('student.club-management.fund-requests') }}" class="btn btn-success btn-sm text-white">
+                <i class="fas fa-plus me-1"></i> Yêu cầu cấp kinh phí
+            </a>
+            <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled" class="btn btn-info btn-sm text-white">
+                <i class="fas fa-calculator me-1"></i> Xem quyết toán
+            </a>
+        @endif
+        <a href="{{ route('student.club-management.fund-transactions.create') }}" class="btn btn-primary btn-sm text-white">
             <i class="fas fa-plus me-1"></i> Tạo giao dịch
         </a>
-        <a href="{{ route('student.club-management.reports') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Báo cáo
+        <a href="{{ route('student.club-management.index') }}" class="btn btn-secondary btn-sm text-white">
+            <i class="fas fa-arrow-left me-1"></i> Quay lại
         </a>
     </div>
     </div>
@@ -30,7 +38,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-primary w-100">
+            <button class="btn btn-primary text-white w-100">
                 <i class="fas fa-filter me-1"></i> Lọc
             </button>
         </div>
@@ -84,19 +92,21 @@
                     <td class="text-center">
                         @if($canApprove)
                             <div class="d-flex flex-column gap-1 align-items-center">
-                                <div>
-                                    <form method="POST" action="{{ route('student.club-management.fund-transactions.approve', $t->id) }}" class="d-inline" onclick="event.stopPropagation();">
-                                        @csrf
-                                        <button class="btn btn-success btn-sm">Duyệt</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('student.club-management.fund-transactions.reject', $t->id) }}" class="d-inline" onclick="event.stopPropagation();">
-                                        @csrf
-                                        <button class="btn btn-outline-secondary btn-sm">Từ chối</button>
-                                    </form>
-                                </div>
+                                <form method="POST" action="{{ route('student.club-management.fund-transactions.approve', $t->id) }}" class="d-inline w-100" onclick="event.stopPropagation();">
+                                    @csrf
+                                    <button class="btn btn-success btn-sm text-white w-100">
+                                        <i class="fas fa-check"></i> Duyệt
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('student.club-management.fund-transactions.reject', $t->id) }}" class="d-inline w-100" onclick="event.stopPropagation();">
+                                    @csrf
+                                    <button class="btn btn-danger btn-sm text-white w-100">
+                                        <i class="fas fa-times"></i> Từ chối
+                                    </button>
+                                </form>
                                 @if($att)
-                                    <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
-                                        <i class="fas fa-file-pdf"></i>
+                                    <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-primary text-white w-100" onclick="event.stopPropagation();">
+                                        <i class="fas fa-file-pdf"></i> PDF
                                     </a>
                                 @endif
                             </div>
@@ -104,7 +114,7 @@
                             <div class="d-flex flex-column gap-1 align-items-center">
                                 <span class="badge bg-{{ $t->status === 'approved' ? 'success' : ($t->status === 'rejected' ? 'secondary' : 'warning') }}">{{ ucfirst($t->status) }}</span>
                                 @if($att)
-                                    <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                    <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-primary text-white" onclick="event.stopPropagation();">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
                                 @endif
