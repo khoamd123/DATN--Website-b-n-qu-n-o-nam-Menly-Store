@@ -215,6 +215,32 @@
                 </div>
             </div>
             @endif
+            @if($userClub && $clubId && ($user->hasPermission('quan_ly_clb', $clubId) || $user->hasPermission('dang_thong_bao', $clubId)))
+            <div class="col-md-6 mb-4">
+                <div class="management-card">
+                    <div class="management-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <div class="management-content">
+                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
+                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
+                        <div class="management-stats">
+                            <span class="stat-item">
+                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
+                                <small>Tài nguyên</small>
+                            </span>
+                            <span class="stat-item">
+                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
+                                <small>File</small>
+                            </span>
+                        </div>
+                        <a href="{{ $clubId ? route('student.club-management.resources', ['club' => $clubId]) : '#' }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-folder me-1"></i> Quản lý tài nguyên
+                        </a>
+                    </div>
+                </div>
+            </div>
+            @endif
             @if($userClub && $clubId && $user->hasPermission('quan_ly_clb', $clubId) && $user->getPositionInClub($clubId) === 'leader')
             <div class="col-md-6 mb-4">
                 <div class="management-card special-card">

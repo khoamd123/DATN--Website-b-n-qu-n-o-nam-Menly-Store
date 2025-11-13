@@ -8,7 +8,7 @@
             <article class="content-card">
                 <div class="mb-3">
                     <a href="{{ route('student.posts') }}" class="text-decoration-none">
-                        <i class="fas fa-arrow-left me-2"></i>Quay lại tin tức
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại
                     </a>
                 </div>
                 <h2 class="mb-2">{{ $post->title }}</h2>
@@ -39,12 +39,13 @@
                         // Remove any <img> tags whose src matches featured image (relative or with asset URL)
                         $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetImage, '#') . '|' . preg_quote('/' . $relativeImage, '#') . '|' . preg_quote($relativeImage, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
                         $contentForDisplay = preg_replace($pattern, '', $contentForDisplay);
-                    }
-                @endphp
+                        }
+                    @endphp
                 <div class="mt-3" style="line-height: 1.7;">
                     {!! $contentForDisplay !!}
                 </div>
 
+                @if($post->type !== 'announcement')
                 <hr class="my-4">
 
                 <div class="mt-4">
@@ -116,6 +117,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
                 @endif
             </article>
         </div>
