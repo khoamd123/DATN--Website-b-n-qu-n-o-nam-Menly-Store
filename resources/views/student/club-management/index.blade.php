@@ -119,7 +119,7 @@
                         <i class="fas fa-calendar-plus"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Tạo sự kiện</h5>
+                        <h5 class="management-title">Quản lý sự kiện</h5>
                         <p class="management-description">Tổ chức và quản lý các sự kiện của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
@@ -131,9 +131,14 @@
                                 <small>Sắp tới</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i> Tạo mới
-                        </a>
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i> Tạo mới
+                            </a>
+                            <a href="{{ route('student.events.manage') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-1"></i> Quản lý
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -261,7 +266,11 @@
                 @if($clubId && $user->hasPermission('tao_su_kien', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-calendar-plus text-success"></i>
-                    <span>Tạo sự kiện</span>
+                    <span>
+                        <a href="{{ route('student.events.manage') }}" class="text-decoration-none text-dark">
+                            Quản lý sự kiện
+                        </a>
+                    </span>
                 </div>
                 @endif
                 @if($clubId && $user->hasPermission('dang_thong_bao', $clubId))
