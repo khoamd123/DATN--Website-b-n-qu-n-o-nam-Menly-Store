@@ -61,7 +61,7 @@
                 @if($isMember && $clubMember)
                     <div>
                         <span class="badge bg-success me-2">Đang hoạt động</span>
-                        <small class="text-muted">Tham gia từ: {{ $clubMember->joined_at->format('d/m/Y') }}</small>
+                        <small class="text-muted">Tham gia từ: {{ $clubMember->joined_at ? (\Carbon\Carbon::parse($clubMember->joined_at)->format('d/m/Y')) : 'N/A' }}</small>
                     </div>
                     <!-- Leave Club Button -->
                     <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#leaveClubModal">

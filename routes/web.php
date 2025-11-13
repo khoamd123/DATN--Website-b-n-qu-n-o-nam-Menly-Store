@@ -105,8 +105,14 @@ Route::get('/quick-login-student', function () {
 Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard'])->name('student.dashboard');
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
+Route::get('/student/clubs/ajax-search', [\App\Http\Controllers\StudentController::class, 'ajaxSearchClubs'])->name('student.clubs.ajax_search');
+Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
+Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
+Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
+Route::delete('/student/clubs/{club}/cancel-join-request', [\App\Http\Controllers\StudentController::class, 'cancelJoinRequest'])->name('student.clubs.cancel_join_request');
 
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
+Route::get('/student/events/{event}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
@@ -121,6 +127,7 @@ Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 
 Route::get('/student/posts', [\App\Http\Controllers\StudentController::class, 'posts'])->name('student.posts');
 // Create must be before {id}
 Route::get('/student/posts/create', [\App\Http\Controllers\StudentController::class, 'createPost'])->name('student.posts.create');
+Route::get('/student/clubs/{club}/posts/create', [\App\Http\Controllers\StudentController::class, 'createClubPost'])->name('student.clubs.posts.create');
 Route::post('/student/posts', [\App\Http\Controllers\StudentController::class, 'storePost'])->name('student.posts.store');
 // Edit must be before {id}
 Route::get('/student/posts/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editPost'])->whereNumber('id')->name('student.posts.edit');
