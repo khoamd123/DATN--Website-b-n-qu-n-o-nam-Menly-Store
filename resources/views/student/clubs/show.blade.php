@@ -3,34 +3,6 @@
 @section('title', $club->name . ' - Chi tiết CLB')
 
 @php
-    // Lấy thông tin thành viên của người dùng hiện tại trong CLB này (nếu là thành viên)
-    // Biến $isMember và $user đã được truyền từ StudentController
-    $clubMember = $isMember ? $club->clubMembers->where('user_id', $user->id)->first() : null;
-
-    // Kiểm tra xem người dùng đã gửi yêu cầu tham gia chưa
-    $joinRequest = $club->joinRequests()->where('user_id', $user->id)->where('status', 'pending')->first();
-
-    // Lấy các sự kiện sắp tới của CLB
-    $events = $club->events()->where('status', 'approved')->where('start_time', '>=', now())->orderBy('start_time', 'asc')->get();
-
-    // Lấy các thông báo của CLB
-    $announcements = $club->posts()->where('type', 'announcement')->where('status', 'published')->orderBy('created_at', 'desc')->get();
-
-    // Lấy các bài viết diễn đàn của CLB
-    $posts = $club->posts()->where('type', 'post')->where('status', 'published')->orderBy('created_at', 'desc')->get();
-
-    // Lấy ảnh từ các sự kiện đã hoàn thành và các bài viết có ảnh
-    $eventImages = \App\Models\EventImage::whereIn('event_id', $club->events()->where('status', 'completed')->pluck('id'))->get();
-    $postImages = \App\Models\PostAttachment::whereIn('post_id', $club->posts()->whereNotNull('image')->pluck('id'))->get();
-    $galleryImages = $eventImages->concat($postImages);
-
-    // Lấy thành tích cá nhân (giả định, cần model Achievement)
-    $achievements = collect([]); // Giả định chưa có model này, khởi tạo mảng rỗng
-
-    // Lấy tiến trình hoạt động (giả định, cần logic tính điểm)
-    $activityProgress = [
-        'events_attended' => 0, 'posts_created' => 0, 'comments_made' => 0, 'total_points' => 0
-    ];
 @endphp
 
 @section('content')
@@ -49,7 +21,7 @@
                 <div>
                     <h2 class="mb-1">{{ $club->name }}</h2>
                     <p class="text-muted mb-2">
-                        <i class="fas fa-users me-1"></i> {{ $club->members->count() }} thành viên
+                        <i class="fas fa-users me-1"></i> {{ $club->members_count }} thành viên
                         <span class="mx-2">|</span>
                         <i class="fas fa-tag me-1"></i> {{ $club->field->name ?? 'Chưa phân loại' }}
                     </p>
@@ -87,17 +59,148 @@
             </div>
         </div>
 
-        @if($isMember)
-            <!-- Navigation Tabs -->
-            <ul class="nav nav-tabs mb-4" id="clubDetailTabs" role="tablist">
-                {{-- ... CÁC TAB SẼ ĐƯỢC GIỮ NGUYÊN Ở ĐÂY ... --}}
-            </ul>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="clubDetailTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+                    <i class="fas fa-info-circle me-1"></i> Tổng quan
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @if(!$isMember) disabled @endif" id="events-tab" data-bs-toggle="tab" data-bs-target="#events" type="button" role="tab" aria-controls="events" aria-selected="false">
+                    <i class="fas fa-calendar-alt me-1"></i> Sự kiện
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @if(!$isMember) disabled @endif" id="announcements-tab" data-bs-toggle="tab" data-bs-target="#announcements" type="button" role="tab" aria-controls="announcements" aria-selected="false">
+                    <i class="fas fa-bullhorn me-1"></i> Thông báo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @if(!$isMember) disabled @endif" id="forum-tab" data-bs-toggle="tab" data-bs-target="#forum" type="button" role="tab" aria-controls="forum" aria-selected="false">
+                    <i class="fas fa-comments me-1"></i> Diễn đàn
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @if(!$isMember) disabled @endif" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab" aria-controls="gallery" aria-selected="false">
+                    <i class="fas fa-images me-1"></i> Thư viện ảnh
+                </button>
+            </li>
+            {{-- Management Tab --}}
+            @if($isMember && in_array(session('club_roles')[$club->id] ?? null, ['leader', 'vice_president', 'officer']))
+            <li class="nav-item" role="presentation">
+                <a class="nav-link text-danger" href="{{ route('student.club-management.reports') }}">
+                    <i class="fas fa-chart-line me-1"></i> Báo cáo & Quản lý</a>
+            </li>
+            @endif
+        </ul>
 
-            <!-- Tab Content -->
-            <div class="tab-content" id="clubDetailTabsContent">
-                {{-- ... NỘI DUNG CÁC TAB SẼ ĐƯỢC GIỮ NGUYÊN Ở ĐÂY ... --}}
+        <!-- Tab Content -->
+        <div class="tab-content" id="clubDetailTabsContent">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                <div class="content-card">
+                    <h5 class="card-title mb-3">Giới thiệu về CLB</h5>
+                    <p>{{ $club->introduction ?? 'Chưa có bài viết giới thiệu chi tiết.' }}</p>
+                </div>
             </div>
-        @else
+
+            @if($isMember)
+                <!-- Events Tab -->
+                <div class="tab-pane fade" id="events" role="tabpanel" aria-labelledby="events-tab">
+                    <div class="content-card">
+                        <h5 class="card-title mb-4">Sự kiện sắp tới và đã diễn ra</h5>
+                        @if($club->events && $club->events->count() > 0)
+                            <div class="list-group list-group-flush">
+                                @foreach($club->events as $event)
+                                    <a href="#" class="list-group-item list-group-item-action px-0">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto text-center" style="width: 80px;">
+                                                <div class="text-danger fw-bold fs-5">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</div>
+                                                <div class="text-muted small">Thg {{ \Carbon\Carbon::parse($event->start_time)->format('m') }}</div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1 fw-bold">{{ $event->name }}</h6>
+                                                    <small class="text-muted">{{ \Carbon\Carbon::parse($event->start_time)->diffForHumans() }}</small>
+                                                </div>
+                                                <p class="text-muted mb-1 small">
+                                                    <i class="fas fa-clock me-1"></i> {{ \Carbon\Carbon::parse($event->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($event->end_time)->format('H:i, d/m/Y') }}
+                                                </p>
+                                                <p class="text-muted mb-0 small"><i class="fas fa-map-marker-alt me-1"></i> {{ $event->location }}</p>
+                                                <p class="mb-0 mt-2">{{ Str::limit($event->description, 150) }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Hiện tại chưa có sự kiện nào được lên lịch.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                <!-- Announcements Tab -->
+                <div class="tab-pane fade" id="announcements" role="tabpanel" aria-labelledby="announcements-tab">
+                    <div class="content-card">
+                        <h5 class="card-title mb-4">Thông báo mới nhất</h5>
+                        @if($club->announcements && $club->announcements->count() > 0)
+                            <div class="list-group list-group-flush">
+                                @foreach($club->announcements as $announcement)
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1 fw-bold">{{ $announcement->title }}</h6>
+                                            <small class="text-muted">{{ $announcement->created_at->diffForHumans() }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ $announcement->content }}</p>
+                                        <small class="text-muted">Đăng bởi: {{ $announcement->user->name ?? 'Ban chủ nhiệm' }}</small>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-4">
+                                <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Chưa có thông báo nào.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                <!-- Forum Tab -->
+                <div class="tab-pane fade" id="forum" role="tabpanel" aria-labelledby="forum-tab">
+                    <div class="content-card">
+                        <h5 class="card-title mb-4">Chủ đề thảo luận</h5>
+                        {{-- Giả sử $club->forumTopics là danh sách các chủ đề --}}
+                        @if($club->forumTopics && $club->forumTopics->count() > 0)
+                             <div class="list-group list-group-flush">
+                                @foreach($club->forumTopics as $topic)
+                                    <a href="#" class="list-group-item list-group-item-action px-0">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1 fw-bold">{{ $topic->title }}</h6>
+                                            <small class="text-muted">{{ $topic->created_at->diffForHumans() }}</small>
+                                        </div>
+                                        <small class="text-muted">Bởi {{ $topic->user->name }} | {{ $topic->posts_count }} trả lời</small>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-4">
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Chưa có chủ đề thảo luận nào.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                <!-- Gallery Tab -->
+                <div class="tab-pane fade" id="gallery" role="tabpanel" aria-labelledby="gallery-tab">
+                    <div class="content-card">
+                        <h5 class="card-title mb-4">Thư viện ảnh</h5>
+                        {{-- TODO: Thêm code hiển thị thư viện ảnh ở đây --}}
+                        <p class="text-muted text-center py-4">Tính năng thư viện ảnh đang được phát triển.</p>
+                    </div>
+                </div>
+            @else
             {{-- Giao diện cho người chưa phải là thành viên --}}
             <div class="content-card text-center py-5">
                 <i class="fas fa-lock fa-3x text-muted mb-3"></i>
@@ -105,7 +208,8 @@
                 <p class="text-muted">Bạn cần là thành viên của câu lạc bộ để xem các hoạt động, diễn đàn và thông tin nội bộ.</p>
                 <p>Hãy gửi yêu cầu tham gia để không bỏ lỡ các hoạt động thú vị!</p>
             </div>
-        @endif
+            @endif
+        </div>
     </div>
 
     <!-- Sidebar -->
@@ -225,6 +329,10 @@
     .nav-tabs .nav-link {
         color: #6c757d;
     }
+    .nav-tabs .nav-link.text-danger:hover {
+        border-color: #f8d7da;
+        background-color: #fdf2f2;
+    }
     .content-card {
         margin-bottom: 1.5rem;
     }
@@ -235,6 +343,16 @@
     .progress-card {
         background-color: #f0fdfa;
         border-color: #a7f3d0 !important;
+    }
+    .gallery-item img {
+        width: 100%;
+        height: 250px; /* Or any fixed height you prefer */
+        object-fit: cover;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .gallery-item:hover img {
+        transform: scale(1.05);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
 </style>
 @endpush
