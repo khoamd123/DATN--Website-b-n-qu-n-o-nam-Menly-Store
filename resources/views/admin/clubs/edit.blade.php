@@ -29,8 +29,6 @@
         </div>
     @endif
 
-<<<<<<< HEAD
-=======
     @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show">
             <i class="fas fa-exclamation-circle"></i> <strong>Có lỗi xảy ra:</strong>
@@ -42,8 +40,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
     <div class="row">
         <div class="col-md-8">
             <div class="card">
@@ -55,12 +51,9 @@
                         @csrf
                         @method('PUT')
                         
-<<<<<<< HEAD
-=======
                         {{-- Hidden field to preserve owner_id --}}
                         <input type="hidden" name="owner_id" value="{{ $club->owner_id }}">
                         
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <div class="mb-3">
                             <label class="form-label">Logo câu lạc bộ</label>
                             <div class="d-flex align-items-center gap-3 mb-2">

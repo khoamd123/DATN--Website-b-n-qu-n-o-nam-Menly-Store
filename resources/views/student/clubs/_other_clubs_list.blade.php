@@ -2,23 +2,27 @@
     <div class="row">
         @foreach($otherClubs as $club)
         <div class="col-md-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card h-100 border-0 shadow-sm club-card">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <div class="club-logo me-3">
                             {{ substr($club->name, 0, 2) }}
                         </div>
-                        <div>
-                            <h5 class="card-title mb-1">{{ $club->name }}</h5>
-                            <small class="text-muted">
-                                <i class="fas fa-user-friends"></i> {{ $club->members_count }} thành viên
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1 fw-bold">{{ $club->name }}</h5>
+                            <small class="text-muted d-flex align-items-center">
+                                <i class="fas fa-user-friends me-1"></i> {{ $club->members_count }} thành viên
                             </small>
                         </div>
                     </div>
-                    <p class="card-text">{{ Str::limit($club->description, 100) }}</p>
+                    <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags($club->description ?? ''), 100) }}</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge bg-success">Đang hoạt động</span>
-                        <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-primary btn-sm">Xem & Tham gia</a>
+                        <span class="badge bg-success rounded-pill">
+                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Đang hoạt động
+                        </span>
+                        <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-primary btn-sm rounded-pill">
+                            <i class="fas fa-eye me-1"></i> Xem & Tham gia
+                        </a>
                     </div>
                 </div>
             </div>

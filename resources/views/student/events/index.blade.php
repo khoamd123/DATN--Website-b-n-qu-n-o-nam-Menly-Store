@@ -29,17 +29,117 @@
                     </h2>
                     <p class="text-muted mb-0">Khám phá các sự kiện thú vị và đăng ký tham gia</p>
                 </div>
-                <div class="btn-group" role="group">
+                <div class="btn-group btn-group-sm" role="group">
                     <button type="button" class="btn btn-outline-primary active" data-filter="all">Tất cả</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="ongoing">Đang diễn ra</button>
                     <button type="button" class="btn btn-outline-primary" data-filter="upcoming">Sắp tới</button>
                     <button type="button" class="btn btn-outline-primary" data-filter="registered">Đã tham gia</button>
                 </div>
             </div>
         </div>
 
+        <!-- Ongoing Events -->
+        <div class="content-card" id="ongoing-events-section">
+            <h4 class="mb-4 fw-bold">
+                <i class="fas fa-play-circle text-success me-2"></i> Sự kiện đang diễn ra
+            </h4>
+            
+            <div class="row" id="ongoing-events-list">
+                @forelse($ongoingEvents as $event)
+                    @php
+                        $registrationCount = $eventRegistrations[$event->id] ?? 0;
+                        $availableSlots = $event->max_participants > 0 ? $event->max_participants - $registrationCount : null;
+                        $isRegistered = in_array($event->id, $registeredEvents->pluck('id')->toArray());
+                        $isFull = $event->max_participants > 0 && $registrationCount >= $event->max_participants;
+                        $hasImages = $event->images && $event->images->count() > 0;
+                        $hasOldImage = !empty($event->image);
+                    @endphp
+                    <div class="col-md-6 mb-4 event-item" data-type="ongoing">
+                        <div class="card border-0 shadow-sm h-100 event-card-hover">
+                            @if($hasImages || $hasOldImage)
+                                <div class="event-image-container">
+                                    @if($hasImages)
+                                        <img src="{{ $event->images->first()->image_url }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @elseif($hasOldImage)
+                                        <img src="{{ asset('storage/' . $event->image) }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @endif
+                                    <div class="event-status-overlay">
+                                        <span class="badge bg-success">Đang diễn ra</span>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="event-date-header bg-success text-white">
+                                    <div class="date-day">{{ $event->start_time->format('d') }}</div>
+                                    <div class="date-month-year">{{ strtoupper($event->start_time->format('M Y')) }}</div>
+                                </div>
+                            @endif
+                            <div class="card-body">
+                                <h5 class="card-title mb-2">
+                                    <a href="{{ route('student.events.show', $event->id) }}" class="text-decoration-none text-dark fw-bold">
+                                        {{ $event->title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text text-muted small mb-2">
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                </p>
+                                <p class="card-text small mb-3">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
+                                </p>
+                                <div class="mb-3">
+                                    <div class="small text-muted mb-1">
+                                        <i class="far fa-calendar me-1 text-teal"></i>
+                                        <strong>Bắt đầu:</strong> {{ $event->start_time->format('d/m/Y H:i') }}
+                                    </div>
+                                    @if($event->location)
+                                        <div class="small text-muted">
+                                            <i class="fas fa-map-marker-alt me-1 text-teal"></i>{{ $event->location }}
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-users me-1"></i> 
+                                        {{ $registrationCount }}{{ $event->max_participants > 0 ? '/' . $event->max_participants : '' }} người đăng ký
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    @if($isRegistered)
+                                        <button class="btn btn-success btn-sm flex-fill" disabled>
+                                            <i class="fas fa-check me-1"></i> Đã đăng ký
+                                        </button>
+                                        <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i> Chi tiết
+                                        </a>
+                                    @else
+                                        <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-primary btn-sm flex-fill">
+                                            <i class="fas fa-eye me-1"></i> Xem chi tiết
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Không có sự kiện đang diễn ra</h5>
+                            <p class="text-muted">Hiện tại không có sự kiện nào đang diễn ra.</p>
+                        </div>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
         <!-- Upcoming Events -->
         <div class="content-card" id="upcoming-events-section">
-            <h4 class="mb-3">
+            <h4 class="mb-4 fw-bold">
                 <i class="fas fa-clock text-warning me-2"></i> Sự kiện sắp tới
             </h4>
             
@@ -51,75 +151,90 @@
                         $isRegistered = in_array($event->id, $registeredEvents->pluck('id')->toArray());
                         $isFull = $event->max_participants > 0 && $registrationCount >= $event->max_participants;
                         $isDeadlinePassed = $event->registration_deadline && $event->registration_deadline < now();
+                        $hasImages = $event->images && $event->images->count() > 0;
+                        $hasOldImage = !empty($event->image);
                     @endphp
-                    <div class="col-12 mb-4 event-item" data-type="upcoming">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="row align-items-center">
-                                    <div class="col-md-2">
-                                        <div class="event-date text-center">
-                                            <div class="date-day">{{ $event->start_time->format('d') }}</div>
-                                            <div class="date-month">{{ strtoupper($event->start_time->format('M')) }}</div>
-                                            <div class="date-year">{{ $event->start_time->format('Y') }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h5 class="card-title mb-2">
-                                            <a href="{{ route('student.events.show', $event->id) }}" class="text-decoration-none text-dark">
-                                                {{ $event->title }}
-                                            </a>
-                                        </h5>
-                                        <p class="card-text text-muted mb-2">
-                                            <i class="fas fa-users me-2"></i> {{ $event->club->name ?? 'N/A' }}
-                                        </p>
-                                        @if($event->location)
-                                        <p class="card-text text-muted mb-2">
-                                            <i class="fas fa-map-marker-alt me-2"></i> {{ $event->location }}
-                                        </p>
-                                        @endif
-                                        <p class="card-text mb-0">
-                                            {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
-                                        </p>
-                                    </div>
-                                    <div class="col-md-4 text-end">
-                                        <div class="mb-2">
-                                            @if($isFull)
-                                                <span class="badge bg-danger">Đã đầy</span>
-                                            @elseif($isDeadlinePassed)
-                                                <span class="badge bg-secondary">Hết hạn đăng ký</span>
-                                            @elseif($availableSlots !== null && $availableSlots <= 5)
-                                                <span class="badge bg-warning">Còn {{ $availableSlots }} chỗ</span>
-                                            @elseif($availableSlots !== null)
-                                                <span class="badge bg-success">Còn {{ $availableSlots }} chỗ</span>
-                                            @else
-                                                <span class="badge bg-info">Không giới hạn</span>
-                                            @endif
-                                        </div>
-                                        <div class="mb-2">
-                                            <small class="text-muted">
-                                                <i class="fas fa-users me-1"></i> 
-                                                {{ $registrationCount }}{{ $event->max_participants > 0 ? '/' . $event->max_participants : '' }} người đăng ký
-                                            </small>
-                                        </div>
-                                        @if($isRegistered)
-                                            <div class="d-flex gap-2 justify-content-end">
-                                                <button class="btn btn-success btn-sm" disabled>
-                                                    <i class="fas fa-check me-1"></i> Đã đăng ký
-                                                </button>
-                                                <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
-                                                    <i class="fas fa-times me-1"></i> Hủy đăng ký
-                                                </button>
-                                            </div>
-                                        @elseif($isFull || $isDeadlinePassed)
-                                            <button class="btn btn-secondary btn-sm" disabled>
-                                                <i class="fas fa-ban me-1"></i> Không thể đăng ký
-                                            </button>
+                    <div class="col-md-6 mb-4 event-item" data-type="upcoming">
+                        <div class="card border-0 shadow-sm h-100 event-card-hover">
+                            @if($hasImages || $hasOldImage)
+                                <div class="event-image-container">
+                                    @if($hasImages)
+                                        <img src="{{ $event->images->first()->image_url }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @elseif($hasOldImage)
+                                        <img src="{{ asset('storage/' . $event->image) }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @endif
+                                    <div class="event-status-overlay">
+                                        @if($isFull)
+                                            <span class="badge bg-danger">Đã đầy</span>
+                                        @elseif($isDeadlinePassed)
+                                            <span class="badge bg-secondary">Hết hạn</span>
+                                        @elseif($availableSlots !== null && $availableSlots <= 5)
+                                            <span class="badge bg-warning">Còn {{ $availableSlots }} chỗ</span>
+                                        @elseif($availableSlots !== null)
+                                            <span class="badge bg-success">Còn {{ $availableSlots }} chỗ</span>
                                         @else
-                                            <button class="btn btn-primary btn-sm" onclick="registerEvent({{ $event->id }}, this)">
-                                                <i class="fas fa-plus me-1"></i> Đăng ký
-                                            </button>
+                                            <span class="badge bg-info">Không giới hạn</span>
                                         @endif
                                     </div>
+                                </div>
+                            @else
+                                <div class="event-date-header bg-primary text-white">
+                                    <div class="date-day">{{ $event->start_time->format('d') }}</div>
+                                    <div class="date-month-year">{{ strtoupper($event->start_time->format('M Y')) }}</div>
+                                </div>
+                            @endif
+                            <div class="card-body">
+                                <h5 class="card-title mb-2">
+                                    <a href="{{ route('student.events.show', $event->id) }}" class="text-decoration-none text-dark fw-bold">
+                                        {{ $event->title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text text-muted small mb-2">
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                </p>
+                                <p class="card-text small mb-3">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
+                                </p>
+                                <div class="mb-3">
+                                    <div class="small text-muted mb-1">
+                                        <i class="far fa-calendar me-1 text-teal"></i>
+                                        <strong>Bắt đầu:</strong> {{ $event->start_time->format('d/m/Y H:i') }}
+                                    </div>
+                                    @if($event->location)
+                                        <div class="small text-muted">
+                                            <i class="fas fa-map-marker-alt me-1 text-teal"></i>{{ $event->location }}
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-users me-1"></i> 
+                                        {{ $registrationCount }}{{ $event->max_participants > 0 ? '/' . $event->max_participants : '' }} người đăng ký
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    @if($isRegistered)
+                                        <button class="btn btn-success btn-sm flex-fill" disabled>
+                                            <i class="fas fa-check me-1"></i> Đã đăng ký
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
+                                            <i class="fas fa-times me-1"></i> Hủy
+                                        </button>
+                                    @elseif($isFull || $isDeadlinePassed)
+                                        <button class="btn btn-secondary btn-sm flex-fill" disabled>
+                                            <i class="fas fa-ban me-1"></i> Không thể đăng ký
+                                        </button>
+                                    @else
+                                        <button class="btn btn-primary btn-sm flex-fill" onclick="registerEvent({{ $event->id }}, this)">
+                                            <i class="fas fa-plus me-1"></i> Đăng ký
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -138,60 +253,71 @@
 
         <!-- My Events -->
         <div class="content-card" id="registered-events-section" style="display: none;">
-            <h4 class="mb-3">
+            <h4 class="mb-4 fw-bold">
                 <i class="fas fa-check-circle text-success me-2"></i> Sự kiện đã đăng ký
             </h4>
             
             <div class="row" id="registered-events-list">
                 @forelse($registeredEvents as $event)
-                    <div class="col-12 mb-4 event-item" data-type="registered">
-                        <div class="card border-0 shadow-sm">
+                    @php
+                        $hasImages = $event->images && $event->images->count() > 0;
+                        $hasOldImage = !empty($event->image);
+                    @endphp
+                    <div class="col-md-6 mb-4 event-item" data-type="registered">
+                        <div class="card border-0 shadow-sm h-100 event-card-hover">
+                            @if($hasImages || $hasOldImage)
+                                <div class="event-image-container">
+                                    @if($hasImages)
+                                        <img src="{{ $event->images->first()->image_url }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @elseif($hasOldImage)
+                                        <img src="{{ asset('storage/' . $event->image) }}" 
+                                             alt="{{ $event->title }}" 
+                                             class="w-100 h-100" 
+                                             style="object-fit: cover;">
+                                    @endif
+                                    <div class="event-status-overlay">
+                                        <span class="badge bg-success">Đã đăng ký</span>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="event-date-header bg-success text-white">
+                                    <div class="date-day">{{ $event->start_time->format('d') }}</div>
+                                    <div class="date-month-year">{{ strtoupper($event->start_time->format('M Y')) }}</div>
+                                </div>
+                            @endif
                             <div class="card-body">
-                                <div class="row align-items-center">
-                                    <div class="col-md-2">
-                                        <div class="event-date text-center">
-                                            <div class="date-day">{{ $event->start_time->format('d') }}</div>
-                                            <div class="date-month">{{ strtoupper($event->start_time->format('M')) }}</div>
-                                            <div class="date-year">{{ $event->start_time->format('Y') }}</div>
-                                        </div>
+                                <h5 class="card-title mb-2">
+                                    <a href="{{ route('student.events.show', $event->id) }}" class="text-decoration-none text-dark fw-bold">
+                                        {{ $event->title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text text-muted small mb-2">
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                </p>
+                                <p class="card-text small mb-3">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
+                                </p>
+                                <div class="mb-3">
+                                    <div class="small text-muted mb-1">
+                                        <i class="far fa-calendar me-1 text-teal"></i>
+                                        <strong>Bắt đầu:</strong> {{ $event->start_time->format('d/m/Y H:i') }}
                                     </div>
-                                    <div class="col-md-6">
-                                        <h5 class="card-title mb-2">
-                                            <a href="{{ route('student.events.show', $event->id) }}" class="text-decoration-none text-dark">
-                                                {{ $event->title }}
-                                            </a>
-                                        </h5>
-                                        <p class="card-text text-muted mb-2">
-                                            <i class="fas fa-users me-2"></i> {{ $event->club->name ?? 'N/A' }}
-                                        </p>
-                                        @if($event->location)
-                                        <p class="card-text text-muted mb-2">
-                                            <i class="fas fa-map-marker-alt me-2"></i> {{ $event->location }}
-                                        </p>
-                                        @endif
-                                        <p class="card-text mb-0">
-                                            {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
-                                        </p>
-                                    </div>
-                                    <div class="col-md-4 text-end">
-                                        <div class="mb-2">
-                                            <span class="badge bg-success">Đã đăng ký</span>
+                                    @if($event->location)
+                                        <div class="small text-muted">
+                                            <i class="fas fa-map-marker-alt me-1 text-teal"></i>{{ $event->location }}
                                         </div>
-                                        <div class="mb-2">
-                                            <small class="text-muted">
-                                                <i class="fas fa-clock me-1"></i> 
-                                                {{ $event->start_time->format('d/m/Y H:i') }}
-                                            </small>
-                                        </div>
-                                        <div class="d-flex gap-2 justify-content-end">
-                                            <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye me-1"></i> Xem chi tiết
-                                            </a>
-                                            <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
-                                                <i class="fas fa-times me-1"></i> Hủy đăng ký
-                                            </button>
-                                        </div>
-                                    </div>
+                                    @endif
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-primary btn-sm flex-fill">
+                                        <i class="fas fa-eye me-1"></i> Xem chi tiết
+                                    </a>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
+                                        <i class="fas fa-times me-1"></i> Hủy
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -278,33 +404,65 @@
 
 @push('styles')
 <style>
-    .event-date {
-        background: #f0fdfa;
-        border: 2px solid #a7f3d0;
-        border-radius: 12px;
-        padding: 1rem;
-        color: #14b8a6;
+    .text-teal {
+        color: #14b8a6 !important;
     }
     
-    .date-day {
-        font-size: 2rem;
+    /* Event Card Styles */
+    .event-card-hover {
+        transition: all 0.3s ease;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .event-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* Event Image Container */
+    .event-image-container {
+        height: 200px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f0fdfa 0%, #e0f2f1 100%);
+        position: relative;
+    }
+    
+    .event-image-container img {
+        transition: transform 0.3s ease;
+    }
+    
+    .event-card-hover:hover .event-image-container img {
+        transform: scale(1.05);
+    }
+    
+    .event-status-overlay {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+    }
+    
+    /* Event Date Header (when no image) */
+    .event-date-header {
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    }
+    
+    .event-date-header .date-day {
+        font-size: 2.5rem;
         font-weight: bold;
         line-height: 1;
     }
     
-    .date-month {
-        font-size: 0.9rem;
+    .event-date-header .date-month-year {
+        font-size: 0.875rem;
         font-weight: 500;
-        margin-top: 0.25rem;
-    }
-    
-    .date-year {
-        font-size: 0.8rem;
-        opacity: 0.7;
-    }
-    
-    .text-teal {
-        color: #14b8a6 !important;
+        margin-top: 0.5rem;
+        text-transform: uppercase;
     }
     
     /* Toast Notification Styles */
@@ -320,6 +478,26 @@
     .toast-body {
         font-size: 0.95rem;
     }
+    
+    /* Filter buttons - smaller size */
+    .btn-group[role="group"] .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    /* Card body improvements */
+    .event-card-hover .card-body {
+        padding: 1.25rem;
+    }
+    
+    .event-card-hover .card-title {
+        font-size: 1.1rem;
+        line-height: 1.4;
+    }
+    
+    .event-card-hover .card-title a:hover {
+        color: #14b8a6 !important;
+    }
 </style>
 @endpush
 
@@ -328,6 +506,7 @@
     // Filter buttons functionality
     document.addEventListener('DOMContentLoaded', function() {
         const filterButtons = document.querySelectorAll('[data-filter]');
+        const ongoingSection = document.getElementById('ongoing-events-section');
         const upcomingSection = document.getElementById('upcoming-events-section');
         const registeredSection = document.getElementById('registered-events-section');
         
@@ -341,12 +520,19 @@
                 const filter = this.getAttribute('data-filter');
                 
                 if (filter === 'all') {
+                    ongoingSection.style.display = 'block';
                     upcomingSection.style.display = 'block';
                     registeredSection.style.display = 'none';
+                } else if (filter === 'ongoing') {
+                    ongoingSection.style.display = 'block';
+                    upcomingSection.style.display = 'none';
+                    registeredSection.style.display = 'none';
                 } else if (filter === 'upcoming') {
+                    ongoingSection.style.display = 'none';
                     upcomingSection.style.display = 'block';
                     registeredSection.style.display = 'none';
                 } else if (filter === 'registered') {
+                    ongoingSection.style.display = 'none';
                     upcomingSection.style.display = 'none';
                     registeredSection.style.display = 'block';
                 }
@@ -397,14 +583,43 @@
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
         
-        fetch(`/student/events/${eventId}/register`, {
+        // Sử dụng route helper từ Laravel để tạo URL đúng
+        const registerUrl = '{{ route("student.events.register", ":id") }}'.replace(':id', eventId);
+        
+        fetch(registerUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            // Kiểm tra response status
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Có lỗi xảy ra khi đăng ký');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Có lỗi xảy ra khi đăng ký. Mã lỗi: ' + response.status);
+                    }
+                });
+            }
+            // Kiểm tra content-type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Server trả về dữ liệu không hợp lệ');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showToast('Đăng ký tham gia sự kiện thành công', 'success');
@@ -421,7 +636,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Có lỗi xảy ra khi đăng ký', 'error');
+            showToast(error.message || 'Có lỗi xảy ra khi đăng ký', 'error');
             // Re-enable button on error
             button.disabled = false;
             button.innerHTML = originalText;
@@ -446,14 +661,43 @@
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
         
-        fetch(`/student/events/${eventId}/cancel-registration`, {
+        // Sử dụng route helper từ Laravel để tạo URL đúng
+        const cancelUrl = '{{ route("student.events.cancel_registration", ":id") }}'.replace(':id', eventId);
+        
+        fetch(cancelUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            // Kiểm tra response status
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Có lỗi xảy ra khi hủy đăng ký');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Có lỗi xảy ra khi hủy đăng ký. Mã lỗi: ' + response.status);
+                    }
+                });
+            }
+            // Kiểm tra content-type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Server trả về dữ liệu không hợp lệ');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showToast('Hủy đăng ký sự kiện thành công', 'success');
@@ -470,7 +714,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Có lỗi xảy ra khi hủy đăng ký', 'error');
+            showToast(error.message || 'Có lỗi xảy ra khi hủy đăng ký', 'error');
             // Re-enable button on error
             button.disabled = false;
             button.innerHTML = originalText;

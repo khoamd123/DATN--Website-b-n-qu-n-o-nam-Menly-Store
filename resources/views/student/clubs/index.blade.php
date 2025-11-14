@@ -18,8 +18,11 @@
             </div>
             <!-- Search Form -->
             <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form">
-                <div class="input-group" id="search-input-group">
-                    <input type="text" name="search" class="form-control" placeholder="Nhập tên câu lạc bộ..." value="{{ $search ?? '' }}">
+                <div class="input-group input-group-lg" id="search-input-group">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" name="search" class="form-control border-start-0" placeholder="Nhập tên câu lạc bộ..." value="{{ $search ?? '' }}">
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-search me-1"></i> Tìm kiếm
                     </button>
@@ -52,23 +55,27 @@
                 <div class="row">
                     @foreach($myClubs as $club)
                     <div class="col-md-6 mb-4">
-                        <div class="card h-100 border-0 shadow-sm">
+                        <div class="card h-100 border-0 shadow-sm club-card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center mb-3">
                                     <div class="club-logo me-3">
                                         {{ substr($club->name, 0, 2) }}
                                     </div>
-                                    <div>
-                                        <h5 class="card-title mb-1">{{ $club->name }}</h5>
-                                        <small class="text-muted">
-                                            <i class="fas fa-user-friends"></i> {{ $club->members_count ?? $club->members->count() }} thành viên
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-1 fw-bold">{{ $club->name }}</h5>
+                                        <small class="text-muted d-flex align-items-center">
+                                            <i class="fas fa-user-friends me-1"></i> {{ $club->members_count ?? $club->members->count() }} thành viên
                                         </small>
                                     </div>
                                 </div>
-                                <p class="card-text">{{ Str::limit($club->description, 100) }}</p>
+                                <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags($club->description ?? ''), 100) }}</p>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-teal">Đã tham gia</span>
-                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm">Xem chi tiết</a>
+                                    <span class="badge bg-teal rounded-pill">
+                                        <i class="fas fa-check-circle me-1"></i> Đã tham gia
+                                    </span>
+                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                                        <i class="fas fa-eye me-1"></i> Xem chi tiết
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -153,16 +160,33 @@
 @push('styles')
 <style>
     .club-logo {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        background: #14b8a6;
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+        box-shadow: 0 4px 6px rgba(20, 184, 166, 0.2);
+        flex-shrink: 0;
+    }
+    
+    .club-card {
+        transition: all 0.3s ease;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .club-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .club-card .card-body {
+        padding: 1.5rem;
     }
     
     .text-teal {
@@ -171,6 +195,66 @@
     
     .bg-teal {
         background-color: #14b8a6 !important;
+    }
+    
+    /* Search input improvements */
+    #search-input-group .form-control {
+        border-left: none;
+        padding-left: 0;
+    }
+    
+    #search-input-group .input-group-text {
+        border-right: none;
+    }
+    
+    #search-input-group .form-control:focus {
+        border-color: #14b8a6;
+        box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+    }
+    
+    /* Sidebar improvements */
+    .sidebar {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .sidebar-title {
+        color: #1e293b;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .sidebar-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e2e8f0;
+        transition: background 0.2s ease;
+    }
+    
+    .sidebar-item:last-child {
+        border-bottom: none;
+    }
+    
+    .sidebar-item:hover {
+        background: rgba(20, 184, 166, 0.05);
+        border-radius: 8px;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    .sidebar-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
     }
 </style>
 @endpush

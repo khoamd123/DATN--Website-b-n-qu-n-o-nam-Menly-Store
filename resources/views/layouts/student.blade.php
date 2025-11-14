@@ -30,8 +30,8 @@
         }
         
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             background: #0d9488;
             color: white;
@@ -39,8 +39,72 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
             border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .user-avatar:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .dropdown-toggle::after {
+            display: none;
+        }
+        
+        .dropdown-menu {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e7eb;
+            margin-top: 0.5rem;
+        }
+        
+        .dropdown-item {
+            padding: 0.75rem 1.25rem;
+            transition: all 0.2s ease;
+        }
+        
+        .dropdown-item:hover {
+            background: #f0fdfa;
+            color: #14b8a6;
+        }
+        
+        .dropdown-item i {
+            width: 20px;
+        }
+        
+        /* Notification Icon */
+        .notification-icon {
+            position: relative;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .notification-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #14b8a6;
         }
         
         /* Navigation */
@@ -303,30 +367,79 @@
                 <div class="col-md-6 text-end">
                     <div class="d-flex align-items-center justify-content-end">
                         @if(isset($user) && $user)
-                        <div class="me-3">
-                            <div class="user-avatar">{{ substr($user->name ?? 'U', 0, 1) }}</div>
-                        </div>
-                        <div>
-                            <div class="fw-bold">{{ $user->name ?? 'Người dùng' }}</div>
-                            <small class="opacity-75">{{ $user->student_id ?? 'Sinh viên' }}</small>
+                        <!-- Notification Bell -->
+                        <a href="{{ route('student.notifications.index') }}" class="notification-icon me-3 position-relative text-white text-decoration-none">
+                            <i class="fas fa-bell fa-lg"></i>
+                            @php
+                                $unreadCount = 0;
+                                try {
+                                    $unreadCount = \App\Models\Notification::where('user_id', $user->id)
+                                        ->whereNull('read_at')
+                                        ->count();
+                                } catch (\Exception $e) {
+                                    $unreadCount = 0;
+                                }
+                            @endphp
+                            @if($unreadCount > 0)
+                                <span class="notification-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+                            @endif
+                        </a>
+                        
+                        <!-- User Profile Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-link text-white text-decoration-none p-0 d-flex align-items-center" 
+                                    type="button" 
+                                    id="userDropdown" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false"
+                                    style="border: none; background: none;">
+                                <div class="user-avatar">{{ substr($user->name ?? 'U', 0, 1) }}</div>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('student.profile.index') }}">
+                                        <i class="fas fa-user-circle me-2 text-teal"></i> Hồ sơ
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
                         </div>
                         @else
-                        <div class="me-3">
-                            <div class="user-avatar">U</div>
-                        </div>
-                        <div>
-                            <div class="fw-bold">Người dùng</div>
-                            <small class="opacity-75">Sinh viên</small>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-white text-decoration-none p-0 d-flex align-items-center" 
+                                    type="button" 
+                                    id="userDropdown" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false"
+                                    style="border: none; background: none;">
+                                <div class="user-avatar">U</div>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('student.profile.index') }}">
+                                        <i class="fas fa-user-circle me-2 text-teal"></i> Hồ sơ
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
                         </div>
                         @endif
-                        <div class="ms-3">
-                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                                @csrf
-                                <button type="submit" class="btn btn-outline-light btn-sm">
-                                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                                </button>
-                            </form>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -355,11 +468,6 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
                         <i class="fas fa-newspaper me-2"></i> Bài viết
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.profile*') ? 'active' : '' }}" href="{{ route('student.profile.index') }}">
-                        <i class="fas fa-user-circle me-2"></i> Hồ sơ
                     </a>
                 </li>
                 <li class="nav-item">

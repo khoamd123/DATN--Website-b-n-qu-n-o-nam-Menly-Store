@@ -101,7 +101,7 @@
                                 <small>Thành viên</small>
                             </span>
                             <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'members.pending', 0) }}</strong>
+                                    <strong>{{ data_get($clubStats, 'members.pending', 0) }}</strong>
                                 <small>Đang chờ</small>
                             </span>
                         </div>
@@ -133,8 +133,8 @@
                         </div>
                         <div class="d-flex gap-2">
                             <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus me-1"></i> Tạo mới
-                            </a>
+                            <i class="fas fa-plus me-1"></i> Tạo mới
+                        </a>
                             <a href="{{ route('student.events.manage') }}" class="btn btn-outline-primary btn-sm">
                                 <i class="fas fa-list me-1"></i> Quản lý
                             </a>
@@ -209,34 +209,8 @@
                         <h5 class="management-title">Quỹ CLB</h5>
                         <p class="management-description">Quản lý tài chính và giao dịch quỹ CLB</p>
                         <a href="{{ route('student.club-management.fund-transactions') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-list me-1"></i> Xem giao dịch
-                        </a>
-                    </div>
-                </div>
-            </div>
-            @endif
-            @if($userClub && $clubId && ($user->hasPermission('quan_ly_clb', $clubId) || $user->hasPermission('dang_thong_bao', $clubId)))
-            <div class="col-md-6 mb-4">
-                <div class="management-card">
-                    <div class="management-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="management-content">
-                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
-                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
-                        <div class="management-stats">
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
-                                <small>Tài nguyên</small>
-                            </span>
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
-                                <small>File</small>
-                            </span>
-                        </div>
-                        <a href="{{ $clubId ? route('student.club-management.resources', ['club' => $clubId]) : '#' }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-folder me-1"></i> Quản lý tài nguyên
-                        </a>
+                                <i class="fas fa-list me-1"></i> Xem giao dịch
+                            </a>
                     </div>
                 </div>
             </div>

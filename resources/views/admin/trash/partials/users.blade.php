@@ -40,12 +40,20 @@
                             @endif
                         </td>
                         <td>
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-success" onclick="restore('user', {{ $user->id }})">
-                                    <i class="fas fa-undo"></i> Khôi phục
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success text-white" 
+                                        onclick="restore('user', {{ $user->id }})" 
+                                        title="Khôi phục"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top">
+                                    <i class="fas fa-undo"></i>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="forceDelete('user', {{ $user->id }})">
-                                    <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                                <button class="btn btn-danger text-white" 
+                                        onclick="forceDelete('user', {{ $user->id }})" 
+                                        title="Xóa vĩnh viễn"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>

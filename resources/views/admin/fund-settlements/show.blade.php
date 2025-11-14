@@ -46,7 +46,9 @@
                         <td><strong>Sự kiện:</strong></td>
                         <td>
                             @if($fundRequest->event)
-                                <span class="badge bg-info">{{ $fundRequest->event->name }}</span>
+                                <a href="{{ route('admin.events.show', $fundRequest->event->id) }}" class="text-primary text-decoration-none">
+                                    <strong>{{ $fundRequest->event->title ?? $fundRequest->event->name ?? 'Sự kiện #' . $fundRequest->event->id }}</strong>
+                                </a>
                             @else
                                 <span class="text-muted">Không có</span>
                             @endif
@@ -90,11 +92,22 @@
                     <tr>
                         <td><strong>Trạng thái:</strong></td>
                         <td>
-                            @if($fundRequest->status === 'approved')
-                                <span class="badge bg-success">Đã duyệt</span>
-                            @elseif($fundRequest->status === 'partially_approved')
-                                <span class="badge bg-warning">Duyệt một phần</span>
-                            @endif
+                            @switch($fundRequest->status)
+                                @case('pending')
+                                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                                    @break
+                                @case('approved')
+                                    <span class="badge bg-success text-white">Đã duyệt</span>
+                                    @break
+                                @case('partially_approved')
+                                    <span class="badge bg-info text-dark">Duyệt một phần</span>
+                                    @break
+                                @case('rejected')
+                                    <span class="badge bg-danger text-white">Từ chối</span>
+                                    @break
+                                @default
+                                    <span class="badge bg-secondary text-white">{{ ucfirst($fundRequest->status) }}</span>
+                            @endswitch
                         </td>
                     </tr>
                     <tr>
@@ -170,7 +183,7 @@
                             <div class="mb-3">
                                 <label class="form-label"><strong><i class="fas fa-file-alt text-primary"></i> Ghi chú quyết toán:</strong></label>
                                 <div class="p-3 bg-light rounded border-start border-primary border-3">
-                                    {{ $fundRequest->settlement_notes }}
+                                    {!! nl2br(e(str_replace('&nbsp;', ' ', strip_tags($fundRequest->settlement_notes)))) !!}
                                 </div>
                             </div>
                         @endif

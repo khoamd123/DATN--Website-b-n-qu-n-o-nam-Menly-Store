@@ -13,7 +13,7 @@
                         @if(request('settlement') === 'settled')
                             Quyết toán kinh phí - {{ $club->name }}
                         @else
-                            Yêu cầu cấp kinh phí - {{ $club->name }}
+                        Yêu cầu cấp kinh phí - {{ $club->name }}
                         @endif
                     </h3>
                     <small class="text-muted">

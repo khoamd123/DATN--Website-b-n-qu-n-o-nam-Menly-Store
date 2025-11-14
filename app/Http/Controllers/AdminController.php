@@ -1717,6 +1717,13 @@ class AdminController extends Controller
 
         try {
             $event = Event::with('images')->findOrFail($id);
+            
+            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành
+            if ($event->status === 'completed') {
+                return redirect()->route('admin.events.show', $event->id)
+                    ->with('error', 'Không thể chỉnh sửa sự kiện đã hoàn thành.');
+            }
+            
             $clubs = Club::all();
             return view('admin.events.edit', compact('event', 'clubs'));
         } catch (\Exception $e) {
@@ -1735,6 +1742,14 @@ class AdminController extends Controller
         }
 
         try {
+            // Lấy event hiện tại để kiểm tra status
+            $event = Event::findOrFail($id);
+            
+            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành
+            if ($event->status === 'completed') {
+                return back()->with('error', 'Không thể chỉnh sửa sự kiện đã hoàn thành.');
+            }
+            
             $request->validate([
                 'title' => 'required|string|max:255',
                 'club_id' => 'required|exists:clubs,id',
@@ -1950,10 +1965,15 @@ class AdminController extends Controller
                 'guests' => $guestsData,
             ]);
 
-            $event->update($data);
+            // Cập nhật event - admin có thể tự do thay đổi status
+            // Sử dụng DB::table để tránh trigger boot method tự động cập nhật status
+            DB::table('events')->where('id', $event->id)->update($data);
             
-            // Log sau khi cập nhật
-            $event->refresh();
+            // Refresh event để lấy dữ liệu mới nhất (không trigger boot method)
+            // Sử dụng withoutEvents để tránh boot method tự động cập nhật status
+            $event = Event::withoutEvents(function() use ($event) {
+                return Event::find($event->id);
+            });
             \Log::info('EventsUpdate - Event updated', [
                 'event_id' => $event->id,
                 'main_organizer' => $event->main_organizer ?? 'null',
@@ -2067,9 +2087,24 @@ class AdminController extends Controller
 
             $event = Event::findOrFail($id);
             
-            // Kiểm tra trạng thái sự kiện
-            if (!in_array($event->status, ['pending', 'approved', 'ongoing'])) {
+            // Kiểm tra trạng thái sự kiện - chỉ cho phép hủy khi chưa diễn ra
+            if (!in_array($event->status, ['pending', 'approved'])) {
+                if ($event->status === 'ongoing') {
+                    return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+                }
+                if ($event->status === 'completed') {
+                    return back()->with('error', 'Sự kiện đã hoàn thành, không thể hủy.');
+                }
                 return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+            
+            // Kiểm tra thời gian - không cho phép hủy nếu sự kiện đã bắt đầu hoặc đã kết thúc
+            $now = now();
+            if ($event->start_time && $event->start_time->isPast()) {
+                return back()->with('error', 'Sự kiện đã bắt đầu, không thể hủy.');
+            }
+            if ($event->end_time && $event->end_time->isPast()) {
+                return back()->with('error', 'Sự kiện đã kết thúc, không thể hủy.');
             }
 
             // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
@@ -2122,9 +2157,24 @@ class AdminController extends Controller
         try {
             $event = Event::findOrFail($id);
             
-            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
-            if ($event->status === 'ongoing') {
-                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+            // Kiểm tra trạng thái sự kiện - chỉ cho phép hủy khi chưa diễn ra
+            if (!in_array($event->status, ['pending', 'approved'])) {
+                if ($event->status === 'ongoing') {
+                    return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
+                }
+                if ($event->status === 'completed') {
+                    return back()->with('error', 'Sự kiện đã hoàn thành, không thể hủy.');
+                }
+                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
+            }
+            
+            // Kiểm tra thời gian - không cho phép hủy nếu sự kiện đã bắt đầu hoặc đã kết thúc
+            $now = now();
+            if ($event->start_time && $event->start_time->isPast()) {
+                return back()->with('error', 'Sự kiện đã bắt đầu, không thể hủy.');
+            }
+            if ($event->end_time && $event->end_time->isPast()) {
+                return back()->with('error', 'Sự kiện đã kết thúc, không thể hủy.');
             }
             
             // Kiểm tra dữ liệu đầu vào
@@ -2137,16 +2187,6 @@ class AdminController extends Controller
             $cancellationReason = trim($cancellationReason);
             if (strlen($cancellationReason) < 5) {
                 return back()->with('error', 'Lý do hủy sự kiện phải có ít nhất 5 ký tự.');
-            }
-
-            // Kiểm tra trạng thái sự kiện - không thể hủy nếu đang diễn ra
-            if ($event->status === 'ongoing') {
-                return back()->with('error', 'Sự kiện đang diễn ra, không thể hủy.');
-            }
-            
-            // Kiểm tra trạng thái sự kiện - chỉ cho phép hủy pending và approved
-            if (!in_array($event->status, ['pending', 'approved'])) {
-                return back()->with('error', 'Không thể hủy sự kiện ở trạng thái hiện tại.');
             }
 
             // Cập nhật bằng DB::table để tránh lỗi cột không tồn tại
@@ -2191,7 +2231,9 @@ class AdminController extends Controller
      */
     public function postsManagement(Request $request)
     {
-        $query = Post::whereIn('type', ['post', 'announcement'])
+        // Chỉ hiển thị bài viết chưa bị soft delete
+        $query = Post::withoutTrashed()
+            ->whereIn('type', ['post', 'announcement'])
             ->where('status', '!=', 'deleted') // Loại bỏ posts có status='deleted' (legacy)
             ->with(['club', 'user']);
         
@@ -2869,35 +2911,39 @@ class AdminController extends Controller
      */
     public function permissionsManagement(Request $request)
     {
-        $users = User::with(['ownedClubs', 'clubs'])->paginate(20);
+        $query = User::query();
+        
+        // Tìm kiếm theo tên hoặc email
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+        
+        // Lọc theo role (admin/user)
+        if ($request->filled('role')) {
+            if ($request->role === 'admin') {
+                $query->where('is_admin', true);
+            } elseif ($request->role === 'user') {
+                $query->where('is_admin', false);
+            }
+        }
+        
+        // Lọc theo CLB
+        if ($request->filled('club_id')) {
+            $clubId = $request->club_id;
+            $query->whereHas('clubs', function($q) use ($clubId) {
+                $q->where('clubs.id', $clubId);
+            });
+        }
+        
+        $users = $query->with(['ownedClubs', 'clubs'])->paginate(10)->appends($request->query());
         $clubs = Club::where('status', 'active')->get();
         $permissions = \App\Models\Permission::all();
         
         return view('admin.permissions.index', compact('users', 'clubs', 'permissions'));
-    }
-
-    /**
-     * Simple permissions view (no modals/JavaScript)
-     */
-    public function permissionsSimple(Request $request)
-    {
-        // Kiểm tra đăng nhập đơn giản
-        if (!session('logged_in') || !session('is_admin')) {
-            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
-        }
-
-        try {
-            $users = User::with(['ownedClubs', 'clubs'])->paginate(20);
-            $clubs = Club::where('status', 'active')->get();
-            $permissions = \App\Models\Permission::all();
-        } catch (\Exception $e) {
-            // Nếu có lỗi database, sử dụng dữ liệu mẫu
-            $users = collect([]);
-            $clubs = collect([]);
-            $permissions = collect([]);
-        }
-        
-        return view('admin.permissions.simple', compact('users', 'clubs', 'permissions'));
     }
 
 
@@ -3116,7 +3162,11 @@ class AdminController extends Controller
             $expectedPosition = 'member';
             if ($permissionCount >= 5) {
                 $expectedPosition = 'leader';
-            } elseif ($hasOtherPermissions && $permissionCount >= 2) {
+            } elseif ($hasOtherPermissions && $permissionCount == 4) {
+                // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
+                $expectedPosition = 'vice_president';
+            } elseif ($hasOtherPermissions && $permissionCount >= 2 && $permissionCount <= 3) {
+                // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
                 $expectedPosition = 'officer';
             }
             

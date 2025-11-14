@@ -29,7 +29,7 @@ class HomeController extends Controller
             'posts' => Post::where('status', 'published')->count(),
         ];
 
-        // Featured clubs (top by active members)
+        // Featured clubs (top by active members) - chỉ lấy 4 clubs
         $featuredClubs = Club::with(['field'])
             ->withCount([
                 'clubMembers as active_members_count' => function ($query) {
@@ -38,7 +38,7 @@ class HomeController extends Controller
             ])
             ->where('status', 'active')
             ->orderByDesc('active_members_count')
-            ->limit(6)
+            ->limit(4)
             ->get();
 
         // Upcoming events
@@ -48,9 +48,10 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
-        // Latest public posts
+        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
         $recentPosts = Post::with(['club', 'user'])
             ->where('status', 'published')
+            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderByDesc('created_at')
             ->limit(6)
             ->get();

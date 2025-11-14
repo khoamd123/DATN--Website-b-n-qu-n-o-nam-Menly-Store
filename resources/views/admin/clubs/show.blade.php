@@ -411,17 +411,20 @@
                                             @php
                                                 $role = $member->position ?? $member->role_in_club ?? 'member';
                                                 $badgeColor = 'primary';
-                                                $roleLabel = 'Member';
+                                                $roleLabel = 'Thành viên';
                                                 
                                                 if($role === 'leader' || $role === 'chunhiem') {
                                                     $badgeColor = 'danger';
-                                                    $roleLabel = 'Leader';
+                                                    $roleLabel = 'Trưởng CLB';
+                                                } elseif($role === 'vice_president') {
+                                                    $badgeColor = 'warning';
+                                                    $roleLabel = 'Phó CLB';
                                                 } elseif($role === 'officer') {
                                                     $badgeColor = 'info';
-                                                    $roleLabel = 'Officer';
+                                                    $roleLabel = 'Cán sự';
                                                 } elseif($role === 'member' || $role === 'thanhvien') {
                                                     $badgeColor = 'success';
-                                                    $roleLabel = 'Member';
+                                                    $roleLabel = 'Thành viên';
                                                 }
                                             @endphp
                                             <span class="badge bg-{{ $badgeColor }}">{{ $roleLabel }}</span>
@@ -458,8 +461,17 @@
                     
                     <!-- Phân trang -->
                     @if($approvedMembers->hasPages())
-                        <div class="d-flex justify-content-center mt-4">
-                            {{ $approvedMembers->appends(request()->query())->links() }}
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div class="text-muted small">
+                                    <i class="fas fa-info-circle"></i>
+                                    Hiển thị <strong>{{ $approvedMembers->firstItem() }}</strong> - <strong>{{ $approvedMembers->lastItem() }}</strong> 
+                                    trong tổng <strong>{{ $approvedMembers->total() }}</strong> kết quả
+                                </div>
+                                <div>
+                                    {{ $approvedMembers->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                                </div>
+                            </div>
                         </div>
                     @endif
                 </div>
@@ -504,6 +516,7 @@
             <select class="form-select" id="position" name="position" required>
                 <option value="member" selected>Thành viên</option>
                 <option value="officer">Cán sự</option>
+                <option value="vice_president">Phó CLB</option>
                 <option value="leader">Trưởng CLB</option>
             </select>
           </div>
@@ -589,10 +602,11 @@
             <select class="form-select" id="newPosition" name="position" required>
               <option value="member">Thành viên</option>
               <option value="officer">Cán sự</option>
+              <option value="vice_president">Phó CLB</option>
               <option value="leader">Trưởng CLB</option>
             </select>
             <small class="form-text text-muted">
-              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng và tối đa 3 cán sự.
+              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 1 phó CLB và tối đa 3 cán sự.
             </small>
           </div>
         </div>

@@ -394,15 +394,22 @@
                                     <a href="{{ route('admin.events.show', $event->id) }}" class="btn btn-sm btn-primary text-white w-100">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
-                                    @if($event->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
-                                            @csrf
+                                        @if($event->status === 'pending')
+                                            <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
+                                                @csrf
                                             <button type="submit" class="btn btn-sm btn-success w-100 text-white" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                                <i class="fas fa-check"></i> Duyệt
-                                            </button>
-                                        </form>
-                                    @endif
-                                    @if($event->status !== 'cancelled' && !in_array($event->status, ['cancelled', 'completed', 'ongoing']))
+                                                    <i class="fas fa-check"></i> Duyệt
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @php
+                                        $canCancel = in_array($event->status, ['pending', 'approved']) 
+                                            && $event->start_time 
+                                            && $event->start_time->isFuture() 
+                                            && $event->end_time 
+                                            && $event->end_time->isFuture();
+                                    @endphp
+                                    @if($canCancel)
                                         <button type="button" class="btn btn-sm btn-danger w-100 text-white" data-bs-toggle="modal" data-bs-target="#deleteEventModal{{ $event->id }}">
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
@@ -521,7 +528,14 @@ function toggleForm() {
 
 <!-- Modal hủy sự kiện cho từng sự kiện -->
 @foreach($events as $event)
-@if($event->status !== 'ongoing' && $event->status !== 'cancelled' && $event->status !== 'completed')
+@php
+    $canCancel = in_array($event->status, ['pending', 'approved']) 
+        && $event->start_time 
+        && $event->start_time->isFuture() 
+        && $event->end_time 
+        && $event->end_time->isFuture();
+@endphp
+@if($canCancel)
 <div class="modal fade" id="deleteEventModal{{ $event->id }}" tabindex="-1" aria-labelledby="deleteEventModalLabel{{ $event->id }}" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
