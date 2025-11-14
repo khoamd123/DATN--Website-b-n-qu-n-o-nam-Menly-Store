@@ -479,6 +479,29 @@
             display: inline-block;
         }
         
+        /* Ẩn hoàn toàn các mũi tên Previous/Next trong pagination */
+        .pagination .page-link[rel="prev"],
+        .pagination .page-link[rel="next"],
+        .pagination .page-item:has(.page-link[rel="prev"]),
+        .pagination .page-item:has(.page-link[rel="next"]) {
+            display: none !important;
+        }
+        
+        /* Ẩn các mũi tên bằng text content */
+        .pagination .page-link:first-child,
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            /* Kiểm tra bằng JavaScript */
+        }
+        
+        /* Ẩn các ký tự mũi tên đặc biệt */
+        .pagination .page-link[aria-label*="previous"],
+        .pagination .page-link[aria-label*="Previous"],
+        .pagination .page-link[aria-label*="next"],
+        .pagination .page-link[aria-label*="Next"] {
+            display: none !important;
+        }
+        
         @media (max-width: 768px) {
             .pagination-wrapper {
                 flex-direction: column;
@@ -904,6 +927,43 @@
             if (permissionsMenu && permissionsMenu.style.display === 'block') {
                 permissionsMenu.style.maxHeight = permissionsMenu.scrollHeight + 'px';
             }
+            
+            // Ẩn các mũi tên Previous/Next trong pagination
+            function hidePaginationArrows() {
+                const paginationLinks = document.querySelectorAll('.pagination .page-link');
+                paginationLinks.forEach(function(link) {
+                    const text = link.textContent.trim();
+                    const rel = link.getAttribute('rel');
+                    const ariaLabel = link.getAttribute('aria-label') || '';
+                    
+                    // Ẩn nếu có rel="prev" hoặc rel="next"
+                    if (rel === 'prev' || rel === 'next') {
+                        const pageItem = link.closest('.page-item');
+                        if (pageItem) {
+                            pageItem.style.display = 'none';
+                        }
+                    }
+                    
+                    // Ẩn nếu chứa ký tự mũi tên hoặc text Previous/Next
+                    if (text === '‹' || text === '»' || text === '&lsaquo;' || text === '&rsaquo;' || 
+                        text.includes('Previous') || text.includes('Next') ||
+                        text === '«' || text === '›' || text === '&laquo;' || text === '&raquo;' ||
+                        text.includes('«') || text.includes('»') || text.includes('‹') || text.includes('›') ||
+                        ariaLabel.toLowerCase().includes('previous') || ariaLabel.toLowerCase().includes('next')) {
+                        const pageItem = link.closest('.page-item');
+                        if (pageItem) {
+                            pageItem.style.display = 'none';
+                        }
+                    }
+                });
+            }
+            
+            // Chạy ngay lập tức
+            hidePaginationArrows();
+            
+            // Chạy lại sau khi DOM thay đổi (cho AJAX pagination)
+            setTimeout(hidePaginationArrows, 100);
+            setTimeout(hidePaginationArrows, 500);
         });
     </script>
     

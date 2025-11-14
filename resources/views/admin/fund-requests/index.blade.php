@@ -33,8 +33,8 @@
         <div class="col-12">
             <div class="card">
 
-                <div class="card-body">
-                    <!-- Bộ lọc và tìm kiếm -->
+                                 <div class="card-body">
+                     <!-- Bộ lọc và tìm kiếm -->
                     <div class="card mb-4">
                         <div class="card-body">
                             <form method="GET" action="{{ route('admin.fund-requests') }}" class="row g-3">
@@ -44,39 +44,39 @@
                                            class="form-control" 
                                            placeholder="Tìm kiếm theo sự kiện, mô tả, CLB..."
                                            value="{{ request('search') }}">
-                                </div>
+                             </div>
                                 <div class="col-md-2">
                                     <select name="status" class="form-select">
                                         <option value="">Tất cả trạng thái</option>
-                                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
-                                        <option value="partially_approved" {{ request('status') == 'partially_approved' ? 'selected' : '' }}>Duyệt một phần</option>
-                                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Từ chối</option>
-                                    </select>
-                                </div>
+                                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
+                                     <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
+                                     <option value="partially_approved" {{ request('status') == 'partially_approved' ? 'selected' : '' }}>Duyệt một phần</option>
+                                     <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Từ chối</option>
+                                 </select>
+                             </div>
                                 <div class="col-md-2">
                                     <select name="club_id" class="form-select">
-                                        <option value="">Tất cả CLB</option>
-                                        @foreach($clubs as $club)
-                                            <option value="{{ $club->id }}" {{ request('club_id') == $club->id ? 'selected' : '' }}>
-                                                {{ $club->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                                     <option value="">Tất cả CLB</option>
+                                     @foreach($clubs as $club)
+                                         <option value="{{ $club->id }}" {{ request('club_id') == $club->id ? 'selected' : '' }}>
+                                             {{ $club->name }}
+                                         </option>
+                                     @endforeach
+                                 </select>
+                             </div>
                                 <div class="col-md-2">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search"></i> Tìm kiếm
-                                    </button>
+                                         <i class="fas fa-search"></i> Tìm kiếm
+                                     </button>
                                 </div>
                                 <div class="col-md-auto ms-auto">
                                     <a href="{{ route('admin.fund-requests') }}" class="btn btn-secondary">
                                         <i class="fas fa-refresh"></i> Làm mới
-                                    </a>
-                                </div>
+                                     </a>
+                                 </div>
                             </form>
-                        </div>
-                    </div>
+                             </div>
+                         </div>
 
                     <!-- Bảng danh sách -->
                     <div class="table-responsive">
@@ -86,11 +86,9 @@
                                     <th>STT</th>
                                     <th>Sự kiện</th>
                                     <th>CLB</th>
-                                    <th>Quỹ</th>
                                     <th>Số tiền yêu cầu</th>
                                     <th>Số tiền duyệt</th>
                                     <th>Trạng thái</th>
-                                    <th>Người tạo</th>
                                     <th>Ngày tạo</th>
                                     <th>Hành động</th>
                                 </tr>
@@ -120,22 +118,6 @@
                                                 <span class="text-muted">Không xác định</span>
                                             @endif
                                         </td>
-                                        <td>
-                                            @if($request->club)
-                                                @php
-                                                    $clubFund = \App\Models\Fund::where('club_id', $request->club->id)->where('status', 'active')->first();
-                                                @endphp
-                                                @if($clubFund)
-                                                    <a href="{{ route('admin.funds.show', $clubFund->id) }}" class="badge bg-success text-white text-decoration-none" title="Xem chi tiết quỹ">
-                                                        <i class="fas fa-wallet"></i> {{ number_format($clubFund->current_amount, 0, ',', '.') }} VNĐ
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted">Chưa có quỹ</span>
-                                                @endif
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
                                         <td class="text-right">
                                             <strong class="text-primary">{{ number_format($request->requested_amount) }} VNĐ</strong>
                                         </td>
@@ -162,13 +144,6 @@
                                                     @break
                                             @endswitch
                                         </td>
-                                        <td>
-                                            @if($request->creator)
-                                                {{ $request->creator->name }}
-                                            @else
-                                                <span class="text-muted">Không có</span>
-                                            @endif
-                                        </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y H:i') : 'Chưa có ngày' }}</td>
                                         <td style="min-width: 120px; width: 120px;">
                                             <div class="d-flex flex-column gap-1">
@@ -177,10 +152,6 @@
                                                     <i class="fas fa-eye"></i> Xem chi tiết
                                                 </a>
                                                 @if($request->status === 'pending')
-                                                    <a href="{{ route('admin.fund-requests.edit', $request->id) }}" 
-                                                       class="btn btn-sm btn-warning text-white w-100">
-                                                        <i class="fas fa-edit"></i> Sửa
-                                                    </a>
                                                     <form action="{{ route('admin.fund-requests.destroy', $request->id) }}" 
                                                           method="POST" class="d-inline" 
                                                           onsubmit="return confirm('Bạn có chắc chắn muốn xóa yêu cầu này?')">
@@ -196,7 +167,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="10" class="text-center py-4">
+                                        <td colspan="8" class="text-center py-4">
                                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                             <p class="text-muted">Không tìm thấy yêu cầu cấp kinh phí nào</p>
                                         </td>

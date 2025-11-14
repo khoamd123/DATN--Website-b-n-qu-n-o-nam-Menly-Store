@@ -14,11 +14,7 @@
             <div class="stats-icon" style="background-color: #dc3545;">
                 <i class="fas fa-user-shield"></i>
             </div>
-<<<<<<< HEAD
-            <p class="stats-number">{{ $users->where('is_admin', true)->count() }}</p>
-=======
             <p class="stats-number">{{ \App\Models\User::where('is_admin', true)->count() }}</p>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Admin</p>
         </div>
     </div>
@@ -27,11 +23,7 @@
             <div class="stats-icon" style="background-color: #28a745;">
                 <i class="fas fa-users"></i>
             </div>
-<<<<<<< HEAD
-            <p class="stats-number">{{ $users->where('is_admin', false)->count() }}</p>
-=======
             <p class="stats-number">{{ \App\Models\User::where('is_admin', false)->count() }}</p>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">User thường</p>
         </div>
     </div>
@@ -40,11 +32,7 @@
             <div class="stats-icon" style="background-color: #007bff;">
                 <i class="fas fa-users"></i>
             </div>
-<<<<<<< HEAD
-            <p class="stats-number">{{ $clubs->count() }}</p>
-=======
             <p class="stats-number">{{ \App\Models\Club::count() }}</p>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Câu lạc bộ</p>
         </div>
     </div>
@@ -53,13 +41,54 @@
             <div class="stats-icon" style="background-color: #ffc107;">
                 <i class="fas fa-key"></i>
             </div>
-<<<<<<< HEAD
-            <p class="stats-number">{{ $permissions->count() }}</p>
-=======
             <p class="stats-number">{{ \App\Models\Permission::count() }}</p>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
             <p class="stats-label">Loại quyền</p>
         </div>
+    </div>
+</div>
+
+<!-- Bộ lọc và tìm kiếm -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('admin.permissions') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Tìm kiếm theo tên, email..."
+                       value="{{ request('search') }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Vai trò</label>
+                <select name="role" class="form-select">
+                    <option value="">Tất cả vai trò</option>
+                    <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>User thường</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Câu lạc bộ</label>
+                <select name="club_id" class="form-select">
+                    <option value="">Tất cả CLB</option>
+                    @foreach($clubs as $club)
+                        <option value="{{ $club->id }}" {{ request('club_id') == $club->id ? 'selected' : '' }}>
+                            {{ $club->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100" title="Tìm kiếm">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ route('admin.permissions') }}" class="btn btn-secondary w-100" title="Làm mới">
+                    <i class="fas fa-refresh"></i>
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -70,11 +99,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-<<<<<<< HEAD
-                        <th>ID</th>
-=======
                         <th>STT</th>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Quyền Admin</th>
@@ -84,19 +109,6 @@
                     </tr>
                 </thead>
                 <tbody>
-<<<<<<< HEAD
-                    @forelse($users as $user)
-                        <tr>
-                            <td>{{ $user->id }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ $user->avatar ?? '/images/avatar/avatar.png' }}" 
-                                         alt="{{ $user->name }}" 
-                                         class="rounded-circle me-2" 
-                                         width="30" 
-                                         height="30"
-                                         onerror="this.src='/images/avatar/avatar.png'">
-=======
                     @forelse($users as $index => $user)
                         <tr>
                             <td>{{ ($users->currentPage() - 1) * $users->perPage() + $index + 1 }}</td>
@@ -114,7 +126,6 @@
                                             {{ strtoupper(substr($user->name, 0, 1)) }}
                                         </div>
                                     @endif
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                                     <div>
                                         <strong>{{ $user->name }}</strong>
                                         @if($user->is_admin)
@@ -136,11 +147,7 @@
                                     <span class="text-muted">Không có</span>
                                 @endif
                             </td>
-<<<<<<< HEAD
-                            <td>{{ $user->created_at->format('d/m/Y') }}</td>
-=======
                             <td>{{ $user->created_at ? $user->created_at->format('d/m/Y') : 'N/A' }}</td>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editPermissionsModal{{ $user->id }}">
@@ -210,40 +217,10 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4">
-<<<<<<< HEAD
-                {{ $users->appends(request()->query())->links() }}
-=======
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                        @if($users->onFirstPage())
-                            <li class="page-item disabled">
-                                <span class="page-link">« Previous</span>
-                            </li>
-                        @else
-                            <li class="page-item">
-                                <a class="page-link" href="{{ $users->previousPageUrl() }}">« Previous</a>
-                            </li>
-                        @endif
-                        
-                        <li class="page-item active">
-                            <span class="page-link">{{ $users->currentPage() }}</span>
-                        </li>
-                        
-                        @if($users->hasMorePages())
-                            <li class="page-item">
-                                <a class="page-link" href="{{ $users->nextPageUrl() }}">Next »</a>
-                            </li>
-                        @else
-                            <li class="page-item disabled">
-                                <span class="page-link">Next »</span>
-                            </li>
-                        @endif
-                    </ul>
-                </nav>
+                {{ $users->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
             </div>
             <div class="text-center text-muted mt-2">
-                Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} results
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
+                Hiển thị {{ $users->firstItem() }} đến {{ $users->lastItem() }} trong tổng số {{ $users->total() }} kết quả
             </div>
         @endif
     </div>
@@ -270,8 +247,7 @@
         </div>
     </div>
 </div>
-<<<<<<< HEAD
-=======
+@endsection
 
 <style>
 /* Pagination styling */

@@ -3,30 +3,77 @@
 @section('title', 'Chi tiết sự kiện')
 
 @section('content')
-<div class="row">
-    <div class="col-12">
-        <article class="content-card">
-            <!-- Back Button -->
-            <div class="mb-3">
-                <a href="{{ route('admin.plans-schedule') }}" class="text-decoration-none">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách sự kiện
+    <div class="content-header">
+        <div class="d-flex justify-content-between align-items-center">
+        <h1>Chi tiết sự kiện</h1>
+            <div class="d-flex gap-2">
+            @if($event->status === 'cancelled')
+                @php
+                    $canRestore = $event->end_time && $event->end_time->isFuture();
+                @endphp
+                @if($canRestore)
+                    <a href="{{ route('admin.events.restore-test', $event->id) }}" class="btn btn-success" onclick="return confirm('Bạn có chắc chắn muốn khôi phục sự kiện này?')">
+                        <i class="fas fa-undo me-1"></i> Khôi phục sự kiện
+                    </a>
+                @else
+                    <button type="button" class="btn btn-secondary" disabled title="Không thể khôi phục sự kiện đã kết thúc">
+                        <i class="fas fa-ban me-1"></i> Không thể khôi phục
+                    </button>
+                @endif
+            @else
+                    @if($event->status === 'pending')
+                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
+                            <i class="fas fa-check me-1"></i> Duyệt sự kiện
+                            </button>
+                        </form>
+                    @endif
+                
+                @php
+                    $canCancel = in_array($event->status, ['pending', 'approved']) 
+                        && $event->start_time 
+                        && $event->start_time->isFuture() 
+                        && $event->end_time 
+                        && $event->end_time->isFuture();
+                @endphp
+                @if($canCancel)
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
+                        <i class="fas fa-times me-1"></i> Hủy sự kiện
+                        </button>
+                    @endif
+                
+                @if($event->status !== 'completed')
+                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-warning text-white">
+                        <i class="fas fa-edit me-1"></i> Chỉnh sửa
+                    </a>
+                @endif
+                @endif
+            
+                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
                 </a>
             </div>
+        </div>
+    </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show">
-                    <i class="fas fa-check-circle"></i> {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
+    <div class="row">
+    <div class="col-12">
+        <article class="content-card">
             <!-- Event Header -->
             <div class="mb-4">
                 <h1 class="mb-3">{{ $event->title }}</h1>
@@ -42,140 +89,35 @@
                     <small class="me-3">
                         <i class="far fa-clock me-1"></i>{{ $event->created_at->format('d/m/Y H:i') }}
                     </small>
-                    @php
-                        $statusColors = [
-                            'draft' => 'secondary',
-                            'pending' => 'warning',
-                            'approved' => 'info',
-                            'ongoing' => 'success',
-                            'completed' => 'primary',
-                            'cancelled' => 'danger'
-                        ];
-                        $statusLabels = [
-                            'draft' => 'Bản nháp',
-                            'pending' => 'Chờ duyệt',
-                            'approved' => 'Đã duyệt',
-                            'ongoing' => 'Đang diễn ra',
-                            'completed' => 'Hoàn thành',
-                            'cancelled' => 'Đã hủy'
-                        ];
-                    @endphp
+                        @php
+                            $statusColors = [
+                                'draft' => 'secondary',
+                                'pending' => 'warning',
+                                'approved' => 'info',
+                                'ongoing' => 'success',
+                                'completed' => 'primary',
+                                'cancelled' => 'danger'
+                            ];
+                            $statusLabels = [
+                                'draft' => 'Bản nháp',
+                                'pending' => 'Chờ duyệt',
+                                'approved' => 'Đã duyệt',
+                                'ongoing' => 'Đang diễn ra',
+                                'completed' => 'Hoàn thành',
+                                'cancelled' => 'Đã hủy'
+                            ];
+                        @endphp
                     <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }} me-2">
-                        {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
-                    </span>
-                </div>
-
-                <!-- Event Images Gallery -->
-                @php
-                    $allImages = collect();
-                    // Thêm ảnh từ event_images table
-                    if ($event->images && $event->images->count() > 0) {
-                        foreach ($event->images as $img) {
-                            $allImages->push([
-                                'url' => $img->image_url,
-                                'alt' => $img->alt_text ?? $event->title,
-                                'type' => 'gallery'
-                            ]);
-                        }
-                    }
-                    // Thêm ảnh cũ từ image field nếu có và chưa có trong gallery
-                    if ($event->image) {
-                        $oldImageUrl = asset('storage/' . $event->image);
-                        $exists = $allImages->contains(function($img) use ($oldImageUrl) {
-                            return $img['url'] === $oldImageUrl;
-                        });
-                        if (!$exists) {
-                            $allImages->prepend([
-                                'url' => $oldImageUrl,
-                                'alt' => $event->title . ' - Banner',
-                                'type' => 'banner'
-                            ]);
-                        }
-                    }
-                @endphp
-
-                @if($allImages->count() > 0)
-                    <div class="mb-4">
-                        @if($allImages->count() == 1)
-                            <!-- Single Image -->
-                            <div class="event-image-single">
-                                <img src="{{ $allImages->first()['url'] }}" 
-                                     alt="{{ $allImages->first()['alt'] }}" 
-                                     class="img-fluid rounded shadow-sm" 
-                                     style="max-height: 500px; width: 100%; object-fit: cover; cursor: pointer;"
-                                     onclick="openImageModal('{{ $allImages->first()['url'] }}', '{{ $allImages->first()['alt'] }}')">
-                            </div>
-                        @else
-                            <!-- Image Carousel -->
-                            <div id="eventImageCarousel" class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-indicators">
-                                    @foreach($allImages as $index => $img)
-                                        <button type="button" data-bs-target="#eventImageCarousel" data-bs-slide-to="{{ $index }}" 
-                                                class="{{ $index === 0 ? 'active' : '' }}" 
-                                                aria-current="{{ $index === 0 ? 'true' : 'false' }}" 
-                                                aria-label="Slide {{ $index + 1 }}"></button>
-                                    @endforeach
+                                {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
+                            </span>
                                 </div>
-                                <div class="carousel-inner rounded shadow-sm">
-                                    @foreach($allImages as $index => $img)
-                                        <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
-                                            <img src="{{ $img['url'] }}" 
-                                                 alt="{{ $img['alt'] }}" 
-                                                 class="d-block w-100" 
-                                                 style="max-height: 500px; object-fit: cover; cursor: pointer;"
-                                                 onclick="openImageModal('{{ $img['url'] }}', '{{ $img['alt'] }}')">
-                                            @if($img['type'] === 'banner')
-                                                <div class="carousel-caption d-none d-md-block">
-                                                    <span class="badge bg-primary">Banner sự kiện</span>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <button class="carousel-control-prev" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="prev">
-                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Previous</span>
-                                </button>
-                                <button class="carousel-control-next" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="next">
-                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Next</span>
-                                </button>
-                            </div>
-                            
-                            <!-- Image Thumbnails Grid -->
-                            <div class="mt-3">
-                                <h6 class="mb-2 text-teal">
-                                    <i class="fas fa-images me-2"></i>Hình ảnh sự kiện ({{ $allImages->count() }})
-                                </h6>
-                                <div class="row g-2">
-                                    @foreach($allImages as $index => $img)
-                                        <div class="col-6 col-md-3 col-lg-2">
-                                            <div class="image-thumbnail-wrapper position-relative">
-                                                <img src="{{ $img['url'] }}" 
-                                                     alt="{{ $img['alt'] }}" 
-                                                     class="img-fluid rounded shadow-sm" 
-                                                     style="width: 100%; height: 120px; object-fit: cover; cursor: pointer; transition: transform 0.2s;"
-                                                     onclick="openImageModal('{{ $img['url'] }}', '{{ $img['alt'] }}')"
-                                                     onmouseover="this.style.transform='scale(1.05)'"
-                                                     onmouseout="this.style.transform='scale(1)'">
-                                                @if($img['type'] === 'banner')
-                                                    <span class="badge bg-primary position-absolute top-0 start-0 m-1" style="font-size: 0.7rem;">Banner</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
                     </div>
-                @endif
-            </div>
 
-            <!-- Event Details Grid -->
+            <!-- Quick Info Cards -->
             <div class="row mb-4">
                 <div class="col-md-6 mb-3">
                     <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
+                <div class="card-body">
                             <h6 class="card-title text-teal mb-3">
                                 <i class="fas fa-calendar-alt me-2"></i>Thời gian
                             </h6>
@@ -189,10 +131,10 @@
                                 <p class="mb-0 mt-2">
                                     <strong>Hạn đăng ký:</strong> {{ $event->registration_deadline->format('d/m/Y H:i') }}
                                 </p>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+                    @endif
+                                </div>
+                            </div>
+                                </div>
 
                 <div class="col-md-6 mb-3">
                     <div class="card border-0 shadow-sm h-100">
@@ -223,18 +165,18 @@
                                 <p class="mb-0 mt-2">
                                     <strong>Số lượng tối đa:</strong> {{ $event->max_participants }} người
                                 </p>
-                            @endif
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
             <!-- Registration Info -->
             @php
                 $registrationsCount = \App\Models\EventRegistration::where('event_id', $event->id)->count();
                 $availableSlots = $event->max_participants > 0 ? $event->max_participants - $registrationsCount : null;
                 $isFull = $event->max_participants > 0 && $registrationsCount >= $event->max_participants;
-            @endphp
+                                                    @endphp
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
                     <h6 class="card-title text-teal mb-3">
@@ -253,17 +195,122 @@
                                     <strong>Chỗ còn lại:</strong> 
                                     @if($availableSlots > 0)
                                         <span class="text-success">{{ $availableSlots }} chỗ</span>
-                                    @else
+                                                    @else
                                         <span class="text-danger">Đã đầy</span>
-                                    @endif
+                                                    @endif
                                 </p>
                             @else
                                 <p class="mb-0 text-info">Không giới hạn số lượng</p>
-                            @endif
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                        </div>
+
+            <!-- Event Images Gallery -->
+            @php
+                $allImages = collect();
+                // Thêm ảnh từ event_images table
+                if ($event->images && $event->images->count() > 0) {
+                    foreach ($event->images as $img) {
+                        $allImages->push([
+                            'url' => $img->image_url,
+                            'alt' => $img->alt_text ?? $event->title,
+                            'type' => 'gallery'
+                        ]);
+                    }
+                }
+                // Thêm ảnh cũ từ image field nếu có và chưa có trong gallery
+                if ($event->image) {
+                    $oldImageUrl = asset('storage/' . $event->image);
+                    $exists = $allImages->contains(function($img) use ($oldImageUrl) {
+                        return $img['url'] === $oldImageUrl;
+                    });
+                    if (!$exists) {
+                        $allImages->prepend([
+                            'url' => $oldImageUrl,
+                            'alt' => $event->title . ' - Banner',
+                            'type' => 'banner'
+                        ]);
+                    }
+                }
+                                                    @endphp
+
+            @if($allImages->count() > 0)
+                <div class="mb-4">
+                    @if($allImages->count() == 1)
+                        <!-- Single Image -->
+                        <div class="event-image-single">
+                            <img src="{{ $allImages->first()['url'] }}" 
+                                 alt="{{ $allImages->first()['alt'] }}" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 style="max-height: 500px; width: 100%; object-fit: cover; cursor: pointer;"
+                                 onclick="openImageModal('{{ $allImages->first()['url'] }}', '{{ $allImages->first()['alt'] }}')">
                         </div>
+                                                    @else
+                        <!-- Image Carousel -->
+                        <div id="eventImageCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-indicators">
+                                @foreach($allImages as $index => $img)
+                                    <button type="button" data-bs-target="#eventImageCarousel" data-bs-slide-to="{{ $index }}" 
+                                            class="{{ $index === 0 ? 'active' : '' }}" 
+                                            aria-current="{{ $index === 0 ? 'true' : 'false' }}" 
+                                            aria-label="Slide {{ $index + 1 }}"></button>
+                                @endforeach
+                                        </div>
+                            <div class="carousel-inner rounded shadow-sm">
+                                @foreach($allImages as $index => $img)
+                                    <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                                        <img src="{{ $img['url'] }}" 
+                                             alt="{{ $img['alt'] }}" 
+                                             class="d-block w-100" 
+                                             style="max-height: 500px; object-fit: cover; cursor: pointer;"
+                                             onclick="openImageModal('{{ $img['url'] }}', '{{ $img['alt'] }}')">
+                                        @if($img['type'] === 'banner')
+                                            <div class="carousel-caption d-none d-md-block">
+                                                <span class="badge bg-primary">Banner sự kiện</span>
+                                    </div>
+                                            @endif
+                                        </div>
+                                @endforeach
+                                    </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
                     </div>
-                </div>
-            </div>
+
+                        <!-- Image Thumbnails Grid -->
+                        <div class="mt-3">
+                            <h6 class="mb-2 text-teal">
+                                <i class="fas fa-images me-2"></i>Hình ảnh sự kiện ({{ $allImages->count() }})
+                            </h6>
+                            <div class="row g-2">
+                                @foreach($allImages as $index => $img)
+                                    <div class="col-6 col-md-3 col-lg-2">
+                                        <div class="image-thumbnail-wrapper position-relative">
+                                            <img src="{{ $img['url'] }}" 
+                                                 alt="{{ $img['alt'] }}" 
+                                                 class="img-fluid rounded shadow-sm" 
+                                                 style="width: 100%; height: 120px; object-fit: cover; cursor: pointer; transition: transform 0.2s;"
+                                                 onclick="openImageModal('{{ $img['url'] }}', '{{ $img['alt'] }}')"
+                                                 onmouseover="this.style.transform='scale(1.05)'"
+                                                 onmouseout="this.style.transform='scale(1)'">
+                                            @if($img['type'] === 'banner')
+                                                <span class="badge bg-primary position-absolute top-0 start-0 m-1" style="font-size: 0.7rem;">Banner</span>
+                                            @endif
+                        </div>
+                                        </div>
+                                @endforeach
+                                        </div>
+                                    </div>
+                    @endif
+                                </div>
+            @endif
 
             <!-- Event Description -->
             @if($event->description)
@@ -273,58 +320,58 @@
                     </h4>
                     <div class="event-description" style="line-height: 1.8; font-size: 1.05rem;">
                         {!! $event->description !!}
-                    </div>
-                </div>
+                                        </div>
+                                        </div>
             @endif
 
             <!-- Additional Information -->
             <div class="row mb-4">
                 @if($event->main_organizer)
-                    <div class="col-md-6 mb-3">
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-user-tie me-2"></i>Ban tổ chức chính
                                 </h6>
                                 <p class="mb-0">{{ $event->main_organizer }}</p>
-                            </div>
-                        </div>
-                    </div>
+                                        </div>
+                                        </div>
+                                    </div>
                 @endif
 
                 @if($event->organizing_team)
-                    <div class="col-md-6 mb-3">
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-users-cog me-2"></i>Đội ngũ tổ chức
                                 </h6>
                                 <p class="mb-0" style="white-space: pre-line;">{{ $event->organizing_team }}</p>
-                            </div>
-                        </div>
-                    </div>
+                                        </div>
+                                        </div>
+                                    </div>
                 @endif
 
                 @if($event->co_organizers)
                     <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
-                            <div class="card-body">
+                        <div class="card-body">
                                 <h6 class="card-title text-teal mb-3">
                                     <i class="fas fa-handshake me-2"></i>Đồng tổ chức
                                 </h6>
                                 <p class="mb-0" style="white-space: pre-line;">{{ $event->co_organizers }}</p>
                             </div>
-                        </div>
-                    </div>
+                            </div>
+                            </div>
                 @endif
 
-                @php
-                    $contact = null;
-                    if ($event->contact_info) {
-                        $contact = is_array($event->contact_info) ? $event->contact_info : json_decode($event->contact_info, true);
-                    }
-                @endphp
-                @if($contact && (isset($contact['phone']) || isset($contact['email'])))
+                                    @php
+                                        $contact = null;
+                                        if ($event->contact_info) {
+                                            $contact = is_array($event->contact_info) ? $event->contact_info : json_decode($event->contact_info, true);
+                                        }
+                                    @endphp
+                                    @if($contact && (isset($contact['phone']) || isset($contact['email'])))
                     <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
@@ -335,12 +382,12 @@
                                     <p class="mb-2">
                                         <i class="fas fa-phone me-1"></i>{{ $contact['phone'] }}
                                     </p>
-                                @endif
+                                        @endif
                                 @if(isset($contact['email']))
                                     <p class="mb-0">
                                         <i class="fas fa-envelope me-1"></i>{{ $contact['email'] }}
                                     </p>
-                                @endif
+                                        @endif
                             </div>
                         </div>
                     </div>
@@ -370,7 +417,7 @@
                                                     Sinh viên
                                                 @elseif($type === 'sponsor')
                                                     Nhà tài trợ
-                                                @else
+                                    @else
                                                     {{ ucfirst($type) }}
                                                 @endif
                                             </span>
@@ -379,53 +426,53 @@
                                 @endif
                                 @if(isset($guestData['other_info']))
                                     <p class="mb-0">{{ $guestData['other_info'] }}</p>
-                                @endif
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                    </div>
                 @endif
-            </div>
+                    </div>
 
-            <!-- Tài liệu và File -->
+                    <!-- Tài liệu và File -->
             @if($event->proposal_file || $event->poster_file || $event->permit_file)
                 <div class="mb-4">
                     <h4 class="mb-3 text-teal">
                         <i class="fas fa-file me-2"></i>Tài liệu và File
                     </h4>
                     <div class="row">
-                        @if($event->proposal_file)
+                                        @if($event->proposal_file)
                             <div class="col-md-4 mb-3">
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-body">
                                         <h6 class="card-title mb-3">
                                             <i class="fas fa-file-pdf me-2 text-danger"></i>Kế hoạch chi tiết
                                         </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->proposal_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->proposal_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
                                         <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
                                         <a href="{{ asset('storage/' . $event->proposal_file) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
                                             <i class="fas fa-download me-2"></i>Tải xuống
                                         </a>
-                                    </div>
                                 </div>
+                            </div>
                             </div>
                         @endif
 
-                        @if($event->poster_file)
+                                        @if($event->poster_file)
                             <div class="col-md-4 mb-3">
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-body">
                                         <h6 class="card-title mb-3">
                                             <i class="fas fa-image me-2 text-primary"></i>Poster / Ấn phẩm
                                         </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->poster_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->poster_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
                                         <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
                                         <div class="d-flex gap-2">
                                             @if(in_array(strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
@@ -437,81 +484,81 @@
                                                 <i class="fas fa-download me-2"></i>Tải xuống
                                             </a>
                                         </div>
-                                    </div>
                                 </div>
+                            </div>
                             </div>
                         @endif
 
-                        @if($event->permit_file)
+                                        @if($event->permit_file)
                             <div class="col-md-4 mb-3">
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-body">
                                         <h6 class="card-title mb-3">
                                             <i class="fas fa-file-alt me-2 text-warning"></i>Giấy phép / Công văn
                                         </h6>
-                                        @php
-                                            $filePath = storage_path('app/public/' . $event->permit_file);
-                                            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-                                            $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
-                                        @endphp
+                                            @php
+                                                $filePath = storage_path('app/public/' . $event->permit_file);
+                                                $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+                                                $fileSizeFormatted = $fileSize > 0 ? number_format($fileSize / 1024, 2) . ' KB' : 'N/A';
+                                            @endphp
                                         <p class="text-muted small mb-2">Kích thước: {{ $fileSizeFormatted }}</p>
                                         <a href="{{ asset('storage/' . $event->permit_file) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
                                             <i class="fas fa-download me-2"></i>Tải xuống
                                         </a>
-                                    </div>
                                 </div>
                             </div>
-                        @endif
-                    </div>
-                </div>
-            @endif
+                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                                    @endif
 
-            <!-- Thông tin hệ thống -->
+                    <!-- Thông tin hệ thống -->
             <div class="mb-4">
                 <h4 class="mb-3 text-teal">
                     <i class="fas fa-database me-2"></i>Thông tin hệ thống
                 </h4>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title mb-3">
                                     <i class="fas fa-user me-2"></i>Người tạo
                                 </h6>
                                 <p class="mb-1">{{ $event->creator->name ?? 'N/A' }}</p>
-                                @if($event->creator)
-                                    <small class="text-muted">{{ $event->creator->email ?? '' }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
+                                            @if($event->creator)
+                                                <small class="text-muted">{{ $event->creator->email ?? '' }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title mb-3">
                                     <i class="fas fa-calendar-plus me-2"></i>Ngày tạo
                                 </h6>
                                 <p class="mb-1">{{ $event->created_at ? $event->created_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                                @if($event->created_at)
-                                    <small class="text-muted">{{ $event->created_at->diffForHumans() }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
+                                            @if($event->created_at)
+                                                <small class="text-muted">{{ $event->created_at->diffForHumans() }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title mb-3">
                                     <i class="fas fa-clock me-2"></i>Cập nhật lần cuối
                                 </h6>
                                 <p class="mb-1">{{ $event->updated_at ? $event->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                                @if($event->updated_at)
-                                    <small class="text-muted">{{ $event->updated_at->diffForHumans() }}</small>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
+                                            @if($event->updated_at)
+                                                <small class="text-muted">{{ $event->updated_at->diffForHumans() }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <h6 class="card-title mb-3">
@@ -539,36 +586,8 @@
                             <small>Thời gian hủy: {{ $event->cancelled_at->format('d/m/Y H:i') }}</small>
                         </p>
                     @endif
-                </div>
-            @endif
-
-            <!-- Action Buttons -->
-            <div class="d-flex gap-2 mb-4">
-                @if($event->status !== 'cancelled')
-                    @if($event->status === 'pending')
-                        <form method="POST" action="{{ route('admin.events.approve', $event->id) }}" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc muốn duyệt sự kiện này?')">
-                                <i class="fas fa-check me-1"></i> Duyệt sự kiện
-                            </button>
-                        </form>
+                        </div>
                     @endif
-                    
-                    @if(in_array($event->status, ['pending', 'approved']))
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelEventModal">
-                            <i class="fas fa-times me-1"></i> Hủy sự kiện
-                        </button>
-                    @endif
-                    
-                    <a href="{{ route('admin.events.edit', $event->id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-1"></i> Chỉnh sửa
-                    </a>
-                @endif
-                
-                <a href="{{ route('admin.plans-schedule') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
-                </a>
-            </div>
         </article>
     </div>
 </div>
@@ -582,12 +601,12 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border: 1px solid #e9ecef;
         margin-bottom: 2rem;
-    }
-    
+}
+
     .text-teal {
         color: #14b8a6 !important;
-    }
-    
+}
+
     .event-description {
         color: #333;
     }
@@ -597,29 +616,29 @@
         height: auto;
         border-radius: 8px;
         margin: 1rem 0;
-    }
-    
+}
+
     .card {
         transition: transform 0.2s ease;
-    }
-    
+}
+
     .card:hover {
         transform: translateY(-2px);
     }
     
     .image-thumbnail-wrapper {
         overflow: hidden;
-        border-radius: 8px;
+    border-radius: 8px;
     }
     
     .image-thumbnail-wrapper img {
         transition: transform 0.3s ease;
-    }
-    
+}
+
     .image-thumbnail-wrapper:hover img {
         transform: scale(1.1);
-    }
-    
+}
+
     /* Image Modal */
     .image-modal {
         display: none;
@@ -640,21 +659,21 @@
         max-width: 1200px;
         margin-top: 50px;
         animation: zoom 0.3s;
-    }
-    
+}
+
     .image-modal-content img {
         width: 100%;
         height: auto;
-        border-radius: 8px;
+    border-radius: 8px;
     }
     
     @keyframes zoom {
         from {transform: scale(0.5)}
         to {transform: scale(1)}
-    }
-    
+}
+
     .image-modal-close {
-        position: absolute;
+    position: absolute;
         top: 20px;
         right: 35px;
         color: #f1f1f1;
@@ -662,11 +681,11 @@
         font-weight: bold;
         cursor: pointer;
         z-index: 10000;
-    }
-    
+}
+
     .image-modal-close:hover {
         color: #fff;
-    }
+}
 </style>
 @endpush
 
@@ -684,27 +703,27 @@
         
         // Prevent body scroll when modal is open
         document.body.style.overflow = 'hidden';
-    }
-    
+}
+
     function closeImageModal() {
         const modal = document.getElementById('imageModal');
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
-    }
-    
+}
+
     // Close modal when clicking outside the image
     window.onclick = function(event) {
         const modal = document.getElementById('imageModal');
         if (event.target === modal) {
             closeImageModal();
-        }
+}
     }
     
     // Close modal with Escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             closeImageModal();
-        }
+}
     });
 </script>
 
@@ -721,7 +740,14 @@
 @endpush
 
 <!-- Modal hủy sự kiện -->
-@if($event->status !== 'ongoing' && in_array($event->status, ['pending', 'approved']))
+@php
+    $canCancel = in_array($event->status, ['pending', 'approved']) 
+        && $event->start_time 
+        && $event->start_time->isFuture() 
+        && $event->end_time 
+        && $event->end_time->isFuture();
+@endphp
+@if($canCancel)
 <div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

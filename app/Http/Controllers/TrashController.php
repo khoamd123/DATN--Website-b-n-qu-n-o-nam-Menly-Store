@@ -111,7 +111,8 @@ class TrashController extends Controller
 
             $item->restore();
 
-            if ($request->expectsJson()) {
+            // Luôn trả về JSON nếu là AJAX request
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true, 
                     'message' => "Đã khôi phục {$type} thành công!"
@@ -126,11 +127,17 @@ class TrashController extends Controller
             return back()->with('success', 'Đã khôi phục thành công!');
 
         } catch (\Exception $e) {
-            if ($request->expectsJson()) {
+            \Log::error('Trash restore error: ' . $e->getMessage(), [
+                'type' => $type,
+                'id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false, 
                     'message' => 'Lỗi: ' . $e->getMessage()
-                ]);
+                ], 500);
             }
             return back()->with('error', 'Lỗi: ' . $e->getMessage());
         }

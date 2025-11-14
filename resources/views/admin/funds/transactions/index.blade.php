@@ -117,7 +117,6 @@
                             <th>Loại</th>
                             <th>Tiêu đề</th>
                             <th>Số tiền</th>
-                            <th>Danh mục</th>
                             <th>Trạng thái</th>
                             <th>Người tạo</th>
                             <th>Hành động</th>
@@ -145,131 +144,6 @@
                                     <span class="{{ $transaction->type === 'income' ? 'text-success' : 'text-danger' }}">
                                         {{ $transaction->type === 'income' ? '+' : '-' }}{{ number_format($transaction->amount, 0, ',', '.') }} VNĐ
                                     </span>
-                                </td>
-                                <td>
-                                    @if($transaction->items && $transaction->items->count() > 0)
-                                        <button class="btn btn-sm btn-outline-info" 
-                                                type="button" 
-                                                data-bs-toggle="collapse" 
-                                                data-bs-target="#items-{{ $transaction->id }}">
-                                            <i class="fas fa-list"></i> {{ $transaction->items->count() }} khoản
-                                        </button>
-                                        <div class="collapse mt-2" id="items-{{ $transaction->id }}">
-                                            <table class="table table-sm table-bordered mb-0">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        @if($transaction->status === 'pending')
-                                                            <th width="40" class="text-center">
-                                                                <input type="checkbox" class="form-check-input select-all-{{ $transaction->id }}" checked>
-                                                            </th>
-                                                        @endif
-                                                        <th>Khoản mục</th>
-                                                        <th width="150">Số tiền</th>
-                                                        @if($transaction->status === 'pending')
-                                                            <th width="250">Lý do từ chối</th>
-                                                        @elseif($transaction->items->contains('status', 'rejected'))
-                                                            <th width="200">Lý do từ chối</th>
-                                                        @endif
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($transaction->items as $item)
-                                                    <tr class="item-row-{{ $transaction->id }}" data-item-id="{{ $item->id }}" data-amount="{{ $item->amount }}">
-                                                        @if($transaction->status === 'pending')
-                                                            <td class="text-center">
-                                                                <input type="checkbox" 
-                                                                       class="form-check-input item-checkbox-{{ $transaction->id }}" 
-                                                                       data-item-id="{{ $item->id }}"
-                                                                       checked>
-                                                            </td>
-                                                        @endif
-                                                        <td>
-                                                            {{ $item->item_name }}
-                                                            @if($transaction->status !== 'pending' && $item->status)
-                                                                @if($item->status === 'approved')
-                                                                    <span class="badge bg-success ms-2"><i class="fas fa-check"></i> Đã duyệt</span>
-                                                                @elseif($item->status === 'rejected')
-                                                                    <span class="badge bg-danger ms-2"><i class="fas fa-times"></i> Từ chối</span>
-                                                                @endif
-                                                            @endif
-                                                        </td>
-                                                        <td class="text-end">
-                                                            @if($item->status === 'rejected')
-                                                                <del class="text-muted">{{ number_format($item->amount, 0, ',', '.') }} VNĐ</del>
-                                                            @else
-                                                                {{ number_format($item->amount, 0, ',', '.') }} VNĐ
-                                                            @endif
-                                                        </td>
-                                                        @if($transaction->status === 'pending')
-                                                            <td>
-                                                                <input type="text" 
-                                                                       class="form-control form-control-sm reject-reason-{{ $transaction->id }}" 
-                                                                       data-item-id="{{ $item->id }}"
-                                                                       placeholder="Nhập lý do từ chối..."
-                                                                       style="display: none;">
-                                                            </td>
-                                                        @elseif($item->status === 'rejected' && $item->rejection_reason)
-                                                            <td>
-                                                                <small class="text-danger">
-                                                                    <i class="fas fa-exclamation-circle"></i> 
-                                                                    {{ $item->rejection_reason }}
-                                                                </small>
-                                                            </td>
-                                                        @endif
-                                                    </tr>
-                                                    @endforeach
-                                                    <tr class="table-info fw-bold">
-                                                        <td @if($transaction->status === 'pending') colspan="1" @endif>
-                                                            @if($transaction->status === 'pending')
-                                                                
-                                                            @endif
-                                                        </td>
-                                                        <td>
-                                                            @if($transaction->status === 'pending')
-                                                                Tổng duyệt
-                                                            @else
-                                                                Tổng thực tế
-                                                            @endif
-                                                        </td>
-                                                        <td class="text-end">
-                                                            @if($transaction->status === 'pending')
-                                                                <span class="total-approved-{{ $transaction->id }}">{{ number_format($transaction->items->sum('amount'), 0, ',', '.') }}</span> VNĐ
-                                                            @else
-                                                                <span class="total-approved-{{ $transaction->id }}">
-                                                                    {{ number_format($transaction->items->where('status', '!=', 'rejected')->sum('amount'), 0, ',', '.') }}
-                                                                </span> VNĐ
-                                                                @if($transaction->items->contains('status', 'rejected'))
-                                                                    <br>
-                                                                    <small class="text-muted">
-                                                                        (Gốc: {{ number_format($transaction->items->sum('amount'), 0, ',', '.') }} VNĐ)
-                                                                    </small>
-                                                                @endif
-                                                            @endif
-                                                        </td>
-                                                        @if($transaction->status === 'pending')
-                                                            <td></td>
-                                                        @elseif($transaction->items->contains('status', 'rejected'))
-                                                            <td></td>
-                                                        @endif
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                            @if($transaction->status === 'pending')
-                                                <div class="mt-2">
-                                                    <button class="btn btn-sm btn-success" onclick="approvePartialTransaction({{ $transaction->id }})">
-                                                        <i class="fas fa-check"></i> Duyệt các khoản đã chọn
-                                                    </button>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @elseif($transaction->expenseCategory)
-                                        <span class="badge" style="background-color: {{ $transaction->expenseCategory->color }};">
-                                            <i class="fas fa-{{ $transaction->expenseCategory->icon }}"></i> 
-                                            {{ $transaction->expenseCategory->name }}
-                                        </span>
-                                    @else
-                                        {{ $transaction->category ?? 'N/A' }}
-                                    @endif
                                 </td>
                                 <td>
                                     @php
@@ -332,7 +206,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     Không có giao dịch nào
                                 </td>
                             </tr>

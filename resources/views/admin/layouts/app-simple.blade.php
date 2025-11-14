@@ -167,12 +167,6 @@
                         Phân Quyền
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('club.test*') ? 'active' : '' }}" href="{{ route('club.test') }}">
-                        <i class="fas fa-shield-alt"></i>
-                        Test Phân Quyền CLB
-                    </a>
-                </li>
                 <li class="nav-item mt-3">
                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                         @csrf

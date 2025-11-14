@@ -60,7 +60,6 @@
                         <th>Lĩnh vực</th>
                         <th>Chủ sở hữu</th>
                         <th>Thành viên</th>
-                        <th>Mô tả</th>
                         <th>Trạng thái</th>
                         <th>Ngày tạo</th>
                         <th>Hành động</th>
@@ -91,7 +90,6 @@
                             </td>
                             <td>
                                 <strong>{{ $club->name }}</strong>
-                                <br><small class="text-muted">{{ $club->slug }}</small>
                             </td>
                             <td>{{ $club->field->name ?? 'Không xác định' }}</td>
                             <td>
@@ -100,32 +98,10 @@
                             </td>
                             <td>
                                 @php
-                                    // Sử dụng dữ liệu từ controller (query trực tiếp từ DB)
                                     $approvedMembersCount = isset($club->approved_members_count) ? $club->approved_members_count : 0;
-                                    $officersCount = isset($club->officers_count) ? $club->officers_count : 0;
-                                    $leadersCount = isset($club->leaders_count) ? $club->leaders_count : 0;
                                 @endphp
                                 <span class="badge bg-info">{{ $approvedMembersCount }}</span>
-                                @if($club->leader) {{-- This now correctly uses the new leader relationship --}}
-                                    <br><small class="text-success">
-                                        <i class="fas fa-crown"></i> {{ $club->leader->name }}
-                                    </small>
-                                @elseif($leadersCount > 0)
-                                    <br><small class="text-success">
-                                        <i class="fas fa-crown"></i> Có trưởng
-                                    </small>
-                                @else
-                                    <br><small class="text-danger">
-                                        <i class="fas fa-exclamation-triangle"></i> Chưa có trưởng
-                                    </small>
-                                @endif
-                                @if($officersCount > 0)
-                                    <br><small class="text-warning">
-                                        <i class="fas fa-star"></i> {{ $officersCount }} Cán sự
-                                    </small>
-                                @endif
                             </td>
-                            <td>{{ Str::limit(html_entity_decode(strip_tags($club->description), ENT_QUOTES, 'UTF-8'), 50) }}</td>
                             <td>
                                 @php
                                     $statusColors = [
@@ -165,7 +141,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 Không tìm thấy câu lạc bộ nào
                             </td>
                         </tr>

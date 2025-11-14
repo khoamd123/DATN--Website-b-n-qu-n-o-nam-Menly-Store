@@ -3,6 +3,27 @@
 @section('title', 'Quản lý Thùng rác - CLB Admin')
 
 @section('content')
+<style>
+    .table th[data-column="action"],
+    .table td:last-child {
+        min-width: 100px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .table .d-flex.gap-2 {
+        display: flex !important;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+    .table .d-flex.gap-2 > .btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
 <div class="content-header">
     <h1>🗑️ Quản lý Thùng rác</h1>
     <p class="text-muted">Khôi phục hoặc xóa vĩnh viễn dữ liệu đã bị xóa</p>
@@ -247,22 +268,45 @@ function performAction(action, params) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify(params)
     })
-    .then(response => response.json())
+    .then(response => {
+        // Kiểm tra status code
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        // Kiểm tra content type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Nếu không phải JSON, có thể là redirect hoặc HTML error
+            // Nhưng restore có thể đã thành công, nên reload trang
+            location.reload();
+            return;
+        }
+        return response.json();
+    })
     .then(data => {
-        if (data.success) {
+        if (data && data.success) {
             alert(data.message);
             location.reload();
+        } else if (data) {
+            alert('Lỗi: ' + (data.message || 'Có lỗi xảy ra'));
         } else {
-            alert('Lỗi: ' + data.message);
+            // Nếu không có data, có thể đã thành công nhưng response không phải JSON
+            location.reload();
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Có lỗi xảy ra!');
+        // Có thể restore đã thành công nhưng có lỗi trong response
+        // Hỏi người dùng có muốn reload không
+        if (confirm('Có thể đã khôi phục thành công. Bạn có muốn tải lại trang không?')) {
+            location.reload();
+        }
     });
 }
 
@@ -271,6 +315,14 @@ document.getElementById('confirmButton').addEventListener('click', function() {
         currentAction();
         bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
     }
+});
+
+// Khởi tạo tooltip Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 </script>
 @endsection

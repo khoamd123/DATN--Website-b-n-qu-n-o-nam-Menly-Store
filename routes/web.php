@@ -111,13 +111,16 @@ Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentControll
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
 Route::delete('/student/clubs/{club}/cancel-join-request', [\App\Http\Controllers\StudentController::class, 'cancelJoinRequest'])->name('student.clubs.cancel_join_request');
 
+// Student Events Routes - Specific routes must come BEFORE parameterized routes
+Route::get('/student/events/create', [\App\Http\Controllers\StudentController::class, 'createEvent'])->name('student.events.create');
+Route::get('/student/events/manage', [\App\Http\Controllers\StudentController::class, 'manageEvents'])->name('student.events.manage');
+Route::post('/student/events/{eventId}/restore', [\App\Http\Controllers\StudentController::class, 'restoreEvent'])->name('student.events.restore');
+Route::delete('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'deleteEvent'])->name('student.events.delete');
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
+Route::post('/student/events', [\App\Http\Controllers\StudentController::class, 'storeEvent'])->name('student.events.store');
 Route::get('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
 Route::post('/student/events/{eventId}/register', [\App\Http\Controllers\StudentController::class, 'registerEvent'])->name('student.events.register');
 Route::delete('/student/events/{eventId}/cancel-registration', [\App\Http\Controllers\StudentController::class, 'cancelRegistration'])->name('student.events.cancel_registration');
-Route::get('/student/events/create', [\App\Http\Controllers\StudentController::class, 'createEvent'])->name('student.events.create');
-Route::post('/student/events', [\App\Http\Controllers\StudentController::class, 'storeEvent'])->name('student.events.store');
-Route::get('/student/events/manage', [\App\Http\Controllers\StudentController::class, 'manageEvents'])->name('student.events.manage');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
@@ -208,36 +211,25 @@ Route::get(
     [\App\Http\Controllers\StudentController::class, 'fundTransactionShow']
 )->name('student.club-management.fund-transactions.show');
 
-Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
-// Club Resources
+// Fund requests (student side)
 Route::get(
-    '/student/club-management/{club}/resources',
-    [\App\Http\Controllers\StudentController::class, 'clubResources']
-)->name('student.club-management.resources');
+    '/student/club-management/fund-requests',
+    [\App\Http\Controllers\StudentController::class, 'fundRequests']
+)->name('student.club-management.fund-requests');
 Route::get(
-    '/student/club-management/{club}/resources/create',
-    [\App\Http\Controllers\StudentController::class, 'createClubResource']
-)->name('student.club-management.resources.create');
+    '/student/club-management/fund-requests/create',
+    [\App\Http\Controllers\StudentController::class, 'fundRequestCreate']
+)->name('student.club-management.fund-requests.create');
 Route::post(
-    '/student/club-management/{club}/resources',
-    [\App\Http\Controllers\StudentController::class, 'storeClubResource']
-)->name('student.club-management.resources.store');
+    '/student/club-management/fund-requests',
+    [\App\Http\Controllers\StudentController::class, 'fundRequestStore']
+)->name('student.club-management.fund-requests.store');
 Route::get(
-    '/student/club-management/{club}/resources/{resource}',
-    [\App\Http\Controllers\StudentController::class, 'showClubResource']
-)->name('student.club-management.resources.show');
-Route::get(
-    '/student/club-management/{club}/resources/{resource}/edit',
-    [\App\Http\Controllers\StudentController::class, 'editClubResource']
-)->name('student.club-management.resources.edit');
-Route::put(
-    '/student/club-management/{club}/resources/{resource}',
-    [\App\Http\Controllers\StudentController::class, 'updateClubResource']
-)->name('student.club-management.resources.update');
-Route::delete(
-    '/student/club-management/{club}/resources/{resource}',
-    [\App\Http\Controllers\StudentController::class, 'destroyClubResource']
-)->name('student.club-management.resources.destroy');
+    '/student/club-management/fund-requests/{id}',
+    [\App\Http\Controllers\StudentController::class, 'fundRequestShow']
+)->name('student.club-management.fund-requests.show');
+
+Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 
 // Test route without session check - TEMPORARY
 Route::get('/test-club-management', function () {
@@ -381,7 +373,6 @@ Route::prefix('admin')->group(function () {
         });
     
     // Phân quyền
-    Route::get('/permissions', [AdminController::class, 'permissionsSimple'])->name('admin.permissions');
     Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');
     Route::post('/permissions-detailed/add-to-club', [App\Http\Controllers\PermissionController::class, 'addToClub'])->name('admin.permissions.add-to-club');
     Route::post('/permissions/update', [App\Http\Controllers\PermissionController::class, 'updateUserPermissions'])->name('admin.permissions.update');
@@ -485,7 +476,6 @@ Route::prefix('admin')->group(function () {
     
     // Phân quyền
     Route::get('/permissions', [AdminController::class, 'permissionsManagement'])->name('admin.permissions');
-    Route::get('/permissions-simple', [AdminController::class, 'permissionsSimple'])->name('admin.permissions.simple');
     Route::get('/permissions-detailed', [App\Http\Controllers\PermissionController::class, 'index'])->name('admin.permissions.detailed');
     Route::patch('/permissions/{id}/user', [AdminController::class, 'updateUserPermissions'])->name('admin.permissions.user');
     
@@ -545,6 +535,35 @@ Route::get('/test-clubs-create-view', function () {
 
 // Route test với controller mới
 Route::get('/test-new-controller', [App\Http\Controllers\TestController::class, 'clubsCreate']);
+
+// Route tạm thời để khôi phục sự kiện (test)
+Route::get('/admin/events/{id}/restore-test', function($id) {
+    try {
+        $event = \App\Models\Event::findOrFail($id);
+        
+        if ($event->status !== 'cancelled') {
+            return redirect()->route('admin.events.show', $id)
+                ->with('error', 'Sự kiện không ở trạng thái đã hủy. Status hiện tại: ' . $event->status);
+        }
+        
+        // Khôi phục sự kiện
+        $newStatus = 'approved';
+        if ($event->start_time && $event->start_time->isPast() && $event->end_time && $event->end_time->isFuture()) {
+            $newStatus = 'ongoing';
+        }
+        
+        $event->status = $newStatus;
+        $event->cancellation_reason = null;
+        $event->cancelled_at = null;
+        $event->save();
+        
+        return redirect()->route('admin.events.show', $id)
+            ->with('success', 'Đã khôi phục sự kiện thành công! Status: ' . $newStatus);
+    } catch (\Exception $e) {
+        return redirect()->route('admin.events.index')
+            ->with('error', 'Lỗi: ' . $e->getMessage());
+    }
+})->name('admin.events.restore-test');
     
     
     // Quản lý CLB cho Admin

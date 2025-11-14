@@ -35,11 +35,19 @@
                         <td>{{ $resource->user->name }}</td>
                         <td>{{ $resource->deleted_at->format('d/m/Y H:i') }}</td>
                         <td>
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-success btn-sm" onclick="restore('club-resource', {{ $resource->id }})" title="Khôi phục">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success text-white" 
+                                        onclick="restore('club-resource', {{ $resource->id }})" 
+                                        title="Khôi phục"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top">
                                     <i class="fas fa-undo"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="forceDelete('club-resource', {{ $resource->id }})" title="Xóa vĩnh viễn">
+                                <button class="btn btn-danger text-white" 
+                                        onclick="forceDelete('club-resource', {{ $resource->id }})" 
+                                        title="Xóa vĩnh viễn"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>

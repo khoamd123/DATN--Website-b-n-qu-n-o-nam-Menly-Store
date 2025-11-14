@@ -121,12 +121,24 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Lấy tất cả events sắp tới (chưa kết thúc) - chỉ lấy events đã được duyệt
-        $upcomingEvents = Event::with(['club', 'creator', 'images'])
-            ->where('status', 'approved')
+        // Lấy events đang diễn ra (đã bắt đầu nhưng chưa kết thúc) - chỉ lấy events đã được duyệt hoặc ongoing
+        $ongoingEvents = Event::with(['club', 'creator', 'images'])
+            ->whereIn('status', ['approved', 'ongoing'])
+            ->where('start_time', '<=', now())
             ->where('end_time', '>=', now())
             ->orderBy('start_time', 'asc')
             ->get();
+
+        // Lấy events sắp tới (chưa bắt đầu) - chỉ lấy events đã được duyệt
+        $upcomingEvents = Event::with(['club', 'creator', 'images'])
+            ->where('status', 'approved')
+            ->where('start_time', '>', now())
+            ->where('end_time', '>=', now())
+            ->orderBy('start_time', 'asc')
+            ->get();
+
+        // Gộp tất cả events chưa kết thúc (đang diễn ra + sắp tới) để đếm đăng ký
+        $allActiveEvents = $ongoingEvents->merge($upcomingEvents);
 
         // Lấy events đã đăng ký bởi user
         $registeredEventIds = \App\Models\EventRegistration::where('user_id', $user->id)
@@ -136,35 +148,35 @@ class StudentController extends Controller
 
         $registeredEvents = Event::with(['club', 'creator', 'images'])
             ->whereIn('id', $registeredEventIds)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'ongoing'])
             ->orderBy('start_time', 'asc')
             ->get();
 
-        // Đếm số lượng đăng ký cho mỗi event
-        $eventRegistrations = \App\Models\EventRegistration::whereIn('event_id', $upcomingEvents->pluck('id'))
+        // Đếm số lượng đăng ký cho mỗi event (cả đang diễn ra và sắp tới)
+        $eventRegistrations = \App\Models\EventRegistration::whereIn('event_id', $allActiveEvents->pluck('id'))
             ->whereIn('status', ['registered', 'pending', 'approved'])
             ->selectRaw('event_id, COUNT(*) as count')
             ->groupBy('event_id')
             ->pluck('count', 'event_id')
             ->toArray();
 
-        // Thống kê sidebar - chỉ đếm events đã được duyệt
-        $todayEvents = Event::where('status', 'approved')
+        // Thống kê sidebar - đếm events đã được duyệt hoặc đang diễn ra
+        $todayEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereDate('start_time', now()->toDateString())
             ->count();
 
-        $thisWeekEvents = Event::where('status', 'approved')
+        $thisWeekEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereBetween('start_time', [now()->startOfWeek(), now()->endOfWeek()])
             ->count();
 
-        $thisMonthEvents = Event::where('status', 'approved')
+        $thisMonthEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereMonth('start_time', now()->month)
             ->whereYear('start_time', now()->year)
             ->count();
 
-        // Sự kiện hot (có nhiều đăng ký nhất) - chỉ lấy events đã được duyệt
+        // Sự kiện hot (có nhiều đăng ký nhất) - lấy events đã được duyệt hoặc đang diễn ra
         $hotEvents = Event::with(['club'])
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'ongoing'])
             ->where('end_time', '>=', now())
             ->get()
             ->map(function($event) {
@@ -182,7 +194,8 @@ class StudentController extends Controller
 
         return view('student.events.index', compact(
             'user', 
-            'upcomingEvents', 
+            'upcomingEvents',
+            'ongoingEvents',
             'registeredEvents',
             'eventRegistrations',
             'todayEvents',
@@ -208,14 +221,6 @@ class StudentController extends Controller
         try {
             $event = Event::findOrFail($eventId);
 
-            // Kiểm tra sự kiện đã được duyệt chưa
-            if ($event->status !== 'approved') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Sự kiện này chưa được duyệt hoặc không khả dụng.'
-                ], 400);
-            }
-
             // Kiểm tra sự kiện có bị hủy không
             if ($event->status === 'cancelled') {
                 return response()->json([
@@ -224,21 +229,32 @@ class StudentController extends Controller
                 ], 400);
             }
 
+            // Kiểm tra sự kiện đã được duyệt hoặc đang diễn ra
+            if (!in_array($event->status, ['approved', 'ongoing'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sự kiện này chưa được duyệt hoặc không khả dụng.'
+                ], 400);
+            }
+
             // Kiểm tra sự kiện đã kết thúc chưa
-            if ($event->end_time < now()) {
+            if ($event->end_time && $event->end_time < now()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Sự kiện này đã kết thúc.'
                 ], 400);
             }
 
-            // Kiểm tra hạn đăng ký
+            // Kiểm tra hạn đăng ký (nếu có)
             if ($event->registration_deadline && $event->registration_deadline < now()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Đã hết hạn đăng ký cho sự kiện này.'
                 ], 400);
             }
+
+            // Nếu sự kiện đã bắt đầu (đang diễn ra), vẫn cho phép đăng ký nếu chưa hết hạn đăng ký
+            // (có thể tham gia muộn hoặc theo dõi)
 
             // Kiểm tra đã đăng ký chưa
             $existingRegistration = \App\Models\EventRegistration::where('user_id', $user->id)
@@ -478,7 +494,7 @@ class StudentController extends Controller
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string|max:10000',
                 'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-                'start_time' => 'required|date',
+                'start_time' => 'required|date|after_or_equal:now',
                 'end_time' => 'required|date|after:start_time',
                 'mode' => 'required|in:offline,online,hybrid',
                 'location' => 'nullable|string|max:255',
@@ -499,6 +515,8 @@ class StudentController extends Controller
                 'images.*.image' => 'File ảnh không hợp lệ. Vui lòng chọn file ảnh (JPG, JPEG, PNG, WEBP).',
                 'images.*.mimes' => 'Định dạng ảnh không được hỗ trợ. Chỉ chấp nhận: JPG, JPEG, PNG, WEBP.',
                 'images.*.max' => 'Kích thước ảnh không được vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.',
+                'start_time.after_or_equal' => 'Thời gian bắt đầu sự kiện không được trong quá khứ.',
+                'end_time.after' => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
                 'registration_deadline.before_or_equal' => 'Hạn chót đăng ký phải trước hoặc bằng thời gian bắt đầu sự kiện.',
                 'contact_email.email' => 'Email không hợp lệ.',
                 'proposal_file.mimes' => 'File kế hoạch chỉ chấp nhận định dạng: PDF, DOC, DOCX.',
@@ -723,6 +741,135 @@ class StudentController extends Controller
         ];
 
         return view('student.events.manage', compact('user', 'userClub', 'clubId', 'allEvents', 'pendingEvents', 'approvedEvents', 'ongoingEvents', 'completedEvents', 'cancelledEvents', 'stats'));
+    }
+
+    /**
+     * Restore cancelled event
+     */
+    public function restoreEvent($eventId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Kiểm tra user có CLB và có quyền tạo sự kiện không
+        if ($user->clubs->count() == 0) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn cần tham gia CLB để quản lý sự kiện.');
+        }
+
+        $userClub = $user->clubs->first();
+        $clubId = $userClub->id;
+        
+        // Kiểm tra quyền tạo sự kiện
+        if (!$user->hasPermission('tao_su_kien', $clubId)) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn không có quyền quản lý sự kiện cho CLB này.');
+        }
+
+        try {
+            $event = \App\Models\Event::findOrFail($eventId);
+            
+            // Kiểm tra sự kiện thuộc CLB của user
+            if ($event->club_id != $clubId) {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Sự kiện không thuộc CLB của bạn.');
+            }
+
+            // Chỉ cho phép khôi phục sự kiện đã hủy
+            if ($event->status !== 'cancelled') {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Chỉ có thể khôi phục sự kiện đã hủy.');
+            }
+
+            // Kiểm tra thời gian - nếu sự kiện đã kết thúc thì không thể khôi phục
+            if ($event->end_time && $event->end_time->isPast()) {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Không thể khôi phục sự kiện đã kết thúc.');
+            }
+
+            // Khôi phục sự kiện - chuyển về trạng thái approved
+            // Nếu sự kiện đã bắt đầu nhưng chưa kết thúc, chuyển thành ongoing
+            $newStatus = 'approved';
+            if ($event->start_time && $event->start_time->isPast() && $event->end_time && $event->end_time->isFuture()) {
+                $newStatus = 'ongoing';
+            } elseif ($event->start_time && $event->start_time->isPast() && $event->end_time && $event->end_time->isPast()) {
+                // Nếu đã kết thúc thì không thể khôi phục (đã được kiểm tra ở trên)
+                $newStatus = 'completed';
+            }
+
+            $event->status = $newStatus;
+            $event->cancellation_reason = null;
+            $event->cancelled_at = null;
+            $event->save();
+
+            return redirect()->route('student.events.manage')
+                ->with('success', 'Đã khôi phục sự kiện thành công.');
+        } catch (\Exception $e) {
+            \Log::error('Restore event error: ' . $e->getMessage());
+            return redirect()->route('student.events.manage')
+                ->with('error', 'Có lỗi xảy ra khi khôi phục sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Xóa sự kiện (soft delete)
+     */
+    public function deleteEvent($eventId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Kiểm tra user có CLB và có quyền tạo sự kiện không
+        if ($user->clubs->count() == 0) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn cần tham gia CLB để quản lý sự kiện.');
+        }
+
+        $userClub = $user->clubs->first();
+        $clubId = $userClub->id;
+        
+        // Kiểm tra quyền tạo sự kiện
+        if (!$user->hasPermission('tao_su_kien', $clubId)) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn không có quyền quản lý sự kiện cho CLB này.');
+        }
+
+        try {
+            $event = \App\Models\Event::findOrFail($eventId);
+            
+            // Kiểm tra sự kiện thuộc CLB của user
+            if ($event->club_id != $clubId) {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Sự kiện không thuộc CLB của bạn.');
+            }
+
+            // Chỉ cho phép xóa sự kiện ở trạng thái pending, draft, hoặc cancelled
+            // Không cho phép xóa sự kiện đang diễn ra hoặc đã hoàn thành
+            if (in_array($event->status, ['ongoing', 'completed'])) {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Không thể xóa sự kiện đang diễn ra hoặc đã hoàn thành.');
+            }
+
+            // Kiểm tra thời gian - không cho phép xóa nếu sự kiện đã bắt đầu
+            if ($event->start_time && $event->start_time->isPast()) {
+                return redirect()->route('student.events.manage')
+                    ->with('error', 'Không thể xóa sự kiện đã bắt đầu.');
+            }
+
+            // Soft delete sự kiện
+            $event->delete();
+
+            return redirect()->route('student.events.manage')
+                ->with('success', 'Đã xóa sự kiện thành công.');
+        } catch (\Exception $e) {
+            \Log::error('Delete event error: ' . $e->getMessage());
+            return redirect()->route('student.events.manage')
+                ->with('error', 'Có lỗi xảy ra khi xóa sự kiện: ' . $e->getMessage());
+        }
     }
 
     public function profile()
@@ -1012,626 +1159,6 @@ class StudentController extends Controller
             ->with('success', 'Đã cập nhật cài đặt CLB thành công.');
     }
 
-    /**
-     * Club resources management page
-     */
-    public function clubResources($clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Check permission: leader, vice_president, officer, or has permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = in_array($position, ['leader', 'vice_president', 'officer']) 
-            || $user->hasPermission('quan_ly_clb', $clubId) 
-            || $user->hasPermission('dang_thong_bao', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền quản lý tài nguyên CLB này.');
-        }
-
-        // Get resources for this club
-        $resources = \App\Models\ClubResource::with(['user', 'images', 'files'])
-            ->where('club_id', $clubId)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        // Get stats
-        $totalResources = \App\Models\ClubResource::where('club_id', $clubId)->count();
-        $totalFiles = \App\Models\ClubResourceFile::whereHas('clubResource', function($q) use ($clubId) {
-            $q->where('club_id', $clubId);
-        })->count();
-
-        return view('student.club-management.resources', compact(
-            'user', 
-            'club', 
-            'clubId', 
-            'resources', 
-            'totalResources', 
-            'totalFiles'
-        ));
-    }
-
-    /**
-     * Show create resource form for student
-     */
-    public function createClubResource($clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Check permission: leader, vice_president, officer, or has permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = in_array($position, ['leader', 'vice_president', 'officer']) 
-            || $user->hasPermission('quan_ly_clb', $clubId) 
-            || $user->hasPermission('dang_thong_bao', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo tài nguyên CLB này.');
-        }
-
-        return view('student.club-management.resources-create', compact('user', 'club', 'clubId'));
-    }
-
-    /**
-     * Store resource created by student
-     */
-    public function storeClubResource(Request $request, $clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Check permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = in_array($position, ['leader', 'vice_president', 'officer']) 
-            || $user->hasPermission('quan_ly_clb', $clubId) 
-            || $user->hasPermission('dang_thong_bao', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo tài nguyên CLB này.');
-        }
-
-        // Validate files manually first to show specific file names
-        $fileErrors = [];
-        if ($request->hasFile('files')) {
-            // Allowed MIME types for different file formats
-            $allowedMimes = [
-                // DOC files - can have different MIME types
-                'application/msword',
-                'application/x-msword',
-                'application/vnd.ms-word',
-                // DOCX files
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml',
-                // XLS files
-                'application/vnd.ms-excel',
-                'application/x-msexcel',
-                'application/x-excel',
-                // XLSX files
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml',
-                // PDF files
-                'application/pdf',
-                'application/x-pdf',
-            ];
-            
-            // Allowed extensions
-            $allowedExtensions = ['doc', 'docx', 'xls', 'xlsx', 'pdf'];
-            
-            foreach ($request->file('files') as $index => $file) {
-                $mimeType = $file->getMimeType();
-                $extension = strtolower($file->getClientOriginalExtension());
-                $fileName = $file->getClientOriginalName();
-                
-                // Check both MIME type and extension - accept if either is valid
-                $isValidMime = in_array($mimeType, $allowedMimes);
-                $isValidExtension = in_array($extension, $allowedExtensions);
-                
-                if (!$isValidMime && !$isValidExtension) {
-                    // Log for debugging
-                    \Log::info('File validation failed', [
-                        'file' => $fileName,
-                        'mime_type' => $mimeType,
-                        'extension' => $extension
-                    ]);
-                    $fileErrors["files.$index"] = "File \"{$fileName}\" không đúng định dạng. Chỉ chấp nhận: DOC, DOCX, XLS, XLSX, PDF. (Định dạng hiện tại: .{$extension}, MIME: {$mimeType})";
-                }
-                
-                if ($file->getSize() > 20480 * 1024) {
-                    $fileErrors["files.$index"] = "File \"{$fileName}\" vượt quá 20MB.";
-                }
-            }
-        }
-
-        $imageErrors = [];
-        if ($request->hasFile('images')) {
-            $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 
-                             'video/mp4', 'video/x-msvideo', 'video/quicktime'];
-            foreach ($request->file('images') as $index => $image) {
-                if (!in_array($image->getMimeType(), $allowedMimes)) {
-                    $imageErrors["images.$index"] = "File \"{$image->getClientOriginalName()}\" không đúng định dạng. Chỉ chấp nhận: JPG, PNG, GIF, MP4, AVI, MOV.";
-                }
-                if ($image->getSize() > 102400 * 1024) {
-                    $imageErrors["images.$index"] = "File \"{$image->getClientOriginalName()}\" vượt quá 100MB.";
-                }
-            }
-        }
-
-        // Custom validation for files to show specific file names
-        // Note: We validate files manually above, so we'll skip mimes validation here to avoid duplicate errors
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'title' => 'required|string|min:5|max:255',
-            'description' => 'nullable|string|max:1000',
-            'files' => 'nullable|array|max:10',
-            'files.*' => 'file|max:20480', // Size validation only, mimes checked manually above
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'file|max:102400', // Size validation only, mimes checked manually above
-            'external_link' => 'nullable|url|max:500',
-        ], [
-            // Title validation messages
-            'title.required' => 'Vui lòng nhập tiêu đề tài nguyên.',
-            'title.string' => 'Tiêu đề phải là chuỗi ký tự.',
-            'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
-            
-            // Description validation messages
-            'description.string' => 'Mô tả phải là chuỗi ký tự.',
-            'description.max' => 'Mô tả không được vượt quá :max ký tự.',
-            
-            // Files validation messages
-            'files.array' => 'File phải được gửi dưới dạng mảng.',
-            'files.max' => 'Bạn chỉ có thể tải lên tối đa :max file.',
-            'files.*.file' => 'Một hoặc nhiều file không hợp lệ.',
-            'files.*.mimes' => 'File không đúng định dạng. Chỉ chấp nhận: DOC, DOCX, XLS, XLSX, PDF.',
-            'files.*.max' => 'Một hoặc nhiều file vượt quá 20MB. Vui lòng chọn file nhỏ hơn.',
-            
-            // Images validation messages
-            'images.array' => 'Hình ảnh phải được gửi dưới dạng mảng.',
-            'images.max' => 'Bạn chỉ có thể tải lên tối đa :max hình ảnh/video.',
-            'images.*.file' => 'Một hoặc nhiều hình ảnh/video không hợp lệ.',
-            'images.*.mimes' => 'Hình ảnh/video không đúng định dạng. Chỉ chấp nhận: JPG, PNG, GIF, MP4, AVI, MOV.',
-            'images.*.max' => 'Một hoặc nhiều hình ảnh/video vượt quá 100MB. Vui lòng chọn file nhỏ hơn.',
-            
-            // External link validation messages
-            'external_link.url' => 'Link ngoài không hợp lệ. Vui lòng nhập URL đúng định dạng (ví dụ: https://example.com).',
-            'external_link.max' => 'Link ngoài không được vượt quá :max ký tự.',
-        ]);
-
-        // Add custom file errors to validator
-        foreach ($fileErrors as $key => $message) {
-            $validator->errors()->add($key, $message);
-        }
-
-        foreach ($imageErrors as $key => $message) {
-            $validator->errors()->add($key, $message);
-        }
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $title = $request->input('title');
-        
-        $resource = \App\Models\ClubResource::create([
-            'title' => $title,
-            'slug' => \Illuminate\Support\Str::slug($title) . '-' . time(),
-            'description' => $request->description,
-            'resource_type' => 'other',
-            'club_id' => $clubId,
-            'user_id' => $user->id,
-            'status' => 'active',
-            'external_link' => $request->external_link,
-        ]);
-
-        // Handle file album upload
-        if ($request->hasFile('files')) {
-            $this->handleFileAlbumUpload($resource, $request->file('files'), $clubId);
-        }
-
-        // Handle image album upload
-        if ($request->hasFile('images')) {
-            $this->handleImageAlbumUpload($resource, $request->file('images'), $clubId);
-        }
-
-        return redirect()->route('student.club-management.resources', ['club' => $clubId])
-            ->with('success', 'Tài nguyên đã được tạo thành công!');
-    }
-
-    /**
-     * Handle file album upload
-     */
-    private function handleFileAlbumUpload($resource, $files, $clubId)
-    {
-        $uploadPath = 'club-resources/' . $clubId . '/files';
-        
-        foreach ($files as $index => $file) {
-            $filename = time() . '_' . $index . '_' . \Illuminate\Support\Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
-            $fullPath = $uploadPath . '/' . $filename;
-            
-            $file->storeAs('public/' . $uploadPath, $filename);
-            
-            $thumbnailPath = null;
-            if (str_contains($file->getMimeType(), 'image') || str_contains($file->getMimeType(), 'video')) {
-                $thumbnailPath = $this->createThumbnail($file, $uploadPath, $filename);
-            }
-            
-            $resource->files()->create([
-                'file_path' => $fullPath,
-                'file_name' => $file->getClientOriginalName(),
-                'file_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-                'thumbnail_path' => $thumbnailPath,
-                'sort_order' => $index,
-                'is_primary' => $index === 0
-            ]);
-        }
-    }
-
-    /**
-     * Handle image album upload
-     */
-    private function handleImageAlbumUpload($resource, $images, $clubId)
-    {
-        $uploadPath = 'club-resources/' . $clubId . '/images';
-        
-        foreach ($images as $index => $image) {
-            $filename = time() . '_' . $index . '_' . \Illuminate\Support\Str::slug(pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $image->getClientOriginalExtension();
-            $fullPath = $uploadPath . '/' . $filename;
-            
-            $image->storeAs('public/' . $uploadPath, $filename);
-            
-            $thumbnailPath = null;
-            if (str_contains($image->getMimeType(), 'image') || str_contains($image->getMimeType(), 'video')) {
-                $thumbnailPath = $this->createThumbnail($image, $uploadPath, $filename);
-            }
-            
-            $resource->images()->create([
-                'image_path' => $fullPath,
-                'image_name' => $image->getClientOriginalName(),
-                'image_type' => $image->getMimeType(),
-                'image_size' => $image->getSize(),
-                'thumbnail_path' => $thumbnailPath,
-                'sort_order' => $index,
-                'is_primary' => $index === 0
-            ]);
-        }
-    }
-
-    /**
-     * Create thumbnail for image/video
-     */
-    private function createThumbnail($file, $uploadPath, $filename)
-    {
-        // Simple implementation - just return the same path for now
-        // In production, you might want to use Intervention Image or similar
-        return $uploadPath . '/thumb_' . $filename;
-    }
-
-    /**
-     * Show resource detail for student
-     */
-    public function showClubResource($clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::with(['club', 'user', 'images', 'files'])->findOrFail($resourceId);
-
-        // Check if resource belongs to this club
-        if ($resource->club_id != $clubId) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Tài nguyên không thuộc CLB này.');
-        }
-
-        // Check permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = in_array($position, ['leader', 'vice_president', 'officer']) 
-            || $user->hasPermission('quan_ly_clb', $clubId) 
-            || $user->hasPermission('dang_thong_bao', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền xem tài nguyên CLB này.');
-        }
-
-        // Increment view count
-        try {
-            $resource->increment('view_count');
-            $resource->refresh();
-        } catch (\Throwable $e) {
-            // ignore
-        }
-
-        return view('student.club-management.resources-show', compact('user', 'club', 'clubId', 'resource'));
-    }
-
-    /**
-     * Show edit resource form for student
-     */
-    public function editClubResource($clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::with(['images', 'files'])->findOrFail($resourceId);
-
-        // Check if resource belongs to this club
-        if ($resource->club_id != $clubId) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Tài nguyên không thuộc CLB này.');
-        }
-
-        // Check permission - only creator or leader/vice/officer can edit
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = ($resource->user_id == $user->id) 
-            || in_array($position, ['leader', 'vice_president', 'officer'])
-            || $user->hasPermission('quan_ly_clb', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền chỉnh sửa tài nguyên này.');
-        }
-
-        return view('student.club-management.resources-edit', compact('user', 'club', 'clubId', 'resource'));
-    }
-
-    /**
-     * Update resource for student
-     */
-    public function updateClubResource(Request $request, $clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::findOrFail($resourceId);
-
-        // Check if resource belongs to this club
-        if ($resource->club_id != $clubId) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Tài nguyên không thuộc CLB này.');
-        }
-
-        // Check permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = ($resource->user_id == $user->id) 
-            || in_array($position, ['leader', 'vice_president', 'officer'])
-            || $user->hasPermission('quan_ly_clb', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền chỉnh sửa tài nguyên này.');
-        }
-
-        // Validate files manually first
-        $fileErrors = [];
-        if ($request->hasFile('files')) {
-            $allowedMimes = [
-                'application/msword', 'application/x-msword', 'application/vnd.ms-word',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml',
-                'application/vnd.ms-excel', 'application/x-msexcel', 'application/x-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml',
-                'application/pdf', 'application/x-pdf',
-            ];
-            $allowedExtensions = ['doc', 'docx', 'xls', 'xlsx', 'pdf'];
-            
-            foreach ($request->file('files') as $index => $file) {
-                $mimeType = $file->getMimeType();
-                $extension = strtolower($file->getClientOriginalExtension());
-                $fileName = $file->getClientOriginalName();
-                
-                $isValidMime = in_array($mimeType, $allowedMimes);
-                $isValidExtension = in_array($extension, $allowedExtensions);
-                
-                if (!$isValidMime && !$isValidExtension) {
-                    $fileErrors["files.$index"] = "File \"{$fileName}\" không đúng định dạng. Chỉ chấp nhận: DOC, DOCX, XLS, XLSX, PDF.";
-                }
-                
-                if ($file->getSize() > 20480 * 1024) {
-                    $fileErrors["files.$index"] = "File \"{$fileName}\" vượt quá 20MB.";
-                }
-            }
-        }
-
-        $imageErrors = [];
-        if ($request->hasFile('images')) {
-            $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 
-                             'video/mp4', 'video/x-msvideo', 'video/quicktime'];
-            foreach ($request->file('images') as $index => $image) {
-                if (!in_array($image->getMimeType(), $allowedMimes)) {
-                    $imageErrors["images.$index"] = "File \"{$image->getClientOriginalName()}\" không đúng định dạng. Chỉ chấp nhận: JPG, PNG, GIF, MP4, AVI, MOV.";
-                }
-                if ($image->getSize() > 102400 * 1024) {
-                    $imageErrors["images.$index"] = "File \"{$image->getClientOriginalName()}\" vượt quá 100MB.";
-                }
-            }
-        }
-
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'title' => 'required|string|min:5|max:255',
-            'description' => 'nullable|string|max:1000',
-            'files' => 'nullable|array|max:10',
-            'files.*' => 'file|max:20480',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'file|max:102400',
-            'external_link' => 'nullable|url|max:500',
-        ], [
-            'title.required' => 'Vui lòng nhập tiêu đề tài nguyên.',
-            'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
-            'description.max' => 'Mô tả không được vượt quá :max ký tự.',
-            'files.max' => 'Bạn chỉ có thể tải lên tối đa :max file.',
-            'images.max' => 'Bạn chỉ có thể tải lên tối đa :max hình ảnh/video.',
-            'external_link.url' => 'Link ngoài không hợp lệ.',
-            'external_link.max' => 'Link ngoài không được vượt quá :max ký tự.',
-        ]);
-
-        foreach ($fileErrors as $key => $message) {
-            $validator->errors()->add($key, $message);
-        }
-
-        foreach ($imageErrors as $key => $message) {
-            $validator->errors()->add($key, $message);
-        }
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $title = $request->input('title');
-        
-        $resource->update([
-            'title' => $title,
-            'slug' => \Illuminate\Support\Str::slug($title) . '-' . $resource->id,
-            'description' => $request->description,
-            'external_link' => $request->external_link,
-        ]);
-
-        // Handle file album upload
-        if ($request->hasFile('files')) {
-            $this->handleFileAlbumUpload($resource, $request->file('files'), $clubId);
-        }
-
-        // Handle image album upload
-        if ($request->hasFile('images')) {
-            $this->handleImageAlbumUpload($resource, $request->file('images'), $clubId);
-        }
-
-        // Handle deleted files
-        if ($request->has('deleted_files') && $request->deleted_files) {
-            $deletedFiles = is_array($request->deleted_files) 
-                ? $request->deleted_files 
-                : explode(',', $request->deleted_files);
-            
-            foreach ($deletedFiles as $fileId) {
-                $fileId = (int) trim($fileId);
-                if ($fileId > 0) {
-                    $file = \App\Models\ClubResourceFile::find($fileId);
-                    if ($file && $file->club_resource_id == $resource->id) {
-                        if ($file->file_path && \Storage::exists('public/' . $file->file_path)) {
-                            \Storage::delete('public/' . $file->file_path);
-                        }
-                        if ($file->thumbnail_path && \Storage::exists('public/' . $file->thumbnail_path)) {
-                            \Storage::delete('public/' . $file->thumbnail_path);
-                        }
-                        $file->delete();
-                    }
-                }
-            }
-        }
-
-        // Handle deleted images
-        if ($request->has('deleted_images') && $request->deleted_images) {
-            $deletedImages = is_array($request->deleted_images) 
-                ? $request->deleted_images 
-                : explode(',', $request->deleted_images);
-            
-            foreach ($deletedImages as $imageId) {
-                $imageId = (int) trim($imageId);
-                if ($imageId > 0) {
-                    $image = \App\Models\ClubResourceImage::find($imageId);
-                    if ($image && $image->club_resource_id == $resource->id) {
-                        if ($image->image_path && \Storage::exists('public/' . $image->image_path)) {
-                            \Storage::delete('public/' . $image->image_path);
-                        }
-                        if ($image->thumbnail_path && \Storage::exists('public/' . $image->thumbnail_path)) {
-                            \Storage::delete('public/' . $image->thumbnail_path);
-                        }
-                        $image->delete();
-                    }
-                }
-            }
-        }
-
-        return redirect()->route('student.club-management.resources.show', ['club' => $clubId, 'resource' => $resourceId])
-            ->with('success', 'Tài nguyên đã được cập nhật thành công!');
-    }
-
-    /**
-     * Delete resource for student
-     */
-    public function destroyClubResource($clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::where('club_id', $clubId)->findOrFail($resourceId);
-
-        // Check permission
-        $position = $user->getPositionInClub($clubId);
-        $hasPermission = ($resource->user_id == $user->id) 
-            || in_array($position, ['leader', 'vice_president', 'officer'])
-            || $user->hasPermission('quan_ly_clb', $clubId)
-            || $user->hasPermission('dang_thong_bao', $clubId);
-        
-        if (!$hasPermission) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền xóa tài nguyên này.');
-        }
-
-        // Delete associated files and images
-        foreach ($resource->files as $file) {
-            if ($file->file_path) {
-                \Illuminate\Support\Facades\Storage::delete('public/' . $file->file_path);
-            }
-            if ($file->thumbnail_path) {
-                \Illuminate\Support\Facades\Storage::delete('public/' . $file->thumbnail_path);
-            }
-        }
-
-        foreach ($resource->images as $image) {
-            if ($image->image_path) {
-                \Illuminate\Support\Facades\Storage::delete('public/' . $image->image_path);
-            }
-            if ($image->thumbnail_path) {
-                \Illuminate\Support\Facades\Storage::delete('public/' . $image->thumbnail_path);
-            }
-        }
-
-        $resource->delete();
-
-        return redirect()->route('student.club-management.resources', ['club' => $clubId])
-            ->with('success', 'Tài nguyên đã được xóa thành công!');
-    }
 
     /**
      * Update member permissions in a club
@@ -2907,8 +2434,12 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
+        // Query tương tự admin nhưng filter theo user_id
+        // Loại bỏ các bài viết đã bị soft delete và có status = 'deleted'
         $query = Post::with(['club'])
             ->where('user_id', $user->id)
+            ->whereIn('type', ['post', 'announcement'])
+            ->where('status', '!=', 'deleted')
             ->orderBy('created_at', 'desc');
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
@@ -3047,6 +2578,7 @@ class StudentController extends Controller
         $joinRequest->delete();
 
         return redirect()->back()->with('success', 'Đã hủy yêu cầu tham gia câu lạc bộ ' . $club->name . '.');
+    }
 
     /**
      * Mark announcement as viewed
