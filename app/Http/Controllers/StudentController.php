@@ -2474,20 +2474,48 @@ class StudentController extends Controller
      */
     public function showClub(Club $club)
     {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
+         $user = User::find(session('user_id'));
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập.');
         }
 
-        $club->load(['posts' => function ($query) {
-            $query->where('status', 'published')->orderBy('created_at', 'desc')->limit(5);
-        }, 'events' => function ($query) {
-            $query->where('status', 'approved')->orderBy('start_time', 'asc');
-        }, 'members']);
+        // Tải trước các mối quan hệ cần thiết để tối ưu hóa truy vấn
+        $club->load(['leader', 'field', 'members' => function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        }])->loadCount('members');
 
         $isMember = $user->clubs()->where('club_id', $club->id)->exists();
 
-        return view('student.clubs.show', compact('user', 'club', 'isMember'));
+        $data = [
+            'club' => $club,
+            'user' => $user,
+            'isMember' => $isMember,
+            'joinRequest' => null,
+            'clubMember' => null,
+            'events' => collect(),
+            'announcements' => collect(),
+            'posts' => collect(),
+            'galleryImages' => collect(),
+        ];
+
+        if ($isMember) {
+            // Lấy thông tin thành viên từ collection đã được tải trước
+            $data['clubMember'] = $club->members->first();
+            
+            // Tải các dữ liệu khác chỉ khi người dùng là thành viên
+            $data['events'] = $club->events()->where('status', 'approved')->where('start_time', '>=', now())->orderBy('start_time', 'asc')->get();
+            $data['announcements'] = $club->posts()->where('type', 'announcement')->where('status', 'published')->orderBy('created_at', 'desc')->limit(5)->get();
+            $data['posts'] = $club->posts()->where('type', 'post')->where('status', 'published')->orderBy('created_at', 'desc')->limit(5)->get();
+            
+            // Tải ảnh cho thư viện
+            $eventImages = \App\Models\EventImage::whereIn('event_id', $club->events()->where('status', 'completed')->pluck('id'))->get();
+            $postImages = \App\Models\PostAttachment::whereIn('post_id', $club->posts()->whereNotNull('image')->pluck('id'))->get();
+            $data['galleryImages'] = $eventImages->concat($postImages);
+        } else {
+            $data['joinRequest'] = $club->joinRequests()->where('user_id', $user->id)->where('status', 'pending')->first();
+        }
+
+        return view('student.clubs.show', $data);
     }
 
     /**
