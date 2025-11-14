@@ -1192,7 +1192,7 @@ class StudentController extends Controller
         }
 
         // Không cho phép thay đổi position của leader hoặc owner
-        if (in_array($clubMember->position, ['leader', 'owner'])) {
+        if (in_array($clubMember->position, ['leader', 'owner']) && $clubMember->user_id !== $user->id) {
             return redirect()->back()->with('error', 'Không thể thay đổi vai trò của Trưởng CLB hoặc Chủ nhiệm.');
         }
 
@@ -1266,7 +1266,7 @@ class StudentController extends Controller
                 }
                 
                 // Kiểm tra giới hạn số lượng officer (tối đa 2)
-                if ($calculatedPosition === 'officer') {
+                if ($calculatedPosition === 'officer' && $clubMember->position !== 'officer') {
                     $officerCount = ClubMember::where('club_id', $clubId)
                         ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'officer')
@@ -1280,7 +1280,7 @@ class StudentController extends Controller
                 }
                 
                 // Kiểm tra giới hạn số lượng vice_president (chỉ 1)
-                if ($calculatedPosition === 'vice_president') {
+                if ($calculatedPosition === 'vice_president' && $clubMember->position !== 'vice_president') {
                     $vicePresidentCount = ClubMember::where('club_id', $clubId)
                         ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'vice_president')
@@ -1294,12 +1294,13 @@ class StudentController extends Controller
                 }
                 
                 // Cập nhật position dựa trên quyền (ưu tiên position được tính toán từ quyền)
-                // Nếu user chọn position trong form, vẫn cập nhật theo quyền để đảm bảo đồng bộ
-                ClubMember::where('id', $clubMember->id)
-                    ->update(['position' => $calculatedPosition]);
-                
-                // Log để debug
-                \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$calculatedPosition} (permission count: {$permissionCount}, has other permissions: " . ($hasOtherPermissions ? 'true' : 'false') . ")");
+                // Chỉ cập nhật nếu vai trò hiện tại không phải là 'leader' để bảo vệ người tạo CLB
+                if ($clubMember->position !== 'leader') {
+                    ClubMember::where('id', $clubMember->id)
+                        ->update(['position' => $calculatedPosition]);
+                    // Log để debug
+                    \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$calculatedPosition} (permission count: {$permissionCount}, has other permissions: " . ($hasOtherPermissions ? 'true' : 'false') . ")");
+                }
             });
 
             return redirect()->back()->with('success', 'Đã cập nhật thành công.');
@@ -2516,6 +2517,134 @@ class StudentController extends Controller
         }
 
         return view('student.clubs.show', $data);
+    }
+
+    /**
+     * Show the form for creating a new club.
+     */
+    public function createClub()
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Business logic: A user can only be a leader/officer in one club.
+        // Let's check if the user is already a leader or officer in any club.
+        $isLeaderOrOfficer = ClubMember::where('user_id', $user->id) // Tìm vai trò của user
+            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+            ->whereIn('status', ['active', 'approved']) // Chỉ kiểm tra các vai trò đang hoạt động
+            ->whereHas('club', function ($query) { // Chỉ tính các CLB chưa bị xóa
+                $query->whereNull('deleted_at');
+            })
+            ->exists();
+
+        if ($isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.index')->with('error', 'Bạn đã là cán sự hoặc trưởng của một CLB khác và không thể tạo thêm CLB mới.');
+        }
+
+        $fields = Field::orderBy('name')->get();
+
+        return view('student.clubs.create', compact('user', 'fields'));
+    }
+
+    /**
+     * Store a newly created club request.
+     */
+    public function storeClub(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Re-check eligibility
+        $isLeaderOrOfficer = ClubMember::where('user_id', $user->id) // Tìm vai trò của user
+            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+            ->whereIn('status', ['active', 'approved']) // Thêm dòng này để sửa lỗi
+            ->whereHas('club', function ($query) { // Chỉ tính các CLB chưa bị xóa
+                $query->whereNull('deleted_at');
+            })
+            ->exists();
+
+        if ($isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.index')->with('error', 'Bạn đã là cán sự hoặc trưởng của một CLB khác và không thể tạo thêm CLB mới.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255|unique:clubs,name',
+            'description' => 'required|string|max:255',
+            'introduction' => 'nullable|string|max:20000',
+            'field_id' => 'required|exists:fields,id',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB
+        ], [
+            'name.unique' => 'Tên câu lạc bộ này đã tồn tại.',
+            'logo.max' => 'Kích thước logo không được vượt quá 2MB.',
+        ]);
+
+        // Create slug for the club
+        $slug = Str::slug($request->name);
+        $originalSlug = $slug;
+        $counter = 1;
+        while (Club::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        // Handle logo upload
+        $logoPath = null;
+        if ($request->hasFile('logo')) {
+            $logo = $request->file('logo');
+            $logoName = time() . '_' . $slug . '.' . $logo->getClientOriginalExtension();
+            $logoDir = public_path('uploads/clubs/logos');
+            if (!is_dir($logoDir)) {
+                @mkdir($logoDir, 0755, true);
+            }
+            $logo->move($logoDir, $logoName);
+            $logoPath = 'uploads/clubs/logos/' . $logoName;
+        }
+
+        // Create the club with 'pending' status
+        $club = Club::create([
+            'name' => $request->name,
+            'slug' => $slug,
+            'description' => $request->description,
+            'introduction' => $request->introduction,
+            'logo' => $logoPath,
+            'field_id' => $request->field_id,
+            'owner_id' => $user->id, // The creator is the owner/proposer
+            'leader_id' => $user->id, // Tentatively set the creator as the leader
+            'status' => 'pending', // IMPORTANT: Set status to pending for admin approval
+            'established_at' => now(),
+        ]);
+
+        // Automatically add the creator as the leader in the club_members table
+        if ($club) {
+            $clubMember = ClubMember::create([
+                'club_id' => $club->id,
+                'user_id' => $user->id,
+                'position' => 'leader', // Set the creator as the leader
+                'status' => 'approved', // The leader is automatically approved
+                'joined_at' => now(),
+            ]);
+
+            // Grant all permissions to the leader by default
+            if ($clubMember) {
+                $allPermissionIds = Permission::pluck('id');
+                $permissionsToInsert = $allPermissionIds->map(function ($permissionId) use ($user, $club) {
+                    return [
+                        'user_id' => $user->id,
+                        'club_id' => $club->id,
+                        'permission_id' => $permissionId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                })->toArray();
+                DB::table('user_permissions_club')->insert($permissionsToInsert);
+            }
+        }
+
+        return redirect()->route('student.clubs.index')->with('success', 'Yêu cầu tạo CLB của bạn đã được gửi thành công và đang chờ xét duyệt!');
     }
 
     /**

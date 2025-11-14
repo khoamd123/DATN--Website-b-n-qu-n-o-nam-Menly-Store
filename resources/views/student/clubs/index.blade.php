@@ -15,6 +15,9 @@
                     </h2>
                     <p class="text-muted mb-0">Khám phá, tìm kiếm và tham gia các câu lạc bộ thú vị.</p>
                 </div>
+                <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i> Tạo CLB mới
+                </a>
             </div>
         </div>
 
