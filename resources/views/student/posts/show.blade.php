@@ -2,16 +2,182 @@
 
 @section('title', $post->title)
 
+@push('styles')
+<style>
+    /* Post Content Styling */
+    .content-card article,
+    .content-card .post-content {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Responsive Images in Post Content */
+    .content-card img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5rem auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Ensure images don't overflow */
+    .content-card p img,
+    .content-card div img {
+        max-width: 100% !important;
+        height: auto !important;
+        width: auto !important;
+    }
+    
+    /* Post Content Typography */
+    .content-card .post-content {
+        font-size: 1rem;
+        line-height: 1.8;
+        color: #333;
+    }
+    
+    .content-card .post-content p {
+        margin-bottom: 1rem;
+    }
+    
+    .content-card .post-content h1,
+    .content-card .post-content h2,
+    .content-card .post-content h3,
+    .content-card .post-content h4,
+    .content-card .post-content h5,
+    .content-card .post-content h6 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #0d9488;
+    }
+    
+    .content-card .post-content ul,
+    .content-card .post-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+    
+    .content-card .post-content li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .content-card .post-content blockquote {
+        border-left: 4px solid #14b8a6;
+        padding-left: 1rem;
+        margin: 1.5rem 0;
+        font-style: italic;
+        color: #666;
+    }
+    
+    .content-card .post-content a {
+        color: #14b8a6;
+        text-decoration: none;
+    }
+    
+    .content-card .post-content a:hover {
+        text-decoration: underline;
+    }
+    
+    /* Post Title */
+    .content-card h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0d9488;
+        line-height: 1.3;
+        margin-bottom: 1rem;
+    }
+    
+    /* Metadata Styling */
+    .content-card .text-muted {
+        font-size: 0.9rem;
+    }
+    
+    /* Back Link */
+    .content-card a.text-decoration-none {
+        color: #14b8a6;
+        transition: color 0.2s ease;
+    }
+    
+    .content-card a.text-decoration-none:hover {
+        color: #0d9488;
+    }
+    
+    /* Comments Section */
+    .content-card .user-avatar {
+        flex-shrink: 0;
+    }
+    
+    /* Related Posts */
+    .content-card .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .content-card .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2) !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .content-card {
+            padding: 1.5rem;
+        }
+        
+        .content-card h2 {
+            font-size: 1.5rem;
+        }
+        
+        .content-card .post-content {
+            font-size: 0.95rem;
+        }
+        
+        .content-card img {
+            margin: 1rem auto;
+        }
+    }
+    
+    /* Fix for any inline styles that might break layout */
+    .content-card * {
+        max-width: 100%;
+    }
+    
+    /* Table responsive if any */
+    .content-card table {
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+    }
+    
+    .content-card table thead,
+    .content-card table tbody {
+        display: table;
+        width: 100%;
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="row">
         <div class="col-12">
             <article class="content-card">
                 <div class="mb-3">
-                    <a href="{{ route('student.posts') }}" class="text-decoration-none">
-                        <i class="fas fa-arrow-left me-2"></i>Quay lại
-                    </a>
+                    @if($post->type === 'announcement')
+                        <a href="{{ route('student.notifications.index') }}" class="text-decoration-none">
+                            <i class="fas fa-arrow-left me-2"></i>Quay lại
+                        </a>
+                    @else
+                        <a href="{{ route('student.posts') }}" class="text-decoration-none">
+                            <i class="fas fa-arrow-left me-2"></i>Quay lại
+                        </a>
+                    @endif
                 </div>
-                <h2 class="mb-2">{{ $post->title }}</h2>
+                <div class="mb-3">
+                    <h2 class="mb-2">{{ $post->title }}</h2>
+                    @if($post->type === 'announcement')
+                        <span class="badge bg-warning text-dark mb-2"><i class="fas fa-bullhorn me-1"></i>Thông báo</span>
+                    @endif
+                </div>
                 <div class="d-flex align-items-center text-muted mb-3">
                     <small>
                         <i class="far fa-user me-1"></i>{{ $post->user->name ?? 'Hệ thống' }}
@@ -41,7 +207,7 @@
                         $contentForDisplay = preg_replace($pattern, '', $contentForDisplay);
                         }
                     @endphp
-                <div class="mt-3" style="line-height: 1.7;">
+                <div class="mt-3 post-content">
                     {!! $contentForDisplay !!}
                 </div>
 

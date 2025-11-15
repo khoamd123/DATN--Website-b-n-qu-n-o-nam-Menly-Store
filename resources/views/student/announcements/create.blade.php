@@ -1,14 +1,14 @@
 @extends('layouts.student')
 
-@section('title', 'Tạo bài viết')
+@section('title', 'Tạo thông báo')
 
 @section('content')
 <div class="row">
     <div class="col-12">
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0"><i class="fas fa-plus me-2"></i>Tạo bài viết</h4>
-                <a href="{{ route('student.posts') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Quay lại</a>
+                <h4 class="mb-0"><i class="fas fa-bullhorn me-2 text-warning"></i>Tạo thông báo</h4>
+                <a href="{{ route('student.club-management.posts', ['club' => request('club_id', $user->clubs->first()->id ?? 1)]) }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Quay lại</a>
             </div>
 
             @if ($errors->any())
@@ -21,29 +21,30 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('student.posts.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('student.announcements.store') }}" enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="type" value="announcement">
                 <div class="row">
                     <div class="col-lg-8">
                         <div class="mb-3">
                             <label class="form-label">Tiêu đề <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="title" value="{{ old('title') }}" required>
+                            <input type="text" class="form-control" name="title" value="{{ old('title') }}" required placeholder="Nhập tiêu đề thông báo...">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nội dung <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="content" rows="10">{{ old('content') }}</textarea>
+                            <textarea class="form-control" name="content" rows="10" placeholder="Nhập nội dung thông báo...">{{ old('content') }}</textarea>
                         </div>
                     </div>
                     <div class="col-lg-4">
                         <div class="card mb-3">
-                            <div class="card-header"><strong>Cài đặt</strong></div>
+                            <div class="card-header bg-warning text-dark"><strong><i class="fas fa-cog me-1"></i>Cài đặt</strong></div>
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label">Câu lạc bộ <span class="text-danger">*</span></label>
                                     <select class="form-select" name="club_id" required>
                                         <option value="">Chọn CLB</option>
                                         @foreach($clubs as $club)
-                                            <option value="{{ $club->id }}" {{ old('club_id') == $club->id ? 'selected' : '' }}>{{ $club->name }}</option>
+                                            <option value="{{ $club->id }}" {{ (old('club_id', request('club_id')) == $club->id) ? 'selected' : '' }}>{{ $club->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -58,10 +59,11 @@
                                 <div class="mb-0">
                                     <label class="form-label">Ảnh đại diện</label>
                                     <input type="file" class="form-control" name="image" accept="image/*">
+                                    <small class="text-muted">Chọn ảnh đại diện cho thông báo (tùy chọn)</small>
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Đăng bài</button>
+                        <button type="submit" class="btn btn-warning w-100"><i class="fas fa-save me-1"></i> Đăng thông báo</button>
                     </div>
                 </div>
             </form>
@@ -70,8 +72,8 @@
 </div>
 @endsection
 
-
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('student.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
     // Custom Upload Adapter cho CKEditor 5
@@ -146,7 +148,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var contentTextarea = document.querySelector('textarea[name="content"]');
-        var form = document.querySelector('form[action="{{ route('student.posts.store') }}"]');
+        var form = document.querySelector('form[action="{{ route('student.announcements.store') }}"]');
         var editorInstance = null;
         if (contentTextarea) {
             ClassicEditor.create(contentTextarea, {
@@ -182,7 +184,7 @@
                     var textContent = editorInstance.getData().replace(/<[^>]*>/g, '').trim();
                     if (!textContent) {
                         e.preventDefault();
-                        alert('Vui lòng nhập nội dung bài viết.');
+                        alert('Vui lòng nhập nội dung thông báo.');
                     }
                 }
             });

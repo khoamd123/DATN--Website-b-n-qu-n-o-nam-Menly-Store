@@ -90,8 +90,8 @@
                 </form>
 
                 <div class="row">
-                    <!-- Cột trái: Bài viết (chiếm 8/12) -->
-                    <div class="col-lg-8">
+                    <!-- Cột bài viết (chiếm toàn bộ) -->
+                    <div class="col-12">
                         <h5 class="mb-3">
                             <i class="fas fa-newspaper text-teal me-2"></i>Bài viết
                         </h5>
@@ -347,103 +347,12 @@
                             </div>
                         @endif
                     </div>
-
-                    <!-- Cột phải: Thông báo (chiếm 4/12) -->
-                    <div class="col-lg-4">
-                        <div>
-                            <h5 class="mb-3">
-                                <i class="fas fa-bullhorn text-warning me-2"></i>Thông báo
-                            </h5>
-                            @if(isset($announcements) && $announcements->count() > 0)
-                                <div class="list-group">
-                                    @foreach($announcements as $announcement)
-                                        <a href="{{ route('student.posts.show', $announcement->id) }}" 
-                                           class="list-group-item list-group-item-action border-0 shadow-sm mb-2 rounded">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1 fw-bold" style="font-size: 14px;">
-                                                        {{ \Illuminate\Support\Str::limit($announcement->title, 50) }}
-                                                    </h6>
-                                                    <p class="mb-1 text-muted small" style="font-size: 12px; line-height: 1.4;">
-                                                        @php
-                                                            $content = strip_tags($announcement->content ?? '');
-                                                            $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
-                                                            $content = preg_replace('/\s+/u', ' ', $content);
-                                                            $content = trim($content);
-                                                            $len = function_exists('mb_strlen') ? mb_strlen($content) : strlen($content);
-                                                            if ($len > 80) {
-                                                                $content = function_exists('mb_substr') 
-                                                                    ? mb_substr($content, 0, 77) . '...'
-                                                                    : substr($content, 0, 77) . '...';
-                                                            }
-                                                        @endphp
-                                                        {{ $content }}
-                                                    </p>
-                                                    <small class="text-muted">
-                                                        <i class="far fa-clock me-1"></i>{{ $announcement->created_at->format('d/m/Y') }}
-                                                        @if($announcement->club)
-                                                            <span class="mx-1">•</span>
-                                                            <i class="fas fa-users me-1"></i>{{ $announcement->club->name }}
-                                                        @endif
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="text-center py-4">
-                                    <i class="fas fa-bullhorn fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted small mb-0">Chưa có thông báo nào.</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Announcement Modal -->
-    @if(isset($latestAnnouncement) && $latestAnnouncement && isset($shouldShowModal) && $shouldShowModal)
-            <div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content" style="border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 16px 24px;">
-                            <h5 class="modal-title fw-bold mb-0" id="announcementModalLabel" style="color: #333; font-size: 18px;">
-                                THÔNG BÁO
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body" style="padding: 24px; max-height: 70vh; overflow-y: auto;">
-                            <h6 class="mb-3 fw-bold" style="color: #0d6efd; font-size: 16px; text-transform: uppercase;">
-                                {{ $latestAnnouncement->title }}
-                            </h6>
-                            <div style="line-height: 1.8; color: #333; font-size: 14px;">
-                                @php
-                                    // Format content để hiển thị đẹp hơn
-                                    $content = $latestAnnouncement->content;
-                                    // Chuyển đổi các thẻ HTML thành text đẹp hơn
-                                    $content = strip_tags($content, '<p><br><strong><b><em><i><ul><ol><li><a>');
-                                    // Thêm spacing cho các thẻ
-                                    $content = str_replace(['</p>', '</div>'], ['</p><br>', '</div><br>'], $content);
-                                @endphp
-                                {!! $content !!}
-                            </div>
-                            @if($latestAnnouncement->club)
-                                <div class="mt-4 pt-3 border-top">
-                                    <small class="text-muted">
-                                        <i class="fas fa-users me-1"></i>{{ $latestAnnouncement->club->name }}
-                                        <span class="mx-2">•</span>
-                                        <i class="far fa-clock me-1"></i>{{ $latestAnnouncement->created_at->format('d/m/Y H:i') }}
-                                    </small>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-    @endif
+    {{-- Modal thông báo đã được ẩn --}}
 @endsection
 
 @push('styles')
@@ -499,32 +408,5 @@
 @endpush
 
 @push('scripts')
-@if(isset($latestAnnouncement) && $latestAnnouncement && isset($shouldShowModal) && $shouldShowModal)
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var announcementModal = new bootstrap.Modal(document.getElementById('announcementModal'));
-    announcementModal.show();
-});
-
-function markAnnouncementAsViewed(announcementId) {
-    // Gửi request để đánh dấu đã xem - chỉ cập nhật nếu thông báo mới hơn
-    // Điều này cho phép modal hiển thị lại mỗi lần vào trang
-    fetch('{{ route("student.posts.mark-announcement-viewed") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            announcement_id: announcementId
-        })
-    }).catch(function(error) {
-        console.error('Error marking announcement as viewed:', error);
-    });
-}
-
-// Không tự động đánh dấu khi đóng modal
-// Modal sẽ tiếp tục hiển thị mỗi lần vào trang cho đến khi có thông báo mới
-</script>
-@endif
+{{-- Script modal thông báo đã được ẩn --}}
 @endpush

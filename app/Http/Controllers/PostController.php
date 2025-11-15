@@ -184,9 +184,19 @@ class PostController extends Controller
 
         $path = $request->file('image')->store('public/posts/content');
         $url = Storage::url($path); // e.g. /storage/posts/content/xxx.jpg
+        $fullUrl = asset($url);
 
+        // Hỗ trợ cả CKEditor 4 và CKEditor 5
+        // CKEditor 4 sử dụng callback function
+        if ($request->has('CKEditorFuncNum')) {
+            $CKEditorFuncNum = $request->input('CKEditorFuncNum');
+            return response("<script type='text/javascript'>window.parent.CKEDITOR.tools.callFunction({$CKEditorFuncNum}, '{$fullUrl}', '');</script>")
+                ->header('Content-Type', 'text/html');
+        }
+
+        // CKEditor 5 sử dụng JSON response
         return response()->json([
-            'url' => asset($url),
+            'url' => $fullUrl,
         ]);
     }
 }

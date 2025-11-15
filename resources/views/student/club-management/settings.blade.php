@@ -329,6 +329,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var editor = CKEDITOR.replace('description', {
         height: 300,
         language: 'vi',
+        filebrowserImageBrowseUrl: '{{ route("student.posts.upload-image") }}',
+        filebrowserImageUploadUrl: '{{ route("student.posts.upload-image") }}?_token={{ csrf_token() }}',
         toolbar: [
             { name: 'document', items: ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates'] },
             { name: 'clipboard', items: ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'] },

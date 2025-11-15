@@ -48,15 +48,6 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Loại bài viết</label>
-                                    <select class="form-select" name="type">
-                                        <option value="post" {{ old('type', $post->type ?? 'post') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
-                                        <option value="announcement" {{ old('type', $post->type ?? 'post') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
-                                        <option value="document" {{ old('type', $post->type ?? 'post') == 'document' ? 'selected' : '' }}>Tài liệu</option>
-                                    </select>
-                                    <small class="form-text text-muted">Chọn loại bài viết phù hợp</small>
-                                </div>
-                                <div class="mb-3">
                                     <label class="form-label">Trạng thái</label>
                                     <select class="form-select" name="status" required>
                                         <option value="published" {{ old('status', $post->status)=='published'?'selected':'' }}>Công khai</option>
@@ -102,19 +93,100 @@
 @push('scripts')
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
+    // Custom Upload Adapter cho CKEditor 5
+    class MyUploadAdapter {
+        constructor(loader) {
+            this.loader = loader;
+        }
+
+        upload() {
+            return this.loader.file
+                .then(file => new Promise((resolve, reject) => {
+                    this._initRequest();
+                    this._initListeners(resolve, reject, file);
+                    this._sendRequest(file);
+                }));
+        }
+
+        abort() {
+            if (this.xhr) {
+                this.xhr.abort();
+            }
+        }
+
+        _initRequest() {
+            const xhr = this.xhr = new XMLHttpRequest();
+            xhr.open('POST', '{{ route("student.posts.upload-image") }}', true);
+            xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+            xhr.responseType = 'json';
+        }
+
+        _initListeners(resolve, reject, file) {
+            const xhr = this.xhr;
+            const loader = this.loader;
+            const genericErrorText = 'Không thể upload file: ' + file.name + '.';
+
+            xhr.addEventListener('error', () => reject(genericErrorText));
+            xhr.addEventListener('abort', () => reject());
+            xhr.addEventListener('load', () => {
+                const response = xhr.response;
+
+                if (!response || response.error) {
+                    return reject(response && response.error ? response.error.message : genericErrorText);
+                }
+
+                resolve({
+                    default: response.url
+                });
+            });
+
+            if (xhr.upload) {
+                xhr.upload.addEventListener('progress', evt => {
+                    if (evt.lengthComputable) {
+                        loader.uploadTotal = evt.total;
+                        loader.uploaded = evt.loaded;
+                    }
+                });
+            }
+        }
+
+        _sendRequest(file) {
+            const data = new FormData();
+            data.append('image', file);
+            this.xhr.send(data);
+        }
+    }
+
+    function SimpleUploadAdapterPlugin(editor) {
+        editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+            return new MyUploadAdapter(loader);
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var contentTextarea = document.querySelector('textarea[name="content"]');
         var form = document.querySelector('form[action="{{ route('student.posts.update', $post->id) }}"]');
         var editorInstance = null;
         if (contentTextarea) {
             ClassicEditor.create(contentTextarea, {
+                extraPlugins: [SimpleUploadAdapterPlugin],
                 toolbar: {
                     items: [
                         'heading', '|',
                         'bold', 'italic', 'link', '|',
                         'bulletedList', 'numberedList', '|',
                         'blockQuote', 'insertTable', '|',
+                        'uploadImage', '|',
                         'undo', 'redo'
+                    ]
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'toggleImageCaption',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side'
                     ]
                 }
             }).then(function (editor) {
@@ -135,5 +207,5 @@
             });
         }
     });
-    </script>
+</script>
 @endpush

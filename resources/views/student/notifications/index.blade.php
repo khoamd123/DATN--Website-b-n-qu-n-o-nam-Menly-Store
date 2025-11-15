@@ -25,119 +25,101 @@
 
         <!-- Notifications -->
         <div class="content-card">
-            <div class="notification-item unread">
-                <div class="notification-icon bg-primary">
-                    <i class="fas fa-info-circle"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Chào mừng bạn đến với UniClubs!</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->format('d/m/Y H:i') }}
-                        </small>
+            @if(isset($announcements) && $announcements->count() > 0)
+                @foreach($announcements as $announcement)
+                    <div class="notification-item {{ $announcement->created_at->isToday() ? 'unread' : '' }}">
+                        <div class="notification-icon bg-warning">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h6 class="mb-1">{{ $announcement->title }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i> {{ $announcement->created_at->format('d/m/Y H:i') }}
+                                </small>
+                            </div>
+                            <p class="notification-text mb-2">
+                                {{ \Illuminate\Support\Str::limit(strip_tags($announcement->content), 150) }}
+                            </p>
+                            <div class="notification-meta mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-users me-1"></i> {{ $announcement->club->name ?? 'UniClubs' }}
+                                    @if($announcement->user)
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-user me-1"></i> {{ $announcement->user->name }}
+                                    @endif
+                                </small>
+                            </div>
+                            <div class="notification-actions">
+                                <a href="{{ route('student.posts.show', $announcement->id) }}" class="btn btn-sm btn-warning">Xem chi tiết</a>
+                            </div>
+                        </div>
                     </div>
-                    <p class="notification-text mb-2">
-                        Cảm ơn bạn đã tham gia UniClubs. Hãy khám phá các câu lạc bộ thú vị và đăng ký tham gia các sự kiện.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-outline-primary">Xem chi tiết</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
+                @endforeach
 
-            <div class="notification-item">
-                <div class="notification-icon bg-success">
-                    <i class="fas fa-calendar-plus"></i>
+                <!-- Pagination -->
+                <div class="mt-4">
+                    {{ $announcements->links() }}
                 </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Sự kiện mới: Workshop "Lập trình Web hiện đại"</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subHours(2)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        CLB Công nghệ thông tin tổ chức workshop về lập trình web hiện đại. Đăng ký ngay để không bỏ lỡ cơ hội học hỏi.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-primary">Đăng ký tham gia</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
+            @else
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Bạn chưa có thông báo nào từ các CLB.</p>
                 </div>
-            </div>
+            @endif
 
-            <div class="notification-item">
-                <div class="notification-icon bg-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Nhắc nhở: Game Jam 2024 sắp hết hạn đăng ký</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subHours(5)->format('d/m/Y H:i') }}
-                        </small>
+            @if(isset($systemNotifications) && $systemNotifications->count() > 0)
+                @foreach($systemNotifications as $notification)
+                    <div class="notification-item">
+                        <div class="notification-icon bg-primary">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h6 class="mb-1">{{ $notification->title }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i> {{ $notification->created_at->format('d/m/Y H:i') }}
+                                </small>
+                            </div>
+                            <p class="notification-text mb-2">
+                                {{ $notification->message }}
+                            </p>
+                            <div class="notification-actions">
+                                <button class="btn btn-sm btn-outline-primary">Xem chi tiết</button>
+                            </div>
+                        </div>
                     </div>
-                    <p class="notification-text mb-2">
-                        Chỉ còn 2 ngày để đăng ký tham gia Game Jam 2024. Đừng bỏ lỡ cơ hội thể hiện tài năng lập trình game của bạn.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-warning">Đăng ký ngay</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-info">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Thông báo từ CLB Công nghệ thông tin</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subDays(1)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        CLB sẽ tổ chức buổi họp mặt định kỳ vào cuối tuần này. Tất cả thành viên vui lòng tham gia đầy đủ.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-info">Xem chi tiết</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-secondary">
-                    <i class="fas fa-trophy"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Cuộc thi Hackathon 2024 đã kết thúc</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subDays(3)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        Cuộc thi Hackathon 2024 đã kết thúc thành công. Kết quả sẽ được công bố trong tuần tới.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-secondary">Xem kết quả</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
+                @endforeach
+            @endif
         </div>
 
-        <!-- Load More -->
-        <div class="text-center">
-            <button class="btn btn-outline-primary">
-                <i class="fas fa-chevron-down me-2"></i> Xem thêm thông báo
-            </button>
+    </div>
+
+    {{-- Modal Thông báo --}}
+    @if(isset($latestAnnouncement) && $latestAnnouncement)
+    <div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 0; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                <div class="modal-header" style="border-bottom: 1px solid #e0e0e0; padding: 1.5rem 2rem; position: relative;">
+                    <div class="w-100 text-center">
+                        <h1 class="modal-title fw-bold m-0" id="announcementModalLabel" style="font-size: 1.3rem; color: #333; text-transform: uppercase; letter-spacing: 1px;">
+                            THÔNG BÁO
+                        </h1>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; font-size: 1rem; opacity: 0.7;"></button>
+                </div>
+                <div class="modal-body" style="padding: 2rem; max-height: calc(100vh - 60px); overflow-y: auto;">
+                    <h2 class="mb-3" style="font-size: 1.3rem; color: #333; font-weight: 600; line-height: 1.4;">
+                        {{ $latestAnnouncement->title }}
+                    </h2>
+                    <div class="announcement-content" style="line-height: 1.8; color: #333; font-size: 1rem;">
+                        {!! $latestAnnouncement->content !!}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    @endif
 
     <!-- Sidebar -->
     <div class="col-lg-4">
@@ -148,19 +130,19 @@
             <div class="list-group list-group-flush">
                 <a href="#" class="list-group-item list-group-item-action">
                     <i class="fas fa-info-circle me-2 text-primary"></i> Thông báo hệ thống
-                    <span class="badge bg-primary rounded-pill ms-auto">1</span>
+                    <span class="badge bg-primary rounded-pill ms-auto">{{ $stats['system'] ?? 0 }}</span>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-calendar me-2 text-success"></i> Sự kiện
-                    <span class="badge bg-success rounded-pill ms-auto">2</span>
+                    <i class="fas fa-bullhorn me-2 text-warning"></i> Thông báo CLB
+                    <span class="badge bg-warning rounded-pill ms-auto">{{ $stats['announcements'] ?? 0 }}</span>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
                     <i class="fas fa-users me-2 text-info"></i> Câu lạc bộ
-                    <span class="badge bg-info rounded-pill ms-auto">1</span>
+                    <span class="badge bg-info rounded-pill ms-auto">{{ $stats['clubs'] ?? 0 }}</span>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-trophy me-2 text-warning"></i> Giải thưởng
-                    <span class="badge bg-warning rounded-pill ms-auto">1</span>
+                    <i class="fas fa-trophy me-2 text-secondary"></i> Giải thưởng
+                    <span class="badge bg-secondary rounded-pill ms-auto">{{ $stats['awards'] ?? 0 }}</span>
                 </a>
             </div>
         </div>
@@ -261,6 +243,93 @@
     .text-teal {
         color: #14b8a6 !important;
     }
+    
+    /* Modal Announcement Styles */
+    #announcementModal .modal-content {
+        animation: modalFadeIn 0.3s ease-out;
+    }
+    
+    #announcementModal .modal-header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-wrap: nowrap !important;
+        visibility: visible !important;
+    }
+    
+    #announcementModal .modal-title {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 2rem !important;
+        color: #333 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 1 1 auto !important;
+        margin-right: 1rem !important;
+    }
+    
+    #announcementModal .modal-title::before,
+    #announcementModal .modal-title::after {
+        display: none !important;
+    }
+    
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    #announcementModal .modal-dialog {
+        max-width: 85%;
+    }
+    
+    #announcementModal .modal-body {
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+    }
+    
+    #announcementModal .announcement-content {
+        max-height: none;
+        overflow-y: visible;
+    }
+    
+    #announcementModal .announcement-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+    
+    #announcementModal .announcement-content p {
+        margin-bottom: 1rem;
+    }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+    @if(isset($latestAnnouncement) && $latestAnnouncement)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hiển thị modal mỗi khi trang load
+        var modalElement = document.getElementById('announcementModal');
+        if (modalElement) {
+            // Thêm delay nhỏ để đảm bảo Bootstrap đã load
+            setTimeout(function() {
+                var modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+            }, 100);
+        }
+    });
+    @endif
+</script>
 @endpush
 @endsection
