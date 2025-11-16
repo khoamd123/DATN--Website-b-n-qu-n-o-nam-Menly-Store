@@ -168,18 +168,34 @@
 @endsection
 
 @section('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('admin.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("admin.posts.upload-image") }}', '{{ csrf_token() }}');
+    
     ClassicEditor
         .create(document.querySelector('#content'), {
-            toolbar: [
-                'heading', '|',
-                'bold', 'italic', '|',
-                'bulletedList', 'numberedList', '|',
-                'blockQuote', '|',
-                'link', '|',
-                'undo', 'redo'
-            ],
+            extraPlugins: [SimpleUploadAdapterPlugin],
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'blockQuote', '|',
+                    'link', 'uploadImage', '|',
+                    'undo', 'redo'
+                ]
+            },
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    'toggleImageCaption',
+                    'imageStyle:inline',
+                    'imageStyle:block',
+                    'imageStyle:side'
+                ]
+            },
             language: 'vi'
         })
         .then(editor => {

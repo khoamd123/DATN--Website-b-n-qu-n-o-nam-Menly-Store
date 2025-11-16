@@ -106,8 +106,6 @@ Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
 Route::get('/student/clubs/ajax-search', [\App\Http\Controllers\StudentController::class, 'ajaxSearchClubs'])->name('student.clubs.ajax_search');
-Route::get('/student/clubs/create', [\App\Http\Controllers\StudentController::class, 'createClub'])->name('student.clubs.create');
-Route::post('/student/clubs', [\App\Http\Controllers\StudentController::class, 'storeClub'])->name('student.clubs.store');
 Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
 Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
@@ -149,6 +147,13 @@ Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::c
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
 Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
 Route::post('/student/posts/mark-announcement-viewed', [\App\Http\Controllers\StudentController::class, 'markAnnouncementViewed'])->name('student.posts.mark-announcement-viewed');
+Route::post('/student/posts/upload-image', [\App\Http\Controllers\StudentController::class, 'uploadEditorImage'])->name('student.posts.upload-image');
+
+// Student Announcements Routes
+Route::get('/student/announcements/create', [\App\Http\Controllers\StudentController::class, 'createAnnouncement'])->name('student.announcements.create');
+Route::post('/student/announcements', [\App\Http\Controllers\StudentController::class, 'storeAnnouncement'])->name('student.announcements.store');
+Route::get('/student/announcements/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editAnnouncement'])->whereNumber('id')->name('student.announcements.edit');
+Route::put('/student/announcements/{id}', [\App\Http\Controllers\StudentController::class, 'updateAnnouncement'])->whereNumber('id')->name('student.announcements.update');
 
 // Club Management Routes
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
@@ -230,6 +235,38 @@ Route::get(
     '/student/club-management/fund-requests/{id}',
     [\App\Http\Controllers\StudentController::class, 'fundRequestShow']
 )->name('student.club-management.fund-requests.show');
+
+// Posts management (club management)
+Route::get(
+    '/student/club-management/{club}/posts',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementPosts']
+)->name('student.club-management.posts');
+
+// Resources management (club management)
+Route::get(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResources']
+)->name('student.club-management.resources');
+Route::get(
+    '/student/club-management/{club}/resources/create',
+    [\App\Http\Controllers\StudentController::class, 'createResource']
+)->name('student.club-management.resources.create');
+Route::post(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'storeResource']
+)->name('student.club-management.resources.store');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}/edit',
+    [\App\Http\Controllers\StudentController::class, 'editResource']
+)->name('student.club-management.resources.edit');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'showResource']
+)->name('student.club-management.resources.show');
+Route::put(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'updateResource']
+)->name('student.club-management.resources.update');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 

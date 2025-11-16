@@ -315,6 +315,7 @@
 </div>
 
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('admin.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script>
 // Sử dụng CKEditor từ CDN đã được load trong layout
 document.addEventListener('DOMContentLoaded', function() {
@@ -339,15 +340,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Creating CKEditor instance...');
     
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("admin.posts.upload-image") }}', '{{ csrf_token() }}');
+    
     ClassicEditor
         .create(textarea, {
+            extraPlugins: [SimpleUploadAdapterPlugin],
             toolbar: {
                 items: [
                     'heading', '|',
                     'bold', 'italic', 'underline', '|',
                     'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
+                    'link', 'blockQuote', 'uploadImage', '|',
                     'undo', 'redo'
+                ]
+            },
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    'toggleImageCaption',
+                    'imageStyle:inline',
+                    'imageStyle:block',
+                    'imageStyle:side'
                 ]
             }
         })

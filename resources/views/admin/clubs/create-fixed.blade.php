@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', function() {
     CKEDITOR.replace('description', {
         height: 300,
         language: 'vi',
-        filebrowserBrowseUrl: '/filemanager?type=Images',
-        filebrowserUploadUrl: '/filemanager/upload?type=Images&_token=',
+        filebrowserImageBrowseUrl: '{{ route("admin.posts.upload-image") }}',
+        filebrowserImageUploadUrl: '{{ route("admin.posts.upload-image") }}?_token={{ csrf_token() }}',
         toolbar: [
             { name: 'document', items: ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates'] },
             { name: 'clipboard', items: ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'] },

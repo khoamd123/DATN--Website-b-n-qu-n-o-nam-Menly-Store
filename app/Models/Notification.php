@@ -13,4 +13,12 @@ class Notification extends Model
         'title',
         'message',
     ];
+
+    /**
+     * Get the notification targets
+     */
+    public function targets()
+    {
+        return $this->hasMany(NotificationTarget::class);
+    }
 }
