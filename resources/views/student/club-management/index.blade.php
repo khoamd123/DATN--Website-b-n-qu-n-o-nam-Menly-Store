@@ -158,7 +158,7 @@
                                 <small>Bài viết</small>
                             </span>
                             <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'announcements', 0) }}</strong>
+                                <strong>{{ data_get($clubStats, 'announcements.total', 0) }}</strong>
                                 <small>Thông báo</small>
                             </span>
                         </div>

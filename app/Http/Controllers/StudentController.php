@@ -951,6 +951,12 @@ class StudentController extends Controller
                 ->where('type', 'announcement')
                 ->whereDate('created_at', now()->toDateString())
                 ->count();
+            
+            // Posts stats
+            $totalPosts = Post::where('club_id', $clubId)
+                ->where('type', 'post')
+                ->where('status', '!=', 'deleted')
+                ->count();
 
             // Fund requests stats
             $totalFundRequests = FundRequest::where('club_id', $clubId)->count();
@@ -985,6 +991,7 @@ class StudentController extends Controller
                 'members' => ['active' => $activeMembers, 'pending' => $pendingMembers],
                 'events' => ['total' => $totalEvents, 'upcoming' => $upcomingEvents],
                 'announcements' => ['total' => $totalAnnouncements, 'today' => $todayAnnouncements],
+                'posts' => $totalPosts,
                 'fundRequests' => ['total' => $totalFundRequests, 'pending' => $pendingFundRequests],
                 'fund' => [
                     'balance' => $balance,
