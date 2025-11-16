@@ -13,9 +13,15 @@
                 </h2>
                 <p class="text-muted mb-0">Phân tích hoạt động của CLB: <strong>{{ $club->name }}</strong></p>
             </div>
-            <a href="{{ route('student.club-management.index') }}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i> Quay lại
-            </a>
+            @if($isLeaderOrOfficer)
+                <a href="{{ route('student.club-management.index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i> Quay lại
+                </a>
+            @else
+                <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i> Quay lại
+                </a>
+            @endif
         </div>
     </div>
 

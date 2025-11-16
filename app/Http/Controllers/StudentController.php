@@ -1668,7 +1668,7 @@ class StudentController extends Controller
         } else {
             // Determine user's club (first club)
             if ($user->clubs->isEmpty()) {
-                return redirect()->route('student.club-management.index')
+                return redirect()->route('student.clubs.index')
                     ->with('error', 'Bạn chưa tham gia CLB nào.');
             }
             $club = $user->clubs->first();
