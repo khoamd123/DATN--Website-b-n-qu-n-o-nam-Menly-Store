@@ -72,83 +72,18 @@
 
 
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('student.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
-    // Custom Upload Adapter cho CKEditor 5
-    class MyUploadAdapter {
-        constructor(loader) {
-            this.loader = loader;
-        }
-
-        upload() {
-            return this.loader.file
-                .then(file => new Promise((resolve, reject) => {
-                    this._initRequest();
-                    this._initListeners(resolve, reject, file);
-                    this._sendRequest(file);
-                }));
-        }
-
-        abort() {
-            if (this.xhr) {
-                this.xhr.abort();
-            }
-        }
-
-        _initRequest() {
-            const xhr = this.xhr = new XMLHttpRequest();
-            xhr.open('POST', '{{ route("student.posts.upload-image") }}', true);
-            xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
-            xhr.responseType = 'json';
-        }
-
-        _initListeners(resolve, reject, file) {
-            const xhr = this.xhr;
-            const loader = this.loader;
-            const genericErrorText = 'Không thể upload file: ' + file.name + '.';
-
-            xhr.addEventListener('error', () => reject(genericErrorText));
-            xhr.addEventListener('abort', () => reject());
-            xhr.addEventListener('load', () => {
-                const response = xhr.response;
-
-                if (!response || response.error) {
-                    return reject(response && response.error ? response.error.message : genericErrorText);
-                }
-
-                resolve({
-                    default: response.url
-                });
-            });
-
-            if (xhr.upload) {
-                xhr.upload.addEventListener('progress', evt => {
-                    if (evt.lengthComputable) {
-                        loader.uploadTotal = evt.total;
-                        loader.uploaded = evt.loaded;
-                    }
-                });
-            }
-        }
-
-        _sendRequest(file) {
-            const data = new FormData();
-            data.append('image', file);
-            this.xhr.send(data);
-        }
-    }
-
-    function SimpleUploadAdapterPlugin(editor) {
-        editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
-            return new MyUploadAdapter(loader);
-        };
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
         var contentTextarea = document.querySelector('textarea[name="content"]');
         var form = document.querySelector('form[action="{{ route('student.posts.store') }}"]');
         var editorInstance = null;
+        
         if (contentTextarea) {
+            // Tạo upload adapter plugin
+            const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("student.posts.upload-image") }}', '{{ csrf_token() }}');
+            
             ClassicEditor.create(contentTextarea, {
                 extraPlugins: [SimpleUploadAdapterPlugin],
                 toolbar: {
@@ -169,13 +104,56 @@
                         'imageStyle:block',
                         'imageStyle:side'
                     ]
-                }
+                },
+                language: 'vi'
             }).then(function (editor) {
                 editorInstance = editor;
+                console.log('CKEditor initialized successfully');
+                
+                // Xử lý paste image từ clipboard
+                // CKEditor 5 tự động hỗ trợ paste image nếu có upload adapter
+                // Thêm event listener để xử lý paste image
+                editor.plugins.get('ClipboardPipeline').on('contentInsertion', (evt, data) => {
+                    // CKEditor sẽ tự động xử lý nếu có upload adapter
+                }, { priority: 'low' });
+                
+                // Xử lý paste trực tiếp từ clipboard (Ctrl+V với ảnh)
+                const viewDocument = editor.editing.view.document;
+                viewDocument.on('paste', (evt, data) => {
+                    const dataTransfer = data.dataTransfer;
+                    const files = Array.from(dataTransfer.files || []);
+                    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                    
+                    if (imageFiles.length > 0) {
+                        evt.stop();
+                        
+                        // Upload và chèn từng ảnh
+                        imageFiles.forEach(file => {
+                            const fileRepository = editor.plugins.get('FileRepository');
+                            const loader = fileRepository.createLoader(file);
+                            
+                            loader.upload().then(result => {
+                                editor.model.change(writer => {
+                                    const imageElement = writer.createElement('imageBlock', {
+                                        src: result.default || result.url
+                                    });
+                                    
+                                    const insertPosition = editor.model.document.selection.getFirstPosition();
+                                    editor.model.insertContent(imageElement, insertPosition);
+                                    writer.setSelection(imageElement, 'after');
+                                });
+                            }).catch(error => {
+                                console.error('Error uploading pasted image:', error);
+                                alert('Không thể tải ảnh từ clipboard. Vui lòng thử lại hoặc sử dụng nút "Upload Image".');
+                            });
+                        });
+                    }
+                }, { priority: 'high' });
             }).catch(function (error) {
-                console.error(error);
+                console.error('CKEditor initialization error:', error);
             });
         }
+        
         if (form) {
             form.addEventListener('submit', function (e) {
                 if (editorInstance) {
