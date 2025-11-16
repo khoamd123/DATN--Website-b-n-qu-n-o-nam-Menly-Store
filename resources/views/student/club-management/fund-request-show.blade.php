@@ -120,8 +120,98 @@
                     </div>
                 </div>
                 @endif
+                @if($fundRequest->settlement_status === 'settled' && $fundRequest->settler)
+                <div class="col-md-6 mb-3">
+                    <label class="text-muted small">Người quyết toán</label>
+                    <p class="mb-0">{{ $fundRequest->settler->name ?? 'N/A' }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="text-muted small">Ngày quyết toán</label>
+                    <p class="mb-0">{{ $fundRequest->settlement_date ? $fundRequest->settlement_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                </div>
+                @endif
             </div>
         </div>
+
+        @if($fundRequest->settlement_status === 'settled')
+        <div class="content-card mb-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="settlement-icon-wrapper me-3">
+                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Thông tin quyết toán</h5>
+                    <small class="text-muted">Yêu cầu đã được quyết toán</small>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="settlement-card bg-light border rounded p-3 text-center">
+                        <div class="text-muted small mb-2">Số tiền được duyệt</div>
+                        <div class="text-primary fw-bold fs-4">{{ number_format($fundRequest->approved_amount ?? 0, 0, ',', '.') }} VNĐ</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="settlement-card bg-light border rounded p-3 text-center">
+                        <div class="text-muted small mb-2">Số tiền thực tế</div>
+                        <div class="text-info fw-bold fs-4">{{ number_format($fundRequest->actual_amount ?? 0, 0, ',', '.') }} VNĐ</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="settlement-card bg-light border rounded p-3 text-center">
+                        <div class="text-muted small mb-2">Chênh lệch</div>
+                        @php
+                            $difference = ($fundRequest->approved_amount ?? 0) - ($fundRequest->actual_amount ?? 0);
+                        @endphp
+                        @if($difference > 0)
+                            <div class="text-success fw-bold fs-4">-{{ number_format($difference, 0, ',', '.') }} VNĐ</div>
+                            <small class="text-success">Tiền thừa</small>
+                        @elseif($difference < 0)
+                            <div class="text-danger fw-bold fs-4">+{{ number_format(abs($difference), 0, ',', '.') }} VNĐ</div>
+                            <small class="text-danger">Vượt quá</small>
+                        @else
+                            <div class="text-success fw-bold fs-4">0 VNĐ</div>
+                            <small class="text-success">Khớp</small>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @if($fundRequest->settlement_notes)
+            <div class="mt-3">
+                <label class="text-muted small"><i class="fas fa-file-alt me-1"></i>Ghi chú quyết toán</label>
+                <div class="border rounded p-3 bg-light">
+                    {!! nl2br(e($fundRequest->settlement_notes)) !!}
+                </div>
+            </div>
+            @endif
+            @if($fundRequest->settlement_documents && count($fundRequest->settlement_documents) > 0)
+            <div class="mt-3">
+                <label class="text-muted small"><i class="fas fa-file-invoice me-1"></i>Hóa đơn/Chứng từ quyết toán</label>
+                <div class="row g-2 mt-2">
+                    @foreach($fundRequest->settlement_documents as $index => $document)
+                        @php
+                            $docPath = is_array($document) ? ($document['path'] ?? $document[0] ?? reset($document)) : $document;
+                            $docName = is_array($document) ? ($document['name'] ?? 'Hóa đơn ' . ($index + 1)) : basename($document);
+                        @endphp
+                        <div class="col-md-3">
+                            <a href="{{ asset('storage/' . $docPath) }}" target="_blank" 
+                               class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-file-pdf me-1"></i> Hóa đơn {{ $index + 1 }}
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        </div>
+        @elseif($fundRequest->settlement_status === 'settlement_pending')
+        <div class="content-card mb-3">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-clock me-2"></i>
+                <strong>Đang chờ quyết toán:</strong> Yêu cầu này đã được duyệt và đang chờ quản trị viên quyết toán.
+            </div>
+        </div>
+        @endif
 
         @if($fundRequest->expense_items && count($fundRequest->expense_items) > 0)
         <div class="content-card mb-3">
