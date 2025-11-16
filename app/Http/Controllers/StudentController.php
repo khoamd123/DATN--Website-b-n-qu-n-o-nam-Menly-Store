@@ -1946,6 +1946,34 @@ class StudentController extends Controller
             'resources'
         ));
     }
+
+    /**
+     * Show form to create new resource
+     */
+    public function createResource($clubId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = Club::findOrFail($clubId);
+        
+        // Kiểm tra quyền
+        $userPosition = $user->getPositionInClub($clubId);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        
+        if (!$isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.show', $clubId)
+                ->with('error', 'Bạn không có quyền tạo tài nguyên cho CLB này.');
+        }
+
+        return view('student.club-management.resources.create', compact(
+            'user',
+            'club',
+            'clubId'
+        ));
+    }
     
     /**
      * Fund transactions list for student (read-only)
