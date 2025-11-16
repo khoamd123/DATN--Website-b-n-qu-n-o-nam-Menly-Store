@@ -1974,6 +1974,264 @@ class StudentController extends Controller
             'clubId'
         ));
     }
+
+    /**
+     * Store newly created resource
+     */
+    public function storeResource($clubId, Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = Club::findOrFail($clubId);
+        
+        // Kiểm tra quyền
+        $userPosition = $user->getPositionInClub($clubId);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        
+        if (!$isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.show', $clubId)
+                ->with('error', 'Bạn không có quyền tạo tài nguyên cho CLB này.');
+        }
+
+        try {
+            $request->validate([
+                'title' => 'required|string|min:5|max:255',
+                'description' => 'nullable|string|max:1000',
+                'status' => 'required|in:active,inactive,archived',
+                'files' => 'nullable|array|max:10',
+                'files.*' => 'file|mimes:doc,docx,xls,xlsx,xlsm,pdf,ppt,pptx|max:20480', // 20MB per file
+                'images' => 'nullable|array|max:10',
+                'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp,mp4,avi,mov|max:102400', // 100MB per file
+                'external_link' => 'nullable|url|max:500',
+                'tags' => 'nullable|string'
+            ], [
+                'title.required' => 'Tiêu đề là bắt buộc.',
+                'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
+                'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
+                'files.max' => 'Tối đa 10 file.',
+                'files.*.mimes' => 'File phải có định dạng: DOC, DOCX, XLS, XLSX, XLSM, PDF, PPT, PPTX.',
+                'files.*.max' => 'Mỗi file không được vượt quá 20MB.',
+                'images.max' => 'Tối đa 10 file.',
+                'images.*.mimes' => 'File phải có định dạng: JPEG, PNG, JPG, GIF, WEBP, MP4, AVI, MOV.',
+                'images.*.max' => 'Mỗi file không được vượt quá 100MB.',
+                'external_link.url' => 'Link không hợp lệ.'
+            ]);
+
+            $title = $request->input('title');
+            $tags = $request->tags ? explode(',', $request->tags) : null;
+            
+            // Tạo slug unique
+            $baseSlug = Str::slug($title);
+            $slug = $baseSlug . '-' . time();
+            $counter = 1;
+            while (ClubResource::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . time() . '-' . $counter;
+                $counter++;
+            }
+            
+            $resource = ClubResource::create([
+                'title' => $title,
+                'slug' => $slug,
+                'description' => $request->description,
+                'resource_type' => 'other',
+                'club_id' => $clubId, // Tự động lấy từ route
+                'user_id' => $user->id,
+                'status' => $request->status,
+                'external_link' => $request->external_link,
+                'tags' => $tags
+            ]);
+
+            // Handle file album upload
+            if ($request->hasFile('files')) {
+                $this->handleResourceFileUpload($resource, $request->file('files'));
+            }
+
+            // Handle image album upload
+            if ($request->hasFile('images')) {
+                $this->handleResourceImageUpload($resource, $request->file('images'));
+            }
+
+            return redirect()->route('student.club-management.resources', ['club' => $clubId])
+                ->with('success', 'Tài nguyên đã được tạo thành công!');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            \Log::error('StoreResource Error: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi tạo tài nguyên: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Handle file upload for resources
+     */
+    private function handleResourceFileUpload($resource, $files)
+    {
+        foreach ($files as $index => $file) {
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('club-resources/files', $filename, 'public');
+            
+            \App\Models\ClubResourceFile::create([
+                'club_resource_id' => $resource->id,
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+                'file_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'sort_order' => $index,
+                'is_primary' => $index === 0
+            ]);
+        }
+    }
+
+    /**
+     * Handle image upload for resources
+     */
+    private function handleResourceImageUpload($resource, $images)
+    {
+        foreach ($images as $index => $image) {
+            if (!$image || !$image->isValid()) {
+                continue;
+            }
+
+            $filename = time() . '_' . $index . '_' . $image->getClientOriginalName();
+            $path = $image->storeAs('club-resources/images', $filename, 'public');
+            
+            // Tạo thumbnail nếu là ảnh
+            $thumbnailPath = null;
+            if (str_starts_with($image->getMimeType(), 'image/')) {
+                try {
+                    $thumbnailPath = $this->createImageThumbnail($path, $filename);
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to create thumbnail: ' . $e->getMessage());
+                }
+            }
+            
+            \App\Models\ClubResourceImage::create([
+                'club_resource_id' => $resource->id,
+                'image_path' => $path,
+                'thumbnail_path' => $thumbnailPath,
+                'image_name' => $image->getClientOriginalName(),
+                'image_type' => $image->getMimeType(),
+                'image_size' => $image->getSize(),
+                'sort_order' => $index,
+                'is_primary' => $index === 0
+            ]);
+        }
+    }
+
+    /**
+     * Create thumbnail for image
+     */
+    private function createImageThumbnail($originalPath, $filename)
+    {
+        $fullPath = storage_path('app/public/' . $originalPath);
+        
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        // Kiểm tra GD extension
+        if (!extension_loaded('gd')) {
+            \Log::warning('GD extension not loaded, skipping thumbnail creation');
+            return null;
+        }
+
+        $imageInfo = @getimagesize($fullPath);
+        if (!$imageInfo) {
+            return null;
+        }
+
+        $mimeType = $imageInfo['mime'];
+        $width = $imageInfo[0];
+        $height = $imageInfo[1];
+
+        // Tạo thumbnail path
+        $thumbnailPath = 'club-resources/thumbnails/' . 'thumb_' . $filename;
+        $thumbnailFullPath = storage_path('app/public/' . $thumbnailPath);
+        
+        // Tạo thư mục nếu chưa có
+        $thumbnailDir = dirname($thumbnailFullPath);
+        if (!is_dir($thumbnailDir)) {
+            @mkdir($thumbnailDir, 0755, true);
+        }
+
+        // Tính toán kích thước thumbnail (max 300x300)
+        $maxSize = 300;
+        $ratio = min($maxSize / $width, $maxSize / $height);
+        $newWidth = (int)($width * $ratio);
+        $newHeight = (int)($height * $ratio);
+
+        // Tạo image resource từ file gốc
+        $sourceImage = null;
+        switch ($mimeType) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                $sourceImage = @imagecreatefromjpeg($fullPath);
+                break;
+            case 'image/png':
+                $sourceImage = @imagecreatefrompng($fullPath);
+                break;
+            case 'image/gif':
+                $sourceImage = @imagecreatefromgif($fullPath);
+                break;
+            case 'image/webp':
+                if (function_exists('imagecreatefromwebp')) {
+                    $sourceImage = @imagecreatefromwebp($fullPath);
+                }
+                break;
+            default:
+                return null;
+        }
+
+        if (!$sourceImage) {
+            return null;
+        }
+
+        // Tạo thumbnail
+        $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Preserve transparency cho PNG và GIF
+        if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+            imagealphablending($thumbnail, false);
+            imagesavealpha($thumbnail, true);
+            $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
+            imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        imagecopyresampled($thumbnail, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        // Lưu thumbnail
+        $saved = false;
+        switch ($mimeType) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                $saved = @imagejpeg($thumbnail, $thumbnailFullPath, 85);
+                break;
+            case 'image/png':
+                $saved = @imagepng($thumbnail, $thumbnailFullPath, 9);
+                break;
+            case 'image/gif':
+                $saved = @imagegif($thumbnail, $thumbnailFullPath);
+                break;
+            case 'image/webp':
+                if (function_exists('imagewebp')) {
+                    $saved = @imagewebp($thumbnail, $thumbnailFullPath, 85);
+                }
+                break;
+        }
+
+        imagedestroy($sourceImage);
+        imagedestroy($thumbnail);
+
+        return $saved ? $thumbnailPath : null;
+    }
     
     /**
      * Fund transactions list for student (read-only)
