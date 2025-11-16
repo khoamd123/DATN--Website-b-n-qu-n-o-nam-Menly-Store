@@ -16,6 +16,7 @@ use App\Models\ClubJoinRequest as JoinReq;
 use App\Models\Fund;
 use App\Models\FundTransaction;
 use App\Models\FundRequest;
+use App\Models\ClubResource;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -1896,6 +1897,53 @@ class StudentController extends Controller
             'posts',
             'announcements',
             'canPostAnnouncement'
+        ));
+    }
+
+    /**
+     * Display resources management page for club
+     */
+    public function clubManagementResources($clubId, Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = Club::findOrFail($clubId);
+        
+        // Kiểm tra quyền
+        $userPosition = $user->getPositionInClub($clubId);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        
+        if (!$isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.show', $clubId)
+                ->with('error', 'Bạn không có quyền quản lý tài nguyên của CLB này.');
+        }
+
+        // Query resources
+        $resourcesQuery = ClubResource::with(['user', 'images', 'files'])
+            ->where('club_id', $clubId)
+            ->where('status', '!=', 'deleted');
+
+        if ($request->filled('search')) {
+            $resourcesQuery->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $resourcesQuery->where('status', $request->status);
+        }
+
+        $resources = $resourcesQuery->orderBy('created_at', 'desc')->paginate(10);
+
+        return view('student.club-management.resources', compact(
+            'user',
+            'club',
+            'clubId',
+            'resources'
         ));
     }
     
