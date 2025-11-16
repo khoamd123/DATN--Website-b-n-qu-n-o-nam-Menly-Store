@@ -241,7 +241,10 @@
                                 </div>
                                 <div class="document-info">
                                     <div class="document-name" title="{{ $docName }}">
-                                        {{ Str::limit($docName, 25) }}
+                                        @php
+                                            $displayName = mb_strlen($docName) > 25 ? mb_substr($docName, 0, 25) . '...' : $docName;
+                                        @endphp
+                                        {{ $displayName }}
                                     </div>
                                     @if($fileSize)
                                         <div class="document-size text-muted">
