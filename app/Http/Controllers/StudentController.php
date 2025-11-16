@@ -2020,11 +2020,26 @@ class StudentController extends Controller
 
         $request->validate([
             'type' => 'required|in:income,expense',
-            'amount' => 'required|numeric|min:1',
-            'category' => 'nullable|string|max:100',
-            'description' => 'nullable|string|max:1000',
-            'transaction_date' => 'nullable|date',
-            'attachment' => 'nullable|file|max:5120',
+            'amount' => 'required|numeric|min:1|max:999999999999',
+            'category' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'transaction_date' => 'required|date|before_or_equal:today',
+            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf|max:5120',
+        ], [
+            'type.required' => 'Vui lòng chọn loại giao dịch.',
+            'type.in' => 'Loại giao dịch không hợp lệ.',
+            'amount.required' => 'Vui lòng nhập số tiền.',
+            'amount.numeric' => 'Số tiền phải là số.',
+            'amount.min' => 'Số tiền phải lớn hơn 0.',
+            'amount.max' => 'Số tiền quá lớn (tối đa 999,999,999,999 VNĐ).',
+            'category.max' => 'Danh mục không được vượt quá 255 ký tự.',
+            'description.max' => 'Mô tả không được vượt quá 5000 ký tự.',
+            'transaction_date.required' => 'Vui lòng chọn ngày giao dịch.',
+            'transaction_date.date' => 'Ngày giao dịch không hợp lệ.',
+            'transaction_date.before_or_equal' => 'Ngày giao dịch không được lớn hơn ngày hiện tại.',
+            'attachment.file' => 'File đính kèm không hợp lệ.',
+            'attachment.mimes' => 'File đính kèm chỉ chấp nhận định dạng: JPG, JPEG, PNG, GIF, WEBP, PDF.',
+            'attachment.max' => 'Kích thước file đính kèm không được vượt quá 5MB.',
         ]);
 
         // Leader auto-approved, Officer pending
