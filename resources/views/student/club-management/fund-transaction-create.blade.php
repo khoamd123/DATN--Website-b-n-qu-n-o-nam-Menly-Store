@@ -49,7 +49,7 @@
         </div>
         <div class="col-md-3">
             <label class="form-label">Ngày giao dịch <span class="text-danger">*</span></label>
-            <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) ) }}" max="{{ date('Y-m-d') }}" required>
+            <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}" required>
             @error('transaction_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-12">
