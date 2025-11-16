@@ -106,6 +106,8 @@ Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
 Route::get('/student/clubs/ajax-search', [\App\Http\Controllers\StudentController::class, 'ajaxSearchClubs'])->name('student.clubs.ajax_search');
+Route::get('/student/clubs/create', [\App\Http\Controllers\StudentController::class, 'createClub'])->name('student.clubs.create');
+Route::post('/student/clubs', [\App\Http\Controllers\StudentController::class, 'storeClub'])->name('student.clubs.store');
 Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
 Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
