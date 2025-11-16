@@ -1829,6 +1829,74 @@ class StudentController extends Controller
 
         return view('student.club-management.reports', compact('user', 'club', 'stats', 'canViewReports', 'isLeaderOrOfficer', 'publicExpenses'));
     }
+
+    /**
+     * Club posts and announcements management
+     */
+    public function clubManagementPosts($clubId, Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = Club::findOrFail($clubId);
+        
+        // Kiểm tra quyền
+        $canPostAnnouncement = $user->hasPermission('dang_thong_bao', $clubId);
+        $userPosition = $user->getPositionInClub($clubId);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        
+        if (!$canPostAnnouncement && !$isLeaderOrOfficer) {
+            return redirect()->route('student.clubs.show', $clubId)
+                ->with('error', 'Bạn không có quyền quản lý bài viết của CLB này.');
+        }
+
+        // Xác định tab hiện tại
+        $activeTab = $request->query('tab', 'posts');
+
+        // Query posts (type='post')
+        $postsQuery = Post::with(['user', 'attachments'])
+            ->where('club_id', $clubId)
+            ->where('type', 'post')
+            ->where('status', '!=', 'deleted');
+
+        if ($request->filled('search')) {
+            $postsQuery->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $postsQuery->where('status', $request->status);
+        }
+
+        $posts = $postsQuery->orderBy('created_at', 'desc')->paginate(10, ['*'], 'posts_page');
+
+        // Query announcements (type='announcement')
+        $announcementsQuery = Post::with(['user'])
+            ->where('club_id', $clubId)
+            ->where('type', 'announcement')
+            ->where('status', '!=', 'deleted');
+
+        if ($request->filled('announcement_search')) {
+            $announcementsQuery->where('title', 'like', '%' . $request->announcement_search . '%');
+        }
+
+        if ($request->filled('announcement_status') && $request->announcement_status !== 'all') {
+            $announcementsQuery->where('status', $request->announcement_status);
+        }
+
+        $announcements = $announcementsQuery->orderBy('created_at', 'desc')->paginate(10, ['*'], 'announcements_page');
+
+        return view('student.club-management.posts', compact(
+            'user',
+            'club',
+            'clubId',
+            'activeTab',
+            'posts',
+            'announcements',
+            'canPostAnnouncement'
+        ));
+    }
     
     /**
      * Fund transactions list for student (read-only)
