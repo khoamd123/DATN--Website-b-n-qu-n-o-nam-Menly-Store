@@ -83,5 +83,27 @@ class Fund extends Model
     {
         return $this->status === 'active';
     }
+
+    /**
+     * Lấy tổng thu của quỹ
+     */
+    public function getTotalIncome()
+    {
+        return $this->transactions()
+            ->where('type', 'income')
+            ->where('status', 'approved')
+            ->sum('amount') ?? 0;
+    }
+
+    /**
+     * Lấy tổng chi của quỹ
+     */
+    public function getTotalExpense()
+    {
+        return $this->transactions()
+            ->where('type', 'expense')
+            ->where('status', 'approved')
+            ->sum('amount') ?? 0;
+    }
 }
 
