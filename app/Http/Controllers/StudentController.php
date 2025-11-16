@@ -2598,6 +2598,83 @@ class StudentController extends Controller
     }
 
     /**
+     * Show form to create announcement
+     */
+    public function createAnnouncement(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+        
+        $clubs = Club::whereIn('id', $user->clubs->pluck('id'))->where('status', 'active')->get();
+        
+        if ($clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')->with('error', 'Bạn cần tham gia CLB trước khi tạo thông báo.');
+        }
+        
+        return view('student.announcements.create', compact('user', 'clubs'));
+    }
+
+    /**
+     * Store announcement
+     */
+    public function storeAnnouncement(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+        
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'club_id' => 'required|exists:clubs,id',
+            'status' => 'required|in:published,members_only,hidden',
+            'type' => 'nullable|in:post,announcement,document',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096'
+        ]);
+        
+        $data = $request->only(['title', 'content', 'club_id', 'status']);
+        $data['type'] = 'announcement';
+        $data['user_id'] = $user->id;
+        
+        // Generate unique slug
+        $baseSlug = Str::slug($data['title']);
+        $slug = $baseSlug;
+        $suffix = 1;
+        while (Post::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+        $data['slug'] = $slug;
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $filename = time() . '_' . $image->getClientOriginalName();
+            $destination = public_path('uploads/posts');
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            $image->move($destination, $filename);
+            $data['image'] = 'uploads/posts/' . $filename;
+        }
+        
+        // Remove featured image from content if present
+        if (!empty($data['image']) && !empty($data['content'])) {
+            $relative = ltrim($data['image'], '/');
+            $assetUrl = asset($relative);
+            $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
+            $data['content'] = preg_replace($pattern, '', $data['content']);
+        }
+        
+        $post = Post::create($data);
+        
+        return redirect()->route('student.posts.show', $post->id)->with('success', 'Tạo thông báo thành công!');
+    }
+
+    /**
      * List posts created by current student
      */
     public function myPosts(\Illuminate\Http\Request $request)
