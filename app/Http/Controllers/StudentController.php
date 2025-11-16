@@ -2708,12 +2708,43 @@ class StudentController extends Controller
             'name' => 'required|string|max:255|unique:clubs,name',
             'description' => 'required|string|max:255',
             'introduction' => 'nullable|string|max:20000',
-            'field_id' => 'required|exists:fields,id',
+            'field_id' => 'required_without:new_field_name|nullable|exists:fields,id',
+            'new_field_name' => 'required_without:field_id|nullable|string|max:100|unique:fields,name',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB
         ], [
             'name.unique' => 'Tên câu lạc bộ này đã tồn tại.',
             'logo.max' => 'Kích thước logo không được vượt quá 2MB.',
+            'field_id.required_without' => 'Vui lòng chọn lĩnh vực hoặc tạo lĩnh vực mới.',
+            'new_field_name.required_without' => 'Vui lòng chọn lĩnh vực hoặc nhập tên lĩnh vực mới.',
+            'new_field_name.unique' => 'Lĩnh vực này đã tồn tại.',
         ]);
+
+        // Xử lý field_id: tạo field mới nếu có new_field_name
+        $fieldId = null;
+        if ($request->filled('new_field_name')) {
+            // Tạo slug từ tên lĩnh vực
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->new_field_name)));
+            $slug = preg_replace('/-+/', '-', $slug);
+            $slug = trim($slug, '-');
+            
+            // Đảm bảo slug unique
+            $originalSlug = $slug;
+            $counter = 1;
+            while (Field::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+
+            // Tạo lĩnh vực mới
+            $field = Field::create([
+                'name' => $request->new_field_name,
+                'slug' => $slug,
+                'description' => 'Lĩnh vực mới được tạo từ form tạo CLB',
+            ]);
+            $fieldId = $field->id;
+        } else {
+            $fieldId = $request->field_id;
+        }
 
         // Create slug for the club
         $slug = Str::slug($request->name);
@@ -2744,7 +2775,7 @@ class StudentController extends Controller
             'description' => $request->description,
             'introduction' => $request->introduction,
             'logo' => $logoPath,
-            'field_id' => $request->field_id,
+            'field_id' => $fieldId,
             'owner_id' => $user->id, // The creator is the owner/proposer
             'leader_id' => $user->id, // Tentatively set the creator as the leader
             'status' => 'pending', // IMPORTANT: Set status to pending for admin approval
