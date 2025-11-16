@@ -2704,18 +2704,30 @@ class StudentController extends Controller
             return redirect()->route('student.clubs.index')->with('error', 'Bạn đã là cán sự hoặc trưởng của một CLB khác và không thể tạo thêm CLB mới.');
         }
 
+        // Custom validation: nếu có new_field_name thì không cần field_id, và ngược lại
+        $hasNewField = $request->filled('new_field_name');
+        $fieldIdValue = $request->input('field_id', '');
+        $hasFieldId = !empty($fieldIdValue) && !str_starts_with((string)$fieldIdValue, 'new_');
+        
+        if (!$hasNewField && !$hasFieldId) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['field_id' => 'Vui lòng chọn lĩnh vực hoặc tạo lĩnh vực mới.']);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255|unique:clubs,name',
             'description' => 'required|string', // Cho phép HTML từ CKEditor, kiểm tra độ dài text thuần ở dưới
             'introduction' => 'nullable|string|max:20000',
-            'field_id' => 'required_without:new_field_name|nullable|exists:fields,id',
-            'new_field_name' => 'required_without:field_id|nullable|string|max:100|unique:fields,name',
+            'field_id' => $hasNewField ? 'nullable' : 'required|exists:fields,id',
+            'new_field_name' => $hasFieldId ? 'nullable' : 'required|string|max:100|unique:fields,name',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB
         ], [
             'name.unique' => 'Tên câu lạc bộ này đã tồn tại.',
             'logo.max' => 'Kích thước logo không được vượt quá 2MB.',
-            'field_id.required_without' => 'Vui lòng chọn lĩnh vực hoặc tạo lĩnh vực mới.',
-            'new_field_name.required_without' => 'Vui lòng chọn lĩnh vực hoặc nhập tên lĩnh vực mới.',
+            'field_id.required' => 'Vui lòng chọn lĩnh vực.',
+            'field_id.exists' => 'Lĩnh vực không hợp lệ.',
+            'new_field_name.required' => 'Vui lòng nhập tên lĩnh vực mới.',
             'new_field_name.unique' => 'Lĩnh vực này đã tồn tại.',
         ]);
 

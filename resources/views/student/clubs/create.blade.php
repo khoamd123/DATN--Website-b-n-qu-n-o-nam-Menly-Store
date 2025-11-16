@@ -264,6 +264,27 @@ document.addEventListener('DOMContentLoaded', function() {
             if (introductionEditor) {
                 introductionEditor.updateSourceElement();
             }
+            
+            // Xử lý field_id: nếu có new_field_name, xóa field_id hoặc set về rỗng
+            const hiddenInput = createClubForm.querySelector('input[name="new_field_name"]');
+            const fieldSelect = document.getElementById('field_id');
+            
+            if (hiddenInput && hiddenInput.value) {
+                // Có lĩnh vực mới, xóa field_id hoặc set về rỗng
+                if (fieldSelect) {
+                    // Tìm và xóa option tạm thời
+                    const tempOptions = fieldSelect.querySelectorAll('option[value^="new_"]');
+                    tempOptions.forEach(opt => opt.remove());
+                    // Set field_id về rỗng để validation không kiểm tra
+                    fieldSelect.value = '';
+                    fieldSelect.removeAttribute('required');
+                }
+            } else if (fieldSelect && fieldSelect.value && fieldSelect.value.startsWith('new_')) {
+                // Nếu field_id là giá trị tạm thời nhưng không có new_field_name, báo lỗi
+                e.preventDefault();
+                alert('Vui lòng chọn lĩnh vực từ danh sách hoặc tạo lĩnh vực mới.');
+                return false;
+            }
         });
     }
     
