@@ -155,8 +155,16 @@
 
         @if($fundRequest->supporting_documents && count($fundRequest->supporting_documents) > 0)
         <div class="content-card">
-            <h5 class="mb-3"><i class="fas fa-file me-2"></i>Tài liệu hỗ trợ ({{ count($fundRequest->supporting_documents) }})</h5>
-            <div class="row g-2">
+            <div class="d-flex align-items-center mb-4">
+                <div class="document-icon-wrapper me-3">
+                    <i class="fas fa-folder-open fa-2x text-teal"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Tài liệu hỗ trợ</h5>
+                    <small class="text-muted">{{ count($fundRequest->supporting_documents) }} tài liệu</small>
+                </div>
+            </div>
+            <div class="row g-3">
                 @foreach($fundRequest->supporting_documents as $index => $document)
                     @php
                         if (is_array($document)) {
@@ -172,11 +180,81 @@
                             $docPath = $document;
                             $docName = basename($document);
                         }
+                        
+                        // Xác định loại file và icon
+                        $fileExtension = strtolower(pathinfo($docPath, PATHINFO_EXTENSION));
+                        $fileIcon = 'fa-file';
+                        $fileColor = 'text-primary';
+                        
+                        switch ($fileExtension) {
+                            case 'pdf':
+                                $fileIcon = 'fa-file-pdf';
+                                $fileColor = 'text-danger';
+                                break;
+                            case 'doc':
+                            case 'docx':
+                                $fileIcon = 'fa-file-word';
+                                $fileColor = 'text-primary';
+                                break;
+                            case 'xls':
+                            case 'xlsx':
+                                $fileIcon = 'fa-file-excel';
+                                $fileColor = 'text-success';
+                                break;
+                            case 'ppt':
+                            case 'pptx':
+                                $fileIcon = 'fa-file-powerpoint';
+                                $fileColor = 'text-warning';
+                                break;
+                            case 'jpg':
+                            case 'jpeg':
+                            case 'png':
+                            case 'gif':
+                                $fileIcon = 'fa-file-image';
+                                $fileColor = 'text-info';
+                                break;
+                            default:
+                                $fileIcon = 'fa-file';
+                                $fileColor = 'text-secondary';
+                        }
+                        
+                        // Lấy kích thước file nếu có
+                        $fileSize = null;
+                        $fullPath = storage_path('app/public/' . $docPath);
+                        if (file_exists($fullPath)) {
+                            $size = filesize($fullPath);
+                            if ($size < 1024) {
+                                $fileSize = $size . ' B';
+                            } elseif ($size < 1048576) {
+                                $fileSize = round($size / 1024, 2) . ' KB';
+                            } else {
+                                $fileSize = round($size / 1048576, 2) . ' MB';
+                            }
+                        }
                     @endphp
-                    <div class="col-md-3">
+                    <div class="col-md-4 col-lg-3">
                         <a href="{{ asset('storage/' . $docPath) }}" target="_blank" 
-                           class="btn btn-outline-primary btn-sm w-100 text-white">
-                            <i class="fas fa-file-pdf me-1"></i> Tài liệu {{ $index + 1 }}
+                           class="document-card text-decoration-none">
+                            <div class="document-card-inner">
+                                <div class="document-icon {{ $fileColor }}">
+                                    <i class="fas {{ $fileIcon }} fa-3x"></i>
+                                </div>
+                                <div class="document-info">
+                                    <div class="document-name" title="{{ $docName }}">
+                                        {{ Str::limit($docName, 25) }}
+                                    </div>
+                                    @if($fileSize)
+                                        <div class="document-size text-muted">
+                                            <i class="fas fa-hdd me-1"></i>{{ $fileSize }}
+                                        </div>
+                                    @endif
+                                    <div class="document-action mt-2">
+                                        <span class="badge bg-teal">
+                                            <i class="fas fa-download me-1"></i>Xem tài liệu
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </a>
                     </div>
                 @endforeach
