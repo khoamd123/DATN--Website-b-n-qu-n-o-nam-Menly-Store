@@ -2557,6 +2557,47 @@ class StudentController extends Controller
     }
 
     /**
+     * Upload image from editor and return public URL (AJAX)
+     */
+    public function uploadEditorImage(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return response()->json(['error' => ['message' => 'Vui lòng đăng nhập.']], 401);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        try {
+            // Lưu vào thư mục public/uploads/posts/content
+            $destination = public_path('uploads/posts/content');
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+
+            $image = $request->file('image');
+            $filename = time() . '_' . uniqid() . '_' . $image->getClientOriginalName();
+            $image->move($destination, $filename);
+            
+            $url = 'uploads/posts/content/' . $filename;
+            $fullUrl = asset($url);
+
+            // CKEditor 5 sử dụng JSON response
+            return response()->json([
+                'url' => $fullUrl,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => [
+                    'message' => 'Không thể upload ảnh: ' . $e->getMessage()
+                ]
+            ], 500);
+        }
+    }
+
+    /**
      * List posts created by current student
      */
     public function myPosts(\Illuminate\Http\Request $request)
