@@ -265,3 +265,108 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    .document-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(20, 184, 166, 0.2);
+    }
+    
+    .document-icon-wrapper i {
+        color: white;
+    }
+    
+    .document-card {
+        display: block;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .document-card:hover {
+        transform: translateY(-5px);
+        text-decoration: none;
+    }
+    
+    .document-card-inner {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .document-card:hover .document-card-inner {
+        border-color: #14b8a6;
+        box-shadow: 0 8px 16px rgba(20, 184, 166, 0.15);
+        background: linear-gradient(to bottom, #ffffff 0%, #f0fdfa 100%);
+    }
+    
+    .document-icon {
+        margin-bottom: 15px;
+        transition: transform 0.3s ease;
+    }
+    
+    .document-card:hover .document-icon {
+        transform: scale(1.1);
+    }
+    
+    .document-info {
+        width: 100%;
+    }
+    
+    .document-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        word-break: break-word;
+    }
+    
+    .document-size {
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+    
+    .document-action {
+        margin-top: auto;
+    }
+    
+    .badge.bg-teal {
+        background-color: #14b8a6 !important;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+    
+    .document-card:hover .badge.bg-teal {
+        background-color: #0d9488 !important;
+        transform: scale(1.05);
+    }
+    
+    @media (max-width: 768px) {
+        .document-card-inner {
+            padding: 15px;
+        }
+        
+        .document-icon i {
+            font-size: 2rem !important;
+        }
+    }
+</style>
+@endpush
+
