@@ -460,6 +460,30 @@
             font-size: 2rem !important;
         }
     }
+    
+    .settlement-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+    }
+    
+    .settlement-icon-wrapper i {
+        color: white;
+    }
+    
+    .settlement-card {
+        transition: all 0.3s ease;
+    }
+    
+    .settlement-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 </style>
 @endpush
 
