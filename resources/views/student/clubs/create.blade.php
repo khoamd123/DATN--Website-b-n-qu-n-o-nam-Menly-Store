@@ -41,7 +41,7 @@
                         <!-- Mô tả ngắn -->
                         <div class="mb-3">
                             <label for="description" class="form-label fw-bold">Mô tả ngắn <span class="text-danger">*</span></label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3" required>{{ old('description') }}</textarea>
+                            <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="5" required>{{ old('description') }}</textarea>
                             <small class="form-text text-muted">Mô tả ngắn gọn về CLB của bạn (tối đa 255 ký tự).</small>
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -51,7 +51,7 @@
                         <!-- Giới thiệu chi tiết -->
                         <div class="mb-3">
                             <label for="introduction" class="form-label fw-bold">Giới thiệu chi tiết</label>
-                            <textarea class="form-control @error('introduction') is-invalid @enderror" id="introduction" name="introduction" rows="6">{{ old('introduction') }}</textarea>
+                            <textarea class="form-control @error('introduction') is-invalid @enderror" id="introduction" name="introduction" rows="10">{{ old('introduction') }}</textarea>
                             <small class="form-text text-muted">Bài viết chi tiết giới thiệu về mục đích, hoạt động, cách thức tham gia...</small>
                             @error('introduction')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -162,8 +162,112 @@
 </div>
 
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('student.posts.upload-image'), 'csrfToken' => csrf_token()])
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("student.posts.upload-image") }}', '{{ csrf_token() }}');
+    
+    let descriptionEditor = null;
+    let introductionEditor = null;
+    
+    // Khởi tạo CKEditor cho mô tả ngắn
+    const descriptionTextarea = document.querySelector('#description');
+    if (descriptionTextarea) {
+        ClassicEditor
+            .create(descriptionTextarea, {
+                extraPlugins: [SimpleUploadAdapterPlugin],
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'uploadImage', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'toggleImageCaption',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side'
+                    ]
+                },
+                language: 'vi'
+            })
+            .then(editor => {
+                descriptionEditor = editor;
+                console.log('CKEditor initialized for description');
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor for description:', error);
+            });
+    }
+    
+    // Khởi tạo CKEditor cho giới thiệu chi tiết
+    const introductionTextarea = document.querySelector('#introduction');
+    if (introductionTextarea) {
+        ClassicEditor
+            .create(introductionTextarea, {
+                extraPlugins: [SimpleUploadAdapterPlugin],
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'blockQuote', 'insertTable', '|',
+                        'uploadImage', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'toggleImageCaption',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side'
+                    ]
+                },
+                language: 'vi'
+            })
+            .then(editor => {
+                introductionEditor = editor;
+                console.log('CKEditor initialized for introduction');
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor for introduction:', error);
+            });
+    }
+    
+    // Đảm bảo sync dữ liệu từ CKEditor vào textarea trước khi submit
+    const createClubForm = document.getElementById('createClubForm');
+    if (createClubForm) {
+        createClubForm.addEventListener('submit', function(e) {
+            // Sync description editor
+            if (descriptionEditor) {
+                const descriptionData = descriptionEditor.getData();
+                // Lấy text thuần (không có HTML) để kiểm tra độ dài
+                const descriptionText = descriptionData.replace(/<[^>]*>/g, '').trim();
+                if (descriptionText.length > 255) {
+                    e.preventDefault();
+                    alert('Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' + descriptionText.length + ' ký tự.');
+                    return false;
+                }
+                descriptionEditor.updateSourceElement();
+            }
+            
+            // Sync introduction editor
+            if (introductionEditor) {
+                introductionEditor.updateSourceElement();
+            }
+        });
+    }
+    
+    // Code cho modal tạo lĩnh vực mới
     const createFieldForm = document.getElementById('createFieldForm');
     const newFieldNameInput = document.getElementById('new_field_name');
     const fieldSelect = document.getElementById('field_id');

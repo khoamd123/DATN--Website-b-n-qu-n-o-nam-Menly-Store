@@ -2706,7 +2706,7 @@ class StudentController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255|unique:clubs,name',
-            'description' => 'required|string|max:255',
+            'description' => 'required|string', // Cho phép HTML từ CKEditor, kiểm tra độ dài text thuần ở dưới
             'introduction' => 'nullable|string|max:20000',
             'field_id' => 'required_without:new_field_name|nullable|exists:fields,id',
             'new_field_name' => 'required_without:field_id|nullable|string|max:100|unique:fields,name',
@@ -2718,6 +2718,14 @@ class StudentController extends Controller
             'new_field_name.required_without' => 'Vui lòng chọn lĩnh vực hoặc nhập tên lĩnh vực mới.',
             'new_field_name.unique' => 'Lĩnh vực này đã tồn tại.',
         ]);
+
+        // Kiểm tra độ dài mô tả (text thuần, không tính HTML tags)
+        $descriptionText = strip_tags($request->description);
+        if (mb_strlen($descriptionText) > 255) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['description' => 'Mô tả ngắn không được vượt quá 255 ký tự (không tính HTML).']);
+        }
 
         // Xử lý field_id: tạo field mới nếu có new_field_name
         $fieldId = null;
