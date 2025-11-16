@@ -2826,6 +2826,23 @@ class StudentController extends Controller
                 })->toArray();
                 DB::table('user_permissions_club')->insert($permissionsToInsert);
             }
+
+            // Tự động tạo quỹ cho CLB mới
+            try {
+                Fund::create([
+                    'club_id' => $club->id,
+                    'name' => 'Quỹ ' . $club->name,
+                    'description' => 'Quỹ tự động được tạo khi thành lập CLB',
+                    'initial_amount' => 0,
+                    'current_amount' => 0,
+                    'status' => 'active',
+                    'source' => 'Hệ thống',
+                    'created_by' => $user->id,
+                ]);
+            } catch (\Exception $e) {
+                // Log lỗi nhưng không chặn việc tạo CLB
+                \Log::error('Lỗi khi tạo quỹ tự động cho CLB: ' . $e->getMessage());
+            }
         }
 
         return redirect()->route('student.clubs.index')->with('success', 'Yêu cầu tạo CLB của bạn đã được gửi thành công và đang chờ xét duyệt!');
