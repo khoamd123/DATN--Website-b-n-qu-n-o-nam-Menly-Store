@@ -106,13 +106,21 @@
                                 </form>
                                 @if($att)
                                     <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-primary text-white w-100" onclick="event.stopPropagation();">
-                                        <i class="fas fa-file-pdf"></i> PDF
+                                        <i class="fas fa-file-pdf"></i> Tài liệu
                                     </a>
                                 @endif
                             </div>
                         @else
+                            @php
+                                $statusLabels = [
+                                    'approved' => 'Đã duyệt',
+                                    'pending' => 'Chờ duyệt',
+                                    'rejected' => 'Từ chối',
+                                ];
+                                $statusLabel = $statusLabels[$t->status] ?? ucfirst($t->status);
+                            @endphp
                             <div class="d-flex flex-column gap-1 align-items-center">
-                                <span class="badge bg-{{ $t->status === 'approved' ? 'success' : ($t->status === 'rejected' ? 'secondary' : 'warning') }}">{{ ucfirst($t->status) }}</span>
+                                <span class="badge bg-{{ $t->status === 'approved' ? 'success' : ($t->status === 'rejected' ? 'secondary' : 'warning') }}">{{ $statusLabel }}</span>
                                 @if($att)
                                     <a href="{{ asset($att) }}" target="_blank" class="btn btn-sm btn-primary text-white" onclick="event.stopPropagation();">
                                         <i class="fas fa-file-pdf"></i>

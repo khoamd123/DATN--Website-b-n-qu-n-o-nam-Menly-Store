@@ -33,7 +33,15 @@
             </div>
             <div class="mb-3">
                 <div class="text-muted">Trạng thái</div>
-                <div><span class="badge bg-{{ $tx->status === 'approved' ? 'success' : ($tx->status === 'rejected' ? 'secondary' : 'warning') }}">{{ ucfirst($tx->status) }}</span></div>
+                @php
+                    $statusLabels = [
+                        'approved' => 'Đã duyệt',
+                        'pending' => 'Chờ duyệt',
+                        'rejected' => 'Từ chối',
+                    ];
+                    $statusLabel = $statusLabels[$tx->status] ?? ucfirst($tx->status);
+                @endphp
+                <div><span class="badge bg-{{ $tx->status === 'approved' ? 'success' : ($tx->status === 'rejected' ? 'secondary' : 'warning') }}">{{ $statusLabel }}</span></div>
             </div>
         </div>
         <div class="col-md-6">
