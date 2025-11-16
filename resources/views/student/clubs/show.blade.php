@@ -78,31 +78,113 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link @if(!$isMember) disabled @endif" id="forum-tab" data-bs-toggle="tab" data-bs-target="#forum" type="button" role="tab" aria-controls="forum" aria-selected="false">
-                    <i class="fas fa-comments me-1"></i> Diễn đàn
+                    <i class="fas fa-newspaper me-1"></i> Bài viết
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link @if(!$isMember) disabled @endif" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab" aria-controls="gallery" aria-selected="false">
-                    <i class="fas fa-images me-1"></i> Thư viện ảnh
-                </button>
+                @if($isMember)
+                    <a class="nav-link" href="{{ route('student.club-management.reports') }}?club={{ $club->id }}" role="tab">
+                        <i class="fas fa-chart-bar me-1"></i> Báo cáo
+                    </a>
+                @else
+                    <button class="nav-link disabled" type="button" role="tab" disabled>
+                        <i class="fas fa-chart-bar me-1"></i> Báo cáo
+                    </button>
+                @endif
             </li>
-            {{-- Management Tab --}}
-            @if($isMember && in_array(session('club_roles')[$club->id] ?? null, ['leader', 'vice_president', 'officer']))
-            <li class="nav-item" role="presentation">
-                <a class="nav-link text-danger" href="{{ route('student.club-management.reports') }}">
-                    <i class="fas fa-chart-line me-1"></i> Báo cáo & Quản lý</a>
-            </li>
-            @endif
         </ul>
 
         <!-- Tab Content -->
         <div class="tab-content" id="clubDetailTabsContent">
             <!-- Overview Tab -->
             <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-                <div class="content-card">
-                    <h5 class="card-title mb-3">Giới thiệu về CLB</h5>
-                    <p>{{ $club->introduction ?? 'Chưa có bài viết giới thiệu chi tiết.' }}</p>
+                <!-- Giới thiệu CLB -->
+                <div class="content-card mb-4">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-info-circle text-teal me-2"></i> Giới thiệu về CLB
+                    </h5>
+                    <div class="introduction-content">
+                        @if($club->introduction)
+                            {!! nl2br(e($club->introduction)) !!}
+                        @else
+                            <p class="text-muted">Chưa có bài viết giới thiệu chi tiết.</p>
+                        @endif
+                    </div>
                 </div>
+
+                @if($isMember)
+                <!-- Thống kê nhanh -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="content-card text-center">
+                            <div class="stat-icon-large bg-primary mb-2">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h4 class="mb-1">{{ $club->members_count }}</h4>
+                            <p class="text-muted mb-0">Thành viên</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="content-card text-center">
+                            <div class="stat-icon-large bg-success mb-2">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <h4 class="mb-1">{{ $club->events->count() ?? 0 }}</h4>
+                            <p class="text-muted mb-0">Sự kiện</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="content-card text-center">
+                            <div class="stat-icon-large bg-info mb-2">
+                                <i class="fas fa-bullhorn"></i>
+                            </div>
+                            <h4 class="mb-1">{{ isset($announcements) ? $announcements->count() : 0 }}</h4>
+                            <p class="text-muted mb-0">Thông báo</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hoạt động gần đây -->
+                @if(isset($events) && $events->count() > 0)
+                <div class="content-card">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-clock text-teal me-2"></i> Sự kiện sắp tới
+                    </h5>
+                    <div class="list-group list-group-flush">
+                        @foreach($events->take(3) as $event)
+                        <div class="list-group-item px-0 border-0 border-bottom">
+                            <div class="d-flex align-items-start">
+                                <div class="event-date-badge me-3 text-center">
+                                    <div class="text-danger fw-bold fs-5">{{ \Carbon\Carbon::parse($event->start_time)->format('d') }}</div>
+                                    <div class="text-muted small">{{ \Carbon\Carbon::parse($event->start_time)->format('M') }}</div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">{{ $event->title }}</h6>
+                                    <p class="text-muted mb-1 small">
+                                        <i class="fas fa-clock me-1"></i> 
+                                        {{ \Carbon\Carbon::parse($event->start_time)->format('H:i') }} - 
+                                        {{ \Carbon\Carbon::parse($event->start_time)->format('d/m/Y') }}
+                                    </p>
+                                    @if($event->location)
+                                    <p class="text-muted mb-0 small">
+                                        <i class="fas fa-map-marker-alt me-1"></i> {{ $event->location }}
+                                    </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @if($events->count() > 3)
+                    <div class="mt-3 text-center">
+                        <a href="#events" class="btn btn-outline-primary btn-sm" data-bs-toggle="tab" data-bs-target="#events">
+                            Xem tất cả sự kiện <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                    @endif
+                </div>
+                @endif
+                @endif
             </div>
 
             @if($isMember)
@@ -128,7 +210,13 @@
                                                     <i class="fas fa-clock me-1"></i> {{ \Carbon\Carbon::parse($event->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($event->end_time)->format('H:i, d/m/Y') }}
                                                 </p>
                                                 <p class="text-muted mb-0 small"><i class="fas fa-map-marker-alt me-1"></i> {{ $event->location }}</p>
-                                                <p class="mb-0 mt-2">{{ Str::limit($event->description, 150) }}</p>
+                                                <p class="mb-0 mt-2">
+                                                    @php
+                                                        $desc = $event->description ?? '';
+                                                        $desc = mb_strlen($desc) > 150 ? mb_substr($desc, 0, 150) . '...' : $desc;
+                                                    @endphp
+                                                    {{ $desc }}
+                                                </p>
                                             </div>
                                         </div>
                                     </a>
@@ -167,37 +255,81 @@
                         @endif
                     </div>
                 </div>
-                <!-- Forum Tab -->
+                <!-- Forum Tab - Sử dụng Posts như diễn đàn -->
                 <div class="tab-pane fade" id="forum" role="tabpanel" aria-labelledby="forum-tab">
                     <div class="content-card">
-                        <h5 class="card-title mb-4">Chủ đề thảo luận</h5>
-                        {{-- Giả sử $club->forumTopics là danh sách các chủ đề --}}
-                        @if($club->forumTopics && $club->forumTopics->count() > 0)
-                             <div class="list-group list-group-flush">
-                                @foreach($club->forumTopics as $topic)
-                                    <a href="#" class="list-group-item list-group-item-action px-0">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1 fw-bold">{{ $topic->title }}</h6>
-                                            <small class="text-muted">{{ $topic->created_at->diffForHumans() }}</small>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-newspaper text-teal me-2"></i> Bài viết
+                            </h5>
+                            @if($isMember)
+                            <a href="{{ route('student.posts.create') }}?club_id={{ $club->id }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i> Tạo chủ đề mới
+                            </a>
+                            @endif
+                        </div>
+                        
+                        @if(isset($posts) && $posts->count() > 0)
+                        <div class="list-group list-group-flush">
+                            @foreach($posts as $post)
+                            <a href="{{ route('student.posts.show', $post->id) }}" class="list-group-item list-group-item-action px-0 border-0 border-bottom">
+                                <div class="d-flex w-100 justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold">{{ $post->title }}</h6>
+                                        <p class="text-muted mb-2 small">
+                                            @php
+                                                $content = strip_tags($post->content ?? '');
+                                                $content = mb_strlen($content) > 150 ? mb_substr($content, 0, 150) . '...' : $content;
+                                            @endphp
+                                            {{ $content }}
+                                        </p>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i> {{ $post->user->name ?? 'N/A' }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="far fa-clock me-1"></i> {{ $post->created_at->diffForHumans() }}
+                                            </small>
+                                            @if($post->comments_count ?? $post->comments->count() ?? 0 > 0)
+                                            <small class="text-muted">
+                                                <i class="fas fa-comments me-1"></i> {{ $post->comments_count ?? $post->comments->count() }} bình luận
+                                            </small>
+                                            @endif
+                                            @if($post->views ?? 0 > 0)
+                                            <small class="text-muted">
+                                                <i class="fas fa-eye me-1"></i> {{ number_format($post->views) }} lượt xem
+                                            </small>
+                                            @endif
                                         </div>
-                                        <small class="text-muted">Bởi {{ $topic->user->name }} | {{ $topic->posts_count }} trả lời</small>
-                                    </a>
-                                @endforeach
-                            </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        @if($post->image)
+                                        <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" 
+                                             class="rounded" style="width: 80px; height: 80px; object-fit: cover;">
+                                        @endif
+                                    </div>
+                                </div>
+                            </a>
+                            @endforeach
+                        </div>
+                        
+                        <div class="mt-3 text-center">
+                            <a href="{{ route('student.posts') }}?club_id={{ $club->id }}" class="btn btn-outline-primary">
+                                Xem tất cả bài viết <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
                         @else
-                            <div class="text-center py-4">
-                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">Chưa có chủ đề thảo luận nào.</p>
-                            </div>
+                        <div class="text-center py-5">
+                            <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted mb-2">Chưa có bài viết nào</h5>
+                            <p class="text-muted mb-4">Hãy tạo bài viết đầu tiên của CLB!</p>
+                            @if($isMember)
+                            <a href="{{ route('student.posts.create') }}?club_id={{ $club->id }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i> Tạo chủ đề mới
+                            </a>
+                            @endif
+                        </div>
                         @endif
-                    </div>
-                </div>
-                <!-- Gallery Tab -->
-                <div class="tab-pane fade" id="gallery" role="tabpanel" aria-labelledby="gallery-tab">
-                    <div class="content-card">
-                        <h5 class="card-title mb-4">Thư viện ảnh</h5>
-                        {{-- TODO: Thêm code hiển thị thư viện ảnh ở đây --}}
-                        <p class="text-muted text-center py-4">Tính năng thư viện ảnh đang được phát triển.</p>
                     </div>
                 </div>
             @else
@@ -205,7 +337,7 @@
             <div class="content-card text-center py-5">
                 <i class="fas fa-lock fa-3x text-muted mb-3"></i>
                 <h4 class="mb-3">Nội dung dành cho thành viên</h4>
-                <p class="text-muted">Bạn cần là thành viên của câu lạc bộ để xem các hoạt động, diễn đàn và thông tin nội bộ.</p>
+                <p class="text-muted">Bạn cần là thành viên của câu lạc bộ để xem các hoạt động, bài viết và thông tin nội bộ.</p>
                 <p>Hãy gửi yêu cầu tham gia để không bỏ lỡ các hoạt động thú vị!</p>
             </div>
             @endif
@@ -260,10 +392,10 @@
                         <i class="fas fa-bullhorn me-2 text-teal"></i> Thông báo
                     </a>
                     <a href="#forum" class="list-group-item list-group-item-action">
-                        <i class="fas fa-comments me-2 text-teal"></i> Diễn đàn
+                        <i class="fas fa-newspaper me-2 text-teal"></i> Bài viết
                     </a>
-                    <a href="#gallery" class="list-group-item list-group-item-action">
-                        <i class="fas fa-images me-2 text-teal"></i> Thư viện ảnh
+                    <a href="{{ route('student.club-management.reports') }}?club={{ $club->id }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-chart-bar me-2 text-teal"></i> Báo cáo
                     </a>
                 </div>
             @endif
@@ -353,6 +485,30 @@
     .gallery-item:hover img {
         transform: scale(1.05);
         box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    
+    .stat-icon-large {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.8rem;
+        margin: 0 auto;
+    }
+    
+    .event-date-badge {
+        min-width: 60px;
+        background: #f0fdfa;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+    
+    .introduction-content {
+        line-height: 1.8;
+        color: #495057;
     }
 </style>
 @endpush

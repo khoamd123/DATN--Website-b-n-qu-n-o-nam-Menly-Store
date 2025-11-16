@@ -59,7 +59,8 @@
         </div>
     </div>
 
-    <!-- Fund Stats -->
+    <!-- Fund Stats - Chỉ hiển thị cho leader/officer hoặc có quyền xem báo cáo -->
+    @if($canViewReports && $isLeaderOrOfficer)
     <div class="content-card">
         <h4 class="mb-4"><i class="fas fa-wallet text-info me-2"></i> Thống kê quỹ</h4>
         @if($stats['fund']['balance'] > 0 || $stats['fund']['totalIncome'] > 0 || $stats['fund']['totalExpense'] > 0)
@@ -118,6 +119,72 @@
             </div>
         @endif
     </div>
+    @else
+    <!-- Thông tin chi tiêu công khai cho thành viên -->
+    <div class="content-card">
+        <h4 class="mb-4"><i class="fas fa-receipt text-info me-2"></i> Danh sách chi tiêu</h4>
+        @if(isset($publicExpenses) && $publicExpenses->count() > 0)
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mục đích</th>
+                            <th>Số tiền</th>
+                            <th>Ngày</th>
+                            <th>Người tạo</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($publicExpenses as $expense)
+                        <tr>
+                            <td>
+                                <strong>{{ $expense->description ?? $expense->title ?? 'Không có mô tả' }}</strong>
+                                @if($expense->category)
+                                    <br><small class="text-muted">Danh mục: {{ ucfirst(str_replace('_', ' ', $expense->category)) }}</small>
+                                @endif
+                            </td>
+                            <td class="text-danger fw-bold">
+                                {{ number_format($expense->amount, 0, ',', '.') }} VNĐ
+                            </td>
+                            <td>
+                                {{ $expense->created_at->format('d/m/Y') }}
+                                <br><small class="text-muted">{{ $expense->created_at->format('H:i') }}</small>
+                            </td>
+                            <td>
+                                {{ $expense->creator->name ?? 'N/A' }}
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Đã duyệt</span>
+                                @if($expense->approved_at)
+                                    <br><small class="text-muted">{{ \Carbon\Carbon::parse($expense->approved_at)->format('d/m/Y') }}</small>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <td colspan="4" class="text-end fw-bold">Tổng chi tiêu:</td>
+                            <td class="text-danger fw-bold">
+                                {{ number_format($stats['fund']['totalExpense'], 0, ',', '.') }} VNĐ
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Đây là danh sách các khoản chi đã được duyệt. Thông tin số dư và chi tiết tài chính chỉ dành cho Trưởng CLB, Phó CLB và Cán sự.
+            </div>
+        @else
+            <div class="text-center py-4">
+                <i class="fas fa-receipt text-muted fa-2x mb-3"></i>
+                <p class="text-muted">Chưa có khoản chi nào được ghi nhận.</p>
+            </div>
+        @endif
+    </div>
+    @endif
 
     <!-- Charts -->
     <div class="row">

@@ -62,9 +62,9 @@
                         <a href="{{ route('student.clubs.index') }}" class="btn btn-primary">
                             <i class="fas fa-search me-2"></i> Tìm CLB để tham gia
                         </a>
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                        <a href="{{ route('student.clubs.create') }}" class="btn btn-outline-primary">
                             <i class="fas fa-plus me-2"></i> Tạo CLB mới
-                        </button>
+                        </a>
                     </div>
                 @else
                     <p class="text-muted mb-4">
@@ -75,9 +75,9 @@
                         <a href="{{ route('student.clubs.index') }}" class="btn btn-outline-primary">
                             <i class="fas fa-users me-2"></i> Xem CLB của tôi
                         </a>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                        <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i> Tạo CLB mới
-                        </button>
+                        </a>
                     </div>
                 @endif
             </div>

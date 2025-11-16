@@ -1644,13 +1644,34 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Determine user's club (first club)
-        if ($user->clubs->isEmpty()) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        // Get club from query parameter or use first club
+        $clubId = $request->query('club');
+        if ($clubId) {
+            $club = Club::findOrFail($clubId);
+            // Kiểm tra user có phải thành viên của CLB này không
+            $isMember = ClubMember::where('club_id', $clubId)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->exists();
+            
+            if (!$isMember) {
+                return redirect()->route('student.clubs.show', $clubId)
+                    ->with('error', 'Bạn cần là thành viên của CLB này để xem báo cáo.');
+            }
+        } else {
+            // Determine user's club (first club)
+            if ($user->clubs->isEmpty()) {
+                return redirect()->route('student.club-management.index')
+                    ->with('error', 'Bạn chưa tham gia CLB nào.');
+            }
+            $club = $user->clubs->first();
         }
-        $club = $user->clubs->first();
         $clubId = $club->id;
+
+        // Kiểm tra quyền xem báo cáo (chỉ leader/officer có quyền xem thông tin quỹ)
+        $canViewReports = $user->hasPermission('xem_bao_cao', $clubId);
+        $userPosition = $user->getPositionInClub($clubId);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
 
         // Simple stats
         $totalMembers = ClubMember::where('club_id', $clubId)
@@ -1666,33 +1687,51 @@ class StudentController extends Controller
             ->where('start_time', '>=', now())
             ->count();
 
-        // Fund stats
+        // Fund stats - chỉ tính cho leader/officer
         $fund = Fund::where('club_id', $clubId)->first();
         $fundId = $fund?->id ?? null;
         $totalIncome = 0;
         $totalExpense = 0;
         $balance = 0;
         $expenseByCategory = [];
+        $publicExpenses = collect(); // Danh sách chi tiêu công khai cho thành viên xem
 
         if ($fundId) {
-            $totalIncome = FundTransaction::where('fund_id', $fundId)
-                ->where('type', 'income')
-                ->where('status', 'approved')
-                ->sum('amount');
-            $totalExpense = FundTransaction::where('fund_id', $fundId)
-                ->where('type', 'expense')
-                ->where('status', 'approved')
-                ->sum('amount');
-            // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
-            $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
-            // breakdown by category (if field exists)
-            $expenseByCategory = FundTransaction::where('fund_id', $fundId)
-                ->where('type', 'expense')
-                ->where('status', 'approved')
-                ->select('category', DB::raw('SUM(amount) as total'))
-                ->groupBy('category')
-                ->pluck('total', 'category')
-                ->toArray();
+            if ($canViewReports && $isLeaderOrOfficer) {
+                // Leader/Officer: xem tất cả thông tin quỹ
+                $totalIncome = FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'income')
+                    ->where('status', 'approved')
+                    ->sum('amount');
+                $totalExpense = FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'expense')
+                    ->where('status', 'approved')
+                    ->sum('amount');
+                // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
+                $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
+                // breakdown by category (if field exists)
+                $expenseByCategory = FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'expense')
+                    ->where('status', 'approved')
+                    ->select('category', DB::raw('SUM(amount) as total'))
+                    ->groupBy('category')
+                    ->pluck('total', 'category')
+                    ->toArray();
+            } else {
+                // Thành viên thông thường: chỉ xem các khoản chi đã được duyệt (công khai)
+                $publicExpenses = FundTransaction::with(['fund', 'creator', 'approver'])
+                    ->where('fund_id', $fundId)
+                    ->where('type', 'expense')
+                    ->where('status', 'approved')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(20) // Giới hạn 20 giao dịch gần nhất
+                    ->get();
+                // Tính tổng chi (chỉ để hiển thị, không có số dư)
+                $totalExpense = FundTransaction::where('fund_id', $fundId)
+                    ->where('type', 'expense')
+                    ->where('status', 'approved')
+                    ->sum('amount');
+            }
         }
 
         // Member structure (leader/officer/member) simple distribution
@@ -1781,7 +1820,7 @@ class StudentController extends Controller
             ],
         ];
 
-        return view('student.club-management.reports', compact('user', 'club', 'stats'));
+        return view('student.club-management.reports', compact('user', 'club', 'stats', 'canViewReports', 'isLeaderOrOfficer', 'publicExpenses'));
     }
     
     /**
@@ -2506,7 +2545,6 @@ class StudentController extends Controller
             // Tải các dữ liệu khác chỉ khi người dùng là thành viên
             $data['events'] = $club->events()->where('status', 'approved')->where('start_time', '>=', now())->orderBy('start_time', 'asc')->get();
             $data['announcements'] = $club->posts()->where('type', 'announcement')->where('status', 'published')->orderBy('created_at', 'desc')->limit(5)->get();
-            $data['posts'] = $club->posts()->where('type', 'post')->where('status', 'published')->orderBy('created_at', 'desc')->limit(5)->get();
             
             // Tải ảnh cho thư viện
             $eventImages = \App\Models\EventImage::whereIn('event_id', $club->events()->where('status', 'completed')->pluck('id'))->get();
@@ -2515,6 +2553,26 @@ class StudentController extends Controller
         } else {
             $data['joinRequest'] = $club->joinRequests()->where('user_id', $user->id)->where('status', 'pending')->first();
         }
+        
+        // Load posts cho người xem
+        // Nếu là thành viên: hiển thị cả published và members_only
+        // Nếu không phải thành viên: chỉ hiển thị published
+        $postsQuery = $club->posts()
+            ->with(['user', 'comments'])
+            ->where('type', 'post');
+            
+        if ($isMember) {
+            // Thành viên: xem cả published và members_only
+            $postsQuery->whereIn('status', ['published', 'members_only']);
+        } else {
+            // Không phải thành viên: chỉ xem published
+            $postsQuery->where('status', 'published');
+        }
+        
+        $data['posts'] = $postsQuery
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
 
         return view('student.clubs.show', $data);
     }
