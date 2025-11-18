@@ -27,8 +27,9 @@
                 <div class="d-flex gap-2">
                     @php
                         $position = $user->getPositionInClub($club->id);
+                        $isSettlementPage = request('settlement') === 'settled';
                     @endphp
-                    @if($position === 'leader')
+                    @if($position === 'leader' && !$isSettlementPage)
                         <a href="{{ route('student.club-management.fund-requests.create') }}" class="btn btn-primary btn-sm text-white">
                             <i class="fas fa-plus me-1"></i> Tạo yêu cầu
                         </a>
@@ -40,8 +41,29 @@
             </div>
         </div>
 
+        <!-- Tabs để chuyển đổi giữa tất cả yêu cầu và quyết toán -->
+        <div class="content-card mb-3">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {{ request('settlement') !== 'settled' ? 'active' : '' }}" 
+                       href="{{ route('student.club-management.fund-requests') }}">
+                        <i class="fas fa-list me-1"></i> Tất cả yêu cầu
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {{ request('settlement') === 'settled' ? 'active' : '' }}" 
+                       href="{{ route('student.club-management.fund-requests', ['settlement' => 'settled']) }}">
+                        <i class="fas fa-calculator me-1"></i> Yêu cầu đã quyết toán
+                    </a>
+                </li>
+            </ul>
+        </div>
+
         <div class="content-card mb-3">
             <form method="GET" action="{{ route('student.club-management.fund-requests') }}" class="row g-2 align-items-end">
+                @if(request('settlement') === 'settled')
+                    <input type="hidden" name="settlement" value="settled">
+                @endif
                 <div class="col-md-4">
                     <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Tìm kiếm theo tiêu đề, mô tả, sự kiện...">
                 </div>
@@ -153,15 +175,24 @@
                 </div>
             @else
                 <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3 d-block opacity-50"></i>
-                    <p class="text-muted mb-3">Chưa có yêu cầu cấp kinh phí nào.</p>
-                    @php
-                        $position = $user->getPositionInClub($club->id);
-                    @endphp
-                    @if($position === 'leader')
-                        <a href="{{ route('student.club-management.fund-requests.create') }}" class="btn btn-primary text-white">
-                            <i class="fas fa-plus me-1"></i> Tạo yêu cầu đầu tiên
+                    @if(request('settlement') === 'settled')
+                        <i class="fas fa-calculator fa-3x text-muted mb-3 d-block opacity-50"></i>
+                        <p class="text-muted mb-3">Chưa có yêu cầu nào đã được quyết toán.</p>
+                        <p class="text-muted small mb-3">Các yêu cầu đã được quyết toán sẽ hiển thị tại đây.</p>
+                        <a href="{{ route('student.club-management.fund-requests') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-1"></i> Xem tất cả yêu cầu
                         </a>
+                    @else
+                        <i class="fas fa-inbox fa-3x text-muted mb-3 d-block opacity-50"></i>
+                        <p class="text-muted mb-3">Chưa có yêu cầu cấp kinh phí nào.</p>
+                        @php
+                            $position = $user->getPositionInClub($club->id);
+                        @endphp
+                        @if($position === 'leader')
+                            <a href="{{ route('student.club-management.fund-requests.create') }}" class="btn btn-primary text-white">
+                                <i class="fas fa-plus me-1"></i> Tạo yêu cầu đầu tiên
+                            </a>
+                        @endif
                     @endif
                 </div>
             @endif

@@ -106,7 +106,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Trưởng câu lạc bộ</label>
-                                    <select class="form-select" name="leader_id">
+                                    <select class="form-select" id="leader_id" name="leader_id">
                                         <option value="">Chưa chọn</option>
                                         @foreach($users as $user)
                                             <option value="{{ $user->id }}" {{ old('leader_id', $club->leader_id) == $user->id ? 'selected' : '' }}>
@@ -196,7 +196,16 @@
     </div>
 </div>
 
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+<!-- jQuery (required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 // Khởi tạo CKEditor cho mô tả
 document.addEventListener('DOMContentLoaded', function() {
@@ -222,6 +231,22 @@ document.addEventListener('DOMContentLoaded', function() {
             { name: 'tools', items: ['Maximize', 'ShowBlocks'] },
             { name: 'about', items: ['About'] }
         ]
+    });
+    
+    // Khởi tạo Select2 cho dropdown chọn trưởng CLB
+    $('#leader_id').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Tìm kiếm và chọn trưởng CLB...',
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "Không tìm thấy người dùng";
+            },
+            searching: function() {
+                return "Đang tìm kiếm...";
+            }
+        },
+        width: '100%'
     });
 });
 </script>

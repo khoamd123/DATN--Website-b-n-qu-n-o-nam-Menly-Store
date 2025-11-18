@@ -2503,7 +2503,7 @@ class StudentController extends Controller
                 ->with('error', 'Bạn chưa tham gia CLB nào.');
         }
         $club = $user->clubs->first();
-        $tx = FundTransaction::findOrFail($transactionId);
+        $tx = FundTransaction::with(['creator', 'approver', 'event'])->findOrFail($transactionId);
         $fund = Fund::where('club_id', $club->id)->first();
         if ($tx->fund_id !== ($fund->id ?? null)) {
             return redirect()->route('student.club-management.fund-transactions')
