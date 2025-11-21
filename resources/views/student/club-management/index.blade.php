@@ -101,17 +101,12 @@
                                 <small>Thành viên</small>
                             </span>
                             <span class="stat-item">
-                                <a href="{{ $clubId ? route('student.club-management.join-requests', ['club' => $clubId]) : '#' }}" class="text-decoration-none">
                                     <strong>{{ data_get($clubStats, 'members.pending', 0) }}</strong>
-                                </a>
                                 <small>Đang chờ</small>
                             </span>
                         </div>
                         <a href="{{ $clubId ? route('student.club-management.members', ['club' => $clubId]) : '#' }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-arrow-right me-1"></i> Quản lý
-                        </a>
-                        <a href="{{ $clubId ? route('student.club-management.join-requests', ['club' => $clubId]) : '#' }}" class="btn btn-outline-secondary btn-sm ms-2">
-                            <i class="fas fa-inbox me-1"></i> Xem đơn chờ
                         </a>
                     </div>
                 </div>
@@ -124,7 +119,7 @@
                         <i class="fas fa-calendar-plus"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Tạo sự kiện</h5>
+                        <h5 class="management-title">Quản lý sự kiện</h5>
                         <p class="management-description">Tổ chức và quản lý các sự kiện của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
@@ -136,9 +131,14 @@
                                 <small>Sắp tới</small>
                             </span>
                         </div>
-                        <a href="#" class="btn btn-primary btn-sm">
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus me-1"></i> Tạo mới
                         </a>
+                            <a href="{{ route('student.events.manage') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-1"></i> Quản lý
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -188,35 +188,29 @@
                                 <small>Sự kiện</small>
                             </span>
                         </div>
-                        <a href="{{ route('student.club-management.reports') }}" class="btn btn-primary btn-sm">
+                        <a href="{{ route('student.club-management.reports') }}" class="btn btn-primary btn-sm text-white">
                             <i class="fas fa-chart-line me-1"></i> Xem báo cáo
                         </a>
                     </div>
                 </div>
             </div>
             @endif
-            @if($userClub && $clubId && ($user->hasPermission('quan_ly_clb', $clubId) || $user->hasPermission('dang_thong_bao', $clubId)))
+            @php
+                $position = $user->getPositionInClub($clubId);
+                $canViewFund = in_array($position, ['leader', 'vice_president', 'officer']);
+            @endphp
+            @if($userClub && $clubId && $canViewFund && data_get($clubStats, 'fund.exists', false))
             <div class="col-md-6 mb-4">
                 <div class="management-card">
                     <div class="management-icon">
-                        <i class="fas fa-folder-open"></i>
+                        <i class="fas fa-wallet"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
-                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
-                        <div class="management-stats">
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
-                                <small>Tài nguyên</small>
-                            </span>
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
-                                <small>File</small>
-                            </span>
-                        </div>
-                        <a href="{{ $clubId ? route('student.club-management.resources', ['club' => $clubId]) : '#' }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-folder me-1"></i> Quản lý tài nguyên
-                        </a>
+                        <h5 class="management-title">Quỹ CLB</h5>
+                        <p class="management-description">Quản lý tài chính và giao dịch quỹ CLB</p>
+                        <a href="{{ route('student.club-management.fund-transactions') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-list me-1"></i> Xem giao dịch
+                            </a>
                     </div>
                 </div>
             </div>
@@ -280,54 +274,6 @@
         </div>
 
         {{-- Phân quyền chi tiết đã chuyển sang trang riêng --}}
-
-        <!-- Recent Activity -->
-        <div class="content-card">
-            <h4 class="mb-3">
-                <i class="fas fa-history text-teal me-2"></i> Hoạt động gần đây
-            </h4>
-            
-            <div class="activity-list">
-                <div class="activity-item">
-                    <div class="activity-icon bg-primary">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="activity-content">
-                        <h6 class="activity-title">Thành viên mới tham gia</h6>
-                        <p class="activity-description">Nguyễn Văn A đã tham gia CLB Công nghệ thông tin</p>
-                        <small class="activity-time">
-                            <i class="fas fa-clock me-1"></i> 2 giờ trước
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="activity-icon bg-success">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="activity-content">
-                        <h6 class="activity-title">Sự kiện mới được tạo</h6>
-                        <p class="activity-description">Workshop "Lập trình Web hiện đại" đã được tạo</p>
-                        <small class="activity-time">
-                            <i class="fas fa-clock me-1"></i> 1 ngày trước
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="activity-icon bg-info">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
-                    <div class="activity-content">
-                        <h6 class="activity-title">Thông báo mới</h6>
-                        <p class="activity-description">Thông báo về buổi họp mặt định kỳ đã được gửi</p>
-                        <small class="activity-time">
-                            <i class="fas fa-clock me-1"></i> 2 ngày trước
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Sidebar -->
@@ -350,7 +296,11 @@
                 @if($clubId && $user->hasPermission('tao_su_kien', $clubId))
                 <div class="permission-item">
                     <i class="fas fa-calendar-plus text-success"></i>
-                    <span>Tạo sự kiện</span>
+                    <span>
+                        <a href="{{ route('student.events.manage') }}" class="text-decoration-none text-dark">
+                            Quản lý sự kiện
+                        </a>
+                    </span>
                 </div>
                 @endif
                 @if($clubId && $user->hasPermission('dang_thong_bao', $clubId))
@@ -466,6 +416,49 @@
     
     .management-content {
         flex-grow: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .management-content .d-flex {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .management-content .btn {
+        white-space: nowrap;
+        flex: 0 1 auto;
+        max-width: 100%;
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .management-content .btn-group {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .management-content .dropdown-menu {
+        position: absolute;
+        z-index: 1000;
+        min-width: 200px;
+    }
+    
+    @media (max-width: 576px) {
+        .management-content .btn {
+            width: 100%;
+            flex: 1 1 100%;
+        }
+        
+        .management-content .btn-group {
+            flex-direction: column;
+        }
+        
+        .management-content .dropdown-toggle-split {
+            width: 100%;
+        }
     }
     
     .management-title {

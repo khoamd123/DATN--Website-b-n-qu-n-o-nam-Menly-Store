@@ -104,13 +104,13 @@
                             <td style="min-width: 120px; width: 120px;">
                                 <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('admin.users.show', $user->id) }}" 
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm btn-primary text-white w-100">
                                         <i class="fas fa-eye"></i> Xem chi tiết
                                     </a>
                                     <form method="POST" action="{{ route('admin.users.delete', $user->id) }}" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-white">
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>

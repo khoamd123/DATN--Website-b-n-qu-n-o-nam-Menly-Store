@@ -21,6 +21,11 @@ class ClubMember extends Model
         'left_reason',
     ];
 
+    protected $casts = [
+        'joined_at' => 'datetime',
+        'left_at' => 'datetime',
+    ];
+
     /**
      * Get the club that owns the member
      */

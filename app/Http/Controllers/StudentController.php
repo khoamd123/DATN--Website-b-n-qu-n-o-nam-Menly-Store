@@ -17,7 +17,6 @@ use App\Models\Fund;
 use App\Models\FundTransaction;
 use App\Models\FundRequest;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class StudentController extends Controller
@@ -890,101 +889,7 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Lấy các CLB mà user đã tham gia
-        $userClubIds = $user->clubs->pluck('id')->toArray();
-
-        // Base query cho thông báo có quyền xem (tương tự như posts)
-        $announcementsQuery = Post::with(['club', 'user'])
-            ->where('type', 'announcement')
-            ->where(function($q) use ($userClubIds) {
-                // Thông báo công khai
-                $q->where('status', 'published')
-                  // Hoặc thông báo chỉ thành viên CLB mà user là thành viên
-                  ->orWhere(function($subQ) use ($userClubIds) {
-                      $subQ->where('status', 'members_only')
-                           ->whereIn('club_id', $userClubIds);
-                  });
-            })
-            // Chỉ lấy thông báo từ CLB mà user tham gia
-            ->whereIn('club_id', $userClubIds)
-            // Loại bỏ bài viết đã xóa mềm (ở thùng rác)
-            ->whereNull('deleted_at')
-            // Loại bỏ bài có status legacy 'deleted' nếu còn
-            ->where('status', '!=', 'deleted')
-            ->orderBy('created_at', 'desc');
-
-        // Filter theo tìm kiếm
-        if (request()->filled('search')) {
-            $search = request('search');
-            $announcementsQuery->where(function($q) use ($search) {
-                $q->where('title', 'like', '%' . $search . '%')
-                  ->orWhere('content', 'like', '%' . $search . '%');
-            });
-        }
-
-        // Filter theo CLB
-        if (request()->filled('club_id')) {
-            $announcementsQuery->where('club_id', request('club_id'));
-        }
-
-        $announcements = $announcementsQuery->paginate(10);
-
-        // Lấy các notifications từ hệ thống (nếu có)
-        $systemNotifications = \App\Models\Notification::with('targets')
-            ->whereHas('targets', function($query) use ($userClubIds, $user) {
-                $query->where(function($q) use ($userClubIds, $user) {
-                    $q->where('target_type', 'all')
-                      ->orWhere(function($q2) use ($userClubIds) {
-                          $q2->where('target_type', 'club')
-                             ->whereIn('target_id', $userClubIds);
-                      })
-                      ->orWhere(function($q3) use ($user) {
-                          $q3->where('target_type', 'user')
-                             ->where('target_id', $user->id);
-                      });
-                });
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Lấy thông báo mới nhất để hiển thị trong modal (sử dụng query base giống nhau)
-        $latestAnnouncementQuery = Post::with(['club', 'user'])
-            ->where('type', 'announcement')
-            ->where(function($q) use ($userClubIds) {
-                $q->where('status', 'published')
-                  ->orWhere(function($subQ) use ($userClubIds) {
-                      $subQ->where('status', 'members_only')
-                           ->whereIn('club_id', $userClubIds);
-                  });
-            })
-            ->whereIn('club_id', $userClubIds)
-            ->whereNull('deleted_at')
-            ->where('status', '!=', 'deleted')
-            ->orderBy('created_at', 'desc');
-        
-        $latestAnnouncement = $latestAnnouncementQuery->first();
-
-        // Thống kê số lượng thông báo theo loại (cũng áp dụng quyền xem)
-        $statsQuery = Post::where('type', 'announcement')
-            ->where(function($q) use ($userClubIds) {
-                $q->where('status', 'published')
-                  ->orWhere(function($subQ) use ($userClubIds) {
-                      $subQ->where('status', 'members_only')
-                           ->whereIn('club_id', $userClubIds);
-                  });
-            })
-            ->whereIn('club_id', $userClubIds)
-            ->whereNull('deleted_at')
-            ->where('status', '!=', 'deleted');
-
-        $stats = [
-            'system' => $systemNotifications->count(),
-            'announcements' => $announcements->total(),
-            'clubs' => (clone $statsQuery)->distinct('club_id')->count('club_id'),
-            'awards' => 0, // Có thể thêm sau
-        ];
-
-        return view('student.notifications.index', compact('user', 'announcements', 'systemNotifications', 'stats', 'latestAnnouncement'));
+        return view('student.notifications.index', compact('user'));
     }
 
     public function contact()
@@ -1038,15 +943,13 @@ class StudentController extends Controller
             $upcomingEvents = Event::where('club_id', $clubId)
                 ->where('start_time', '>=', now())
                 ->count();
-            // Đếm số bài viết (type='post')
-            $totalPosts = Post::where('club_id', $clubId)
-                ->where('type', 'post')
-                ->where('status', '!=', 'deleted')
-                ->count();
-            // Đếm số thông báo (type='announcement')
             $totalAnnouncements = Post::where('club_id', $clubId)
                 ->where('type', 'announcement')
                 ->where('status', '!=', 'deleted')
+                ->count();
+            $todayAnnouncements = Post::where('club_id', $clubId)
+                ->where('type', 'announcement')
+                ->whereDate('created_at', now()->toDateString())
                 ->count();
 
             // Fund requests stats
@@ -1081,8 +984,7 @@ class StudentController extends Controller
             $clubStats = [
                 'members' => ['active' => $activeMembers, 'pending' => $pendingMembers],
                 'events' => ['total' => $totalEvents, 'upcoming' => $upcomingEvents],
-                'posts' => $totalPosts,
-                'announcements' => $totalAnnouncements,
+                'announcements' => ['total' => $totalAnnouncements, 'today' => $todayAnnouncements],
                 'fundRequests' => ['total' => $totalFundRequests, 'pending' => $pendingFundRequests],
                 'fund' => [
                     'balance' => $balance,
@@ -2182,23 +2084,7 @@ class StudentController extends Controller
 
         // Tách query cho bài viết và thông báo
         $postsQuery = (clone $baseQuery);
-        
-        // Query riêng cho thông báo: chỉ lấy từ CLB user tham gia
-        $announcementsQuery = Post::with(['club', 'user', 'attachments'])
-            ->where('type', 'announcement')
-            ->where(function($q) use ($userClubIds) {
-                // Thông báo công khai từ CLB user tham gia
-                $q->where('status', 'published')
-                  // Hoặc thông báo chỉ thành viên từ CLB user tham gia
-                  ->orWhere(function($subQ) use ($userClubIds) {
-                      $subQ->where('status', 'members_only')
-                           ->whereIn('club_id', $userClubIds);
-                  });
-            })
-            // Chỉ lấy thông báo từ CLB user tham gia
-            ->whereIn('club_id', $userClubIds)
-            ->whereNull('deleted_at')
-            ->where('status', '!=', 'deleted');
+        $announcementsQuery = (clone $baseQuery);
 
         // Bài viết: loại trừ announcement (trừ khi filter theo type = announcement)
         if ($request->has('type') && $request->type === 'announcement') {
@@ -2206,6 +2092,9 @@ class StudentController extends Controller
         } else {
             $postsQuery->where('type', '!=', 'announcement');
         }
+
+        // Thông báo: chỉ lấy announcement
+        $announcementsQuery->where('type', 'announcement');
 
         // Filter by club cho cả 2
         if ($request->has('club_id') && $request->club_id) {
@@ -2236,29 +2125,15 @@ class StudentController extends Controller
             $postsQuery->orderBy('created_at', 'desc');
         }
 
-        // Thông báo luôn sắp xếp theo mới nhất (baseQuery đã có logic kiểm tra quyền và club_id)
+        // Thông báo luôn sắp xếp theo mới nhất
         $announcementsQuery->orderBy('created_at', 'desc');
 
         $posts = $postsQuery->paginate(3);
         $announcements = $announcementsQuery->limit(5)->get();
         $clubs = Club::where('status', 'active')->get();
 
-        // Lấy thông báo mới nhất để hiển thị modal (từ query riêng để đảm bảo consistency)
-        $latestAnnouncementQuery = Post::with(['club', 'user'])
-            ->where('type', 'announcement')
-            ->where(function($q) use ($userClubIds) {
-                $q->where('status', 'published')
-                  ->orWhere(function($subQ) use ($userClubIds) {
-                      $subQ->where('status', 'members_only')
-                           ->whereIn('club_id', $userClubIds);
-                  });
-            })
-            ->whereIn('club_id', $userClubIds)
-            ->whereNull('deleted_at')
-            ->where('status', '!=', 'deleted')
-            ->orderBy('created_at', 'desc');
-        
-        $latestAnnouncement = $latestAnnouncementQuery->first();
+        // Lấy thông báo mới nhất để hiển thị modal
+        $latestAnnouncement = $announcementsQuery->first();
 
         // Kiểm tra xem có thông báo mới hơn thông báo đã xem gần nhất không
         // Modal sẽ hiển thị mỗi lần vào trang cho đến khi có thông báo mới (ID lớn hơn)
@@ -2304,13 +2179,11 @@ class StudentController extends Controller
             return redirect()->route('student.posts')->with('error', 'Bạn không có quyền xem bài viết này.');
         }
 
-        // Bài viết liên quan: cùng CLB, đã xuất bản (hoặc members_only nếu là thành viên CLB), chỉ loại post (không bao gồm announcement)
+        // Bài viết liên quan: cùng CLB, đã xuất bản (hoặc members_only nếu là thành viên CLB), loại post/announcement
         $relatedQuery = Post::with(['club', 'user'])
             ->where('id', '!=', $post->id)
             ->where('club_id', $post->club_id)
-            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
-            ->whereNull('deleted_at')
-            ->where('status', '!=', 'deleted')
+            ->whereIn('type', ['post', 'announcement'])
             ->orderBy('created_at', 'desc')
             ->limit(6);
 
@@ -2442,199 +2315,6 @@ class StudentController extends Controller
     }
 
     /**
-     * Show create announcement form
-     */
-    public function createAnnouncement()
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-        
-        // Chỉ lấy các CLB mà user là leader, vice_president, hoặc officer
-        $userClubIds = $user->clubs->pluck('id')->toArray();
-        $allowedClubIds = [];
-        
-        foreach ($userClubIds as $clubId) {
-            $position = $user->getPositionInClub($clubId);
-            if (in_array($position, ['leader', 'vice_president', 'officer'])) {
-                $allowedClubIds[] = $clubId;
-            }
-        }
-        
-        $clubs = Club::whereIn('id', $allowedClubIds)->where('status', 'active')->get();
-        if ($clubs->isEmpty()) {
-            return redirect()->route('student.posts')->with('error', 'Bạn cần là Trưởng, Phó hoặc Cán sự của CLB để có thể đăng thông báo.');
-        }
-        return view('student.announcements.create', compact('user', 'clubs'));
-    }
-
-    /**
-     * Store announcement
-     */
-    public function storeAnnouncement(Request $request)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'club_id' => 'required|exists:clubs,id',
-            'status' => 'required|in:published,members_only,hidden',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096'
-        ]);
-        
-        // Kiểm tra quyền đăng thông báo: chỉ leader, vice_president, officer
-        $clubId = (int) $request->input('club_id');
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->back()->withInput()->with('error', 'Bạn cần là Trưởng, Phó hoặc Cán sự của CLB để có thể đăng thông báo.');
-        }
-        
-        $data = $request->only(['title','content','club_id','status']);
-        $data['type'] = 'announcement'; // Force type to announcement
-        $data['user_id'] = $user->id;
-        // Generate unique slug
-        $baseSlug = Str::slug($data['title']);
-        $slug = $baseSlug;
-        $suffix = 1;
-        while (Post::where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . $suffix;
-            $suffix++;
-        }
-        $data['slug'] = $slug;
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $destination = public_path('uploads/posts');
-            if (!is_dir($destination)) {
-                @mkdir($destination, 0755, true);
-            }
-            $image->move($destination, $filename);
-            $data['image'] = 'uploads/posts/' . $filename;
-        }
-        // Remove featured image from content if present
-        if (!empty($data['image']) && !empty($data['content'])) {
-            $relative = ltrim($data['image'], '/');
-            $assetUrl = asset($relative);
-            $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
-            $data['content'] = preg_replace($pattern, '', $data['content']);
-        }
-        $post = \App\Models\Post::create($data);
-        return redirect()->route('student.posts.show', $post->id)->with('success', 'Tạo thông báo thành công!');
-    }
-
-    /**
-     * Show edit announcement form
-     */
-    public function editAnnouncement($id)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-        $post = Post::findOrFail($id);
-        if ($post->type !== 'announcement') {
-            return redirect()->route('student.posts.show', $id)->with('error', 'Đây không phải là thông báo.');
-        }
-        
-        // Kiểm tra quyền: chỉnh sửa nếu là người đăng hoặc là leader/vice_president/officer của CLB đó
-        $position = $user->getPositionInClub($post->club_id);
-        $canEdit = ($post->user_id === $user->id) || in_array($position, ['leader', 'vice_president', 'officer']);
-        
-        if (!$canEdit) {
-            return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa thông báo này.');
-        }
-        
-        $clubs = Club::whereIn('id', $user->clubs->pluck('id'))->where('status', 'active')->get();
-        return view('student.announcements.edit', compact('user', 'post', 'clubs'));
-    }
-
-    /**
-     * Update announcement
-     */
-    public function updateAnnouncement(Request $request, $id)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-        $post = Post::findOrFail($id);
-        if ($post->type !== 'announcement') {
-            return redirect()->route('student.posts.show', $id)->with('error', 'Đây không phải là thông báo.');
-        }
-        
-        // Kiểm tra quyền: chỉnh sửa nếu là người đăng hoặc là leader/vice_president/officer của CLB đó
-        $position = $user->getPositionInClub($post->club_id);
-        $canEdit = ($post->user_id === $user->id) || in_array($position, ['leader', 'vice_president', 'officer']);
-        
-        if (!$canEdit) {
-            return redirect()->route('student.posts.show', $id)->with('error', 'Bạn không có quyền chỉnh sửa thông báo này.');
-        }
-        
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'club_id' => 'required|exists:clubs,id',
-            'status' => 'required|in:published,members_only,hidden',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
-            'remove_image' => 'nullable|in:0,1'
-        ]);
-        $data = $request->only(['title','content','club_id','status']);
-        $data['type'] = 'announcement'; // Force type to announcement
-        // Regenerate slug if title changed or slug missing
-        if ($post->title !== $data['title'] || empty($post->slug)) {
-            $baseSlug = Str::slug($data['title']);
-            $slug = $baseSlug;
-            $suffix = 1;
-            while (Post::where('slug', $slug)->where('id', '!=', $post->id)->exists()) {
-                $slug = $baseSlug . '-' . $suffix;
-                $suffix++;
-            }
-            $data['slug'] = $slug;
-        }
-        if ($request->input('remove_image') === '1' && !empty($post->image)) {
-            if (\Illuminate\Support\Str::startsWith($post->image, ['uploads/','/uploads/'])) {
-                @unlink(public_path(ltrim($post->image,'/')));
-            }
-            $post->image = null;
-        }
-        if ($request->hasFile('image')) {
-            if (!empty($post->image) && \Illuminate\Support\Str::startsWith($post->image, ['uploads/','/uploads/'])) {
-                @unlink(public_path(ltrim($post->image,'/')));
-            }
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $destination = public_path('uploads/posts');
-            if (!is_dir($destination)) {
-                @mkdir($destination, 0755, true);
-            }
-            $image->move($destination, $filename);
-            $data['image'] = 'uploads/posts/' . $filename;
-        }
-        // Remove featured image(s) from content if present (both old and new featured images)
-        if (!empty($data['content'])) {
-            $imagesToStrip = [];
-            if (!empty($post->image)) {
-                $imagesToStrip[] = $post->image;
-            }
-            if (!empty($data['image'])) {
-                $imagesToStrip[] = $data['image'];
-            }
-            foreach ($imagesToStrip as $imgPath) {
-                $relative = ltrim($imgPath, '/');
-                $assetUrl = asset($relative);
-                $pattern = '#<img[^>]+src=["\\\'](?:' . preg_quote($assetUrl, '#') . '|' . preg_quote('/' . $relative, '#') . '|' . preg_quote($relative, '#') . ')[^"\\\']*["\\\'][^>]*>#i';
-                $data['content'] = preg_replace($pattern, '', $data['content']);
-            }
-        }
-        $post->update($data);
-        return redirect()->route('student.posts.show', $post->id)->with('success', 'Cập nhật thông báo thành công!');
-    }
-
-    /**
      * Show edit post form
      */
     public function editPost($id)
@@ -2746,445 +2426,6 @@ class StudentController extends Controller
     }
 
     /**
-     * Manage posts for a specific club (from club management)
-     */
-    public function clubManagementPosts($clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Kiểm tra quyền quản lý bài viết
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền quản lý bài viết của CLB này.');
-        }
-
-        // Query bài viết của CLB này (chỉ loại 'post', không bao gồm 'announcement')
-        $postsQuery = Post::with(['club', 'user'])
-            ->where('club_id', $clubId)
-            ->where('type', 'post')
-            ->where('status', '!=', 'deleted')
-            ->orderBy('created_at', 'desc');
-
-        // Query thông báo của CLB này (chỉ loại 'announcement')
-        $announcementsQuery = Post::with(['club', 'user'])
-            ->where('club_id', $clubId)
-            ->where('type', 'announcement')
-            ->where('status', '!=', 'deleted')
-            ->orderBy('created_at', 'desc');
-
-        // Filter bài viết theo tìm kiếm
-        if (request()->filled('search')) {
-            $postsQuery->where('title', 'like', '%' . request('search') . '%');
-        }
-
-        // Filter bài viết theo trạng thái
-        if (request()->filled('status') && request('status') !== 'all') {
-            $postsQuery->where('status', request('status'));
-        }
-
-        // Filter thông báo theo tìm kiếm
-        if (request()->filled('announcement_search')) {
-            $announcementsQuery->where('title', 'like', '%' . request('announcement_search') . '%');
-        }
-
-        // Filter thông báo theo trạng thái
-        if (request()->filled('announcement_status') && request('announcement_status') !== 'all') {
-            $announcementsQuery->where('status', request('announcement_status'));
-        }
-
-        $posts = $postsQuery->paginate(12, ['*'], 'posts_page')->appends(request()->except('posts_page'));
-        $announcements = $announcementsQuery->paginate(12, ['*'], 'announcements_page')->appends(request()->except('announcements_page'));
-
-        // Xác định tab hiện tại (mặc định là posts nếu không có tab parameter)
-        $activeTab = request('tab', 'posts');
-        
-        // Kiểm tra quyền đăng thông báo (chỉ leader, vice_president, officer)
-        $userPosition = $user->getPositionInClub($clubId);
-        $canPostAnnouncement = in_array($userPosition, ['leader', 'vice_president', 'officer']);
-
-        return view('student.club-management.posts', [
-            'user' => $user,
-            'club' => $club,
-            'clubId' => $clubId,
-            'posts' => $posts,
-            'announcements' => $announcements,
-            'activeTab' => $activeTab,
-            'canPostAnnouncement' => $canPostAnnouncement,
-        ]);
-    }
-
-    /**
-     * Display resources for a specific club
-     */
-    public function clubManagementResources($clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Kiểm tra quyền quản lý tài nguyên
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền quản lý tài nguyên của CLB này.');
-        }
-
-        // Query tài nguyên của CLB này
-        $resourcesQuery = \App\Models\ClubResource::with(['club', 'user', 'images', 'files'])
-            ->where('club_id', $clubId)
-            ->whereNull('deleted_at')
-            ->orderBy('created_at', 'desc');
-
-        // Filter theo tìm kiếm
-        if (request()->filled('search')) {
-            $resourcesQuery->where(function($q) {
-                $q->where('title', 'like', '%' . request('search') . '%')
-                  ->orWhere('description', 'like', '%' . request('search') . '%');
-            });
-        }
-
-        // Filter theo trạng thái
-        if (request()->filled('status') && request('status') !== 'all') {
-            $resourcesQuery->where('status', request('status'));
-        }
-
-        $resources = $resourcesQuery->paginate(12);
-
-        return view('student.club-management.resources', [
-            'user' => $user,
-            'club' => $club,
-            'clubId' => $clubId,
-            'resources' => $resources,
-        ]);
-    }
-
-    /**
-     * Show create resource form
-     */
-    public function createResource($clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Kiểm tra quyền quản lý tài nguyên
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo tài nguyên cho CLB này.');
-        }
-
-        return view('student.club-management.resources.create', [
-            'user' => $user,
-            'club' => $club,
-            'clubId' => $clubId,
-        ]);
-    }
-
-    /**
-     * Store new resource
-     */
-    public function storeResource(Request $request, $clubId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-
-        // Kiểm tra quyền quản lý tài nguyên
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo tài nguyên cho CLB này.');
-        }
-
-        $request->validate([
-            'title' => 'required|string|min:5|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive,archived',
-            'files' => 'nullable|array|max:10',
-            'files.*' => [
-                'file',
-                'max:20480',
-                function ($attribute, $value, $fail) {
-                    if (!$value) return;
-                    $extension = strtolower($value->getClientOriginalExtension());
-                    $mimeType = $value->getMimeType();
-                    
-                    $allowedExtensions = ['doc', 'docx', 'xls', 'xlsx', 'xlsm', 'pdf', 'ppt', 'pptx'];
-                    $allowedMimeTypes = [
-                        'application/msword', // .doc
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-                        'application/vnd.ms-excel', // .xls
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-                        'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
-                        'application/pdf', // .pdf
-                        'application/vnd.ms-powerpoint', // .ppt
-                        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-                        'application/octet-stream', // Some Office files
-                    ];
-                    
-                    if (!in_array($extension, $allowedExtensions) && !in_array($mimeType, $allowedMimeTypes)) {
-                        $fail('File phải có định dạng: DOC, DOCX, XLS, XLSX, XLSM, PDF, PPT, PPTX.');
-                    }
-                }
-            ],
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp,mp4,avi,mov,webm|max:102400', // 100MB per file
-            'external_link' => 'nullable|url|max:500',
-        ], [
-            'title.required' => 'Tiêu đề là bắt buộc.',
-            'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
-            'status.required' => 'Trạng thái là bắt buộc.',
-            'status.in' => 'Trạng thái không hợp lệ.',
-            'files.max' => 'Tối đa 10 file.',
-            'files.*.file' => 'File không hợp lệ.',
-            'files.*.mimes' => 'File phải có định dạng: DOC, DOCX, XLS, XLSX, XLSM, PDF, PPT, PPTX.',
-            'files.*.max' => 'Mỗi file không được vượt quá 20MB.',
-            'images.max' => 'Tối đa 10 file.',
-            'images.*.file' => 'File không hợp lệ.',
-            'images.*.mimes' => 'File phải có định dạng: JPEG, PNG, JPG, GIF, WEBP, MP4, AVI, MOV, WEBM.',
-            'images.*.max' => 'Mỗi file không được vượt quá 100MB.',
-            'external_link.url' => 'Link không hợp lệ.',
-            'external_link.max' => 'Link không được vượt quá :max ký tự.',
-        ]);
-
-        $title = $request->input('title');
-        
-        $resource = \App\Models\ClubResource::create([
-            'title' => $title,
-            'slug' => Str::slug($title) . '-' . time(),
-            'description' => $request->description,
-            'club_id' => $clubId,
-            'user_id' => $user->id,
-            'status' => $request->status,
-            'external_link' => $request->external_link,
-        ]);
-
-        // Handle file album upload using ClubResourceController methods
-        $clubResourceController = new \App\Http\Controllers\ClubResourceController();
-        if ($request->hasFile('files')) {
-            $reflection = new \ReflectionClass($clubResourceController);
-            $method = $reflection->getMethod('handleFileAlbumUpload');
-            $method->setAccessible(true);
-            $method->invoke($clubResourceController, $resource, $request->file('files'));
-        }
-
-        // Handle image album upload
-        if ($request->hasFile('images')) {
-            $reflection = new \ReflectionClass($clubResourceController);
-            $method = $reflection->getMethod('handleImageAlbumUpload');
-            $method->setAccessible(true);
-            $method->invoke($clubResourceController, $resource, $request->file('images'));
-        }
-
-        return redirect()->route('student.club-management.resources', ['club' => $clubId])
-            ->with('success', 'Tài nguyên đã được tạo thành công!');
-    }
-
-    /**
-     * Show resource detail
-     */
-    public function showResource($clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::with(['club', 'user', 'images', 'files'])
-            ->where('club_id', $clubId)
-            ->findOrFail($resourceId);
-
-        // Kiểm tra quyền xem (chỉ thành viên CLB mới được xem nếu status là inactive hoặc archived)
-        $userClubIds = $user->clubs->pluck('id')->toArray();
-        $isMember = in_array($clubId, $userClubIds);
-        
-        // Nếu tài nguyên không active và user không phải thành viên CLB, không cho xem
-        if ($resource->status !== 'active' && !$isMember) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền xem tài nguyên này.');
-        }
-
-        // Tăng view count
-        $resource->incrementViewCount();
-        $resource->refresh();
-
-        return view('student.club-management.resources.show', [
-            'user' => $user,
-            'club' => $club,
-            'clubId' => $clubId,
-            'resource' => $resource,
-        ]);
-    }
-
-    /**
-     * Show edit resource form
-     */
-    public function editResource($clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::with(['images', 'files'])->findOrFail($resourceId);
-
-        // Kiểm tra tài nguyên thuộc CLB này
-        if ($resource->club_id !== $clubId) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Tài nguyên không thuộc CLB này.');
-        }
-
-        // Kiểm tra quyền chỉnh sửa
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền chỉnh sửa tài nguyên này.');
-        }
-
-        return view('student.club-management.resources.edit', [
-            'user' => $user,
-            'club' => $club,
-            'clubId' => $clubId,
-            'resource' => $resource,
-        ]);
-    }
-
-    /**
-     * Update resource
-     */
-    public function updateResource(Request $request, $clubId, $resourceId)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return $user;
-        }
-
-        $clubId = (int) $clubId;
-        $club = Club::findOrFail($clubId);
-        $resource = \App\Models\ClubResource::findOrFail($resourceId);
-
-        // Kiểm tra tài nguyên thuộc CLB này
-        if ($resource->club_id !== $clubId) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Tài nguyên không thuộc CLB này.');
-        }
-
-        // Kiểm tra quyền chỉnh sửa
-        $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->route('student.club-management.resources', ['club' => $clubId])
-                ->with('error', 'Bạn không có quyền chỉnh sửa tài nguyên này.');
-        }
-
-        $request->validate([
-            'title' => 'required|string|min:5|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive,archived',
-            'files' => 'nullable|array|max:10',
-            'files.*' => [
-                'file',
-                'max:20480',
-                function ($attribute, $value, $fail) {
-                    if (!$value) return;
-                    $extension = strtolower($value->getClientOriginalExtension());
-                    $mimeType = $value->getMimeType();
-                    
-                    $allowedExtensions = ['doc', 'docx', 'xls', 'xlsx', 'xlsm', 'pdf', 'ppt', 'pptx'];
-                    $allowedMimeTypes = [
-                        'application/msword', // .doc
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-                        'application/vnd.ms-excel', // .xls
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-                        'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
-                        'application/pdf', // .pdf
-                        'application/vnd.ms-powerpoint', // .ppt
-                        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-                        'application/octet-stream', // Some Office files
-                    ];
-                    
-                    if (!in_array($extension, $allowedExtensions) && !in_array($mimeType, $allowedMimeTypes)) {
-                        $fail('File phải có định dạng: DOC, DOCX, XLS, XLSX, XLSM, PDF, PPT, PPTX.');
-                    }
-                }
-            ],
-            'deleted_files' => 'nullable|array',
-            'deleted_files.*' => 'integer|exists:club_resource_files,id',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp,mp4,avi,mov,webm|max:102400',
-            'deleted_images' => 'nullable|array',
-            'deleted_images.*' => 'integer|exists:club_resource_images,id',
-            'external_link' => 'nullable|url|max:500',
-        ], [
-            'title.required' => 'Tiêu đề là bắt buộc.',
-            'title.min' => 'Tiêu đề phải có ít nhất :min ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá :max ký tự.',
-            'status.required' => 'Trạng thái là bắt buộc.',
-            'status.in' => 'Trạng thái không hợp lệ.',
-            'files.max' => 'Tối đa 10 file.',
-            'files.*.file' => 'File không hợp lệ.',
-            'files.*.max' => 'Mỗi file không được vượt quá 20MB.',
-            'deleted_files.*.exists' => 'File không tồn tại.',
-            'images.max' => 'Tối đa 10 file.',
-            'images.*.file' => 'File không hợp lệ.',
-            'images.*.mimes' => 'File phải có định dạng: JPEG, PNG, JPG, GIF, WEBP, MP4, AVI, MOV, WEBM.',
-            'images.*.max' => 'Mỗi file không được vượt quá 100MB.',
-            'deleted_images.*.exists' => 'Hình ảnh không tồn tại.',
-            'external_link.url' => 'Link không hợp lệ.',
-            'external_link.max' => 'Link không được vượt quá :max ký tự.',
-        ]);
-
-        $title = $request->input('title');
-        
-        $resource->update([
-            'title' => $title,
-            'slug' => Str::slug($title) . '-' . $resource->id,
-            'description' => $request->description,
-            'status' => $request->status,
-            'external_link' => $request->external_link,
-        ]);
-
-        // Handle file album updates
-        $clubResourceController = new \App\Http\Controllers\ClubResourceController();
-        $reflection = new \ReflectionClass($clubResourceController);
-        
-        $fileMethod = $reflection->getMethod('handleFileAlbumUpdate');
-        $fileMethod->setAccessible(true);
-        $fileMethod->invoke($clubResourceController, $resource, $request);
-
-        $imageMethod = $reflection->getMethod('handleImageAlbumUpdate');
-        $imageMethod->setAccessible(true);
-        $imageMethod->invoke($clubResourceController, $resource, $request);
-
-        return redirect()->route('student.club-management.resources', ['club' => $clubId])
-            ->with('success', 'Tài nguyên đã được cập nhật thành công!');
-    }
-
-    /**
      * List posts created by current student
      */
     public function myPosts(\Illuminate\Http\Request $request)
@@ -3200,14 +2441,6 @@ class StudentController extends Controller
             ->whereIn('type', ['post', 'announcement'])
             ->where('status', '!=', 'deleted')
             ->orderBy('created_at', 'desc');
-        
-        // Filter theo club_id nếu có (từ trang quản lý CLB)
-        // Chỉ hiển thị bài viết của CLB đó, không phải tất cả bài viết của user
-        if ($request->filled('club_id')) {
-            $clubId = (int) $request->club_id;
-            $query->where('club_id', $clubId);
-        }
-        
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
         }
@@ -3369,38 +2602,6 @@ class StudentController extends Controller
         }
 
         return response()->json(['success' => true]);
-    }
-
-    /**
-     * Upload image from editor and return public URL (AJAX)
-     */
-    public function uploadEditorImage(Request $request)
-    {
-        $user = $this->checkStudentAuth();
-        if ($user instanceof \Illuminate\Http\RedirectResponse) {
-            return response()->json(['error' => ['message' => 'Unauthorized']], 401);
-        }
-
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ]);
-
-        $path = $request->file('image')->store('public/posts/content');
-        $url = Storage::url($path); // e.g. /storage/posts/content/xxx.jpg
-        $fullUrl = asset($url);
-
-        // Hỗ trợ cả CKEditor 4 và CKEditor 5
-        // CKEditor 4 sử dụng callback function
-        if ($request->has('CKEditorFuncNum')) {
-            $CKEditorFuncNum = $request->input('CKEditorFuncNum');
-            return response("<script type='text/javascript'>window.parent.CKEDITOR.tools.callFunction({$CKEditorFuncNum}, '{$fullUrl}', '');</script>")
-                ->header('Content-Type', 'text/html');
-        }
-
-        // CKEditor 5 sử dụng JSON response
-        return response()->json([
-            'url' => $fullUrl,
-        ]);
     }
 
 }

@@ -8,19 +8,21 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">
                         <i class="fas fa-money-bill-wave"></i>
                         Chi tiết yêu cầu cấp kinh phí
                     </h3>
-                    <div class="card-tools">
-                        <a href="{{ route('admin.fund-requests') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
-                        </a>
+                        <div class="d-flex gap-2">
                         @if($fundRequest->status === 'pending')
                             <a href="{{ route('admin.fund-requests.edit', $fundRequest->id) }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Chỉnh sửa
+                                    <i class="fas fa-edit me-1"></i> Chỉnh sửa
                             </a>
                         @endif
+                            <a href="{{ route('admin.fund-requests') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Quay lại
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -43,17 +45,19 @@
                                             <p>
                                                 @switch($fundRequest->status)
                                                     @case('pending')
-                                                        <span class="badge badge-warning">Chờ duyệt</span>
+                                                        <span class="badge bg-warning text-dark">Chờ duyệt</span>
                                                         @break
                                                     @case('approved')
-                                                        <span class="badge badge-success">Đã duyệt</span>
+                                                        <span class="badge bg-success text-white">Đã duyệt</span>
                                                         @break
                                                     @case('partially_approved')
-                                                        <span class="badge badge-info">Duyệt một phần</span>
+                                                        <span class="badge bg-info text-dark">Duyệt một phần</span>
                                                         @break
                                                     @case('rejected')
-                                                        <span class="badge badge-danger">Từ chối</span>
+                                                        <span class="badge bg-danger text-white">Từ chối</span>
                                                         @break
+                                                    @default
+                                                        <span class="badge bg-secondary text-white">{{ ucfirst($fundRequest->status) }}</span>
                                                 @endswitch
                                             </p>
                                         </div>
@@ -78,7 +82,7 @@
                                             <p>
                                                 @if($fundRequest->event)
                                                     <a href="{{ route('admin.events.show', $fundRequest->event->id) }}" class="text-primary">
-                                                        {{ $fundRequest->event->name }}
+                                                        <strong>{{ $fundRequest->event->title ?? $fundRequest->event->name ?? 'Sự kiện #' . $fundRequest->event->id }}</strong>
                                                     </a>
                                                     <br><small class="text-muted">{{ $fundRequest->event->start_time ? $fundRequest->event->start_time->format('d/m/Y H:i') : 'Chưa có ngày' }}</small>
                                                 @else
@@ -90,7 +94,9 @@
                                             <strong>CLB:</strong>
                                             <p>
                                                 @if($fundRequest->club)
-                                                    <span class="badge badge-info text-dark">{{ $fundRequest->club->name }}</span>
+                                                    <a href="{{ route('admin.clubs.show', $fundRequest->club->id) }}" class="badge bg-info text-dark text-decoration-none">
+                                                        {{ $fundRequest->club->name }}
+                                                    </a>
                                                 @else
                                                     <span class="text-muted">Không có</span>
                                                 @endif
@@ -130,14 +136,14 @@
                                     @if($fundRequest->approval_notes)
                                         <div class="form-group">
                                             <strong>Ghi chú duyệt:</strong>
-                                            <p class="mt-2 text-info">{{ $fundRequest->approval_notes }}</p>
+                                            <div class="mt-2 text-info">{!! nl2br(e(str_replace('&nbsp;', ' ', strip_tags($fundRequest->approval_notes)))) !!}</div>
                                         </div>
                                     @endif
 
                                     @if($fundRequest->rejection_reason)
                                         <div class="form-group">
                                             <strong>Lý do từ chối:</strong>
-                                            <p class="mt-2 text-danger">{{ $fundRequest->rejection_reason }}</p>
+                                            <div class="mt-2 text-danger">{!! nl2br(e(str_replace('&nbsp;', ' ', strip_tags($fundRequest->rejection_reason)))) !!}</div>
                                         </div>
                                     @endif
                                 </div>

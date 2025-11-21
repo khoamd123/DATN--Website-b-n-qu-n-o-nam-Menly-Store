@@ -3,26 +3,52 @@
 @section('title', 'Đơn tham gia CLB')
 
 @section('content')
-<div class="content-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0">Đơn tham gia CLB</h3>
-        <form method="GET" class="d-flex gap-2">
-            <select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-                <option value="">Tất cả</option>
-                <option value="pending" {{ ($status ?? '')==='pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                <option value="approved" {{ ($status ?? '')==='approved' ? 'selected' : '' }}>Đã duyệt</option>
-                <option value="rejected" {{ ($status ?? '')==='rejected' ? 'selected' : '' }}>Đã từ chối</option>
-            </select>
-            <select name="club_id" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-                <option value="">Tất cả CLB</option>
-                @foreach($clubs as $c)
-                    <option value="{{ $c->id }}" @selected(request('club_id')==$c->id)>{{ $c->name }}</option>
-                @endforeach
-            </select>
-            <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="Tên/Email">
-            <button class="btn btn-sm btn-outline-primary">Lọc</button>
+<div class="content-header">
+    <h1>Đơn tham gia CLB</h1>
+</div>
+
+<!-- Bộ lọc và tìm kiếm -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('admin.join-requests') }}" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" 
+                       name="keyword" 
+                       class="form-control" 
+                       placeholder="Tìm kiếm theo tên, email..."
+                       value="{{ request('keyword') }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
+                    <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
+                    <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Đã từ chối</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="club_id" class="form-select">
+                    <option value="">Tất cả CLB</option>
+                    @foreach($clubs as $c)
+                        <option value="{{ $c->id }}" {{ request('club_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+            </div>
+            <div class="col-md-auto ms-auto">
+                <a href="{{ route('admin.join-requests') }}" class="btn btn-secondary">
+                    <i class="fas fa-refresh"></i> Làm mới
+                </a>
+            </div>
         </form>
     </div>
+</div>
+
+<div class="content-card">
 
     <form method="POST" action="{{ route('admin.join-requests.bulk') }}">
         @csrf
@@ -67,19 +93,25 @@
                         <td>
                             <small class="text-muted">{{ $req->created_at?->format('d/m/Y H:i') }}</small>
                         </td>
-                        <td class="text-end">
-                            @if($req->status === 'pending')
-                            <form method="POST" action="{{ route('admin.join-requests.approve', $req->id) }}" class="d-inline">
-                                @csrf
-                                <button class="btn btn-sm btn-success">Duyệt</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.join-requests.reject', $req->id) }}" class="d-inline">
-                                @csrf
-                                <button class="btn btn-sm btn-outline-secondary">Từ chối</button>
-                            </form>
-                            @else
-                                <small class="text-muted">Đã {{ $req->status === 'approved' ? 'duyệt' : 'từ chối' }}</small>
-                            @endif
+                        <td style="min-width: 120px; width: 120px;">
+                            <div class="d-flex flex-column gap-1">
+                                @if($req->status === 'pending')
+                                    <form method="POST" action="{{ route('admin.join-requests.approve', $req->id) }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success w-100 text-white">
+                                            <i class="fas fa-check"></i> Duyệt
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('admin.join-requests.reject', $req->id) }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-white">
+                                            <i class="fas fa-times"></i> Từ chối
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-muted small">Đã {{ $req->status === 'approved' ? 'duyệt' : 'từ chối' }}</span>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @empty

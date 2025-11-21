@@ -47,6 +47,51 @@
     </div>
 </div>
 
+<!-- Bộ lọc và tìm kiếm -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('admin.permissions') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Tìm kiếm theo tên, email..."
+                       value="{{ request('search') }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Vai trò</label>
+                <select name="role" class="form-select">
+                    <option value="">Tất cả vai trò</option>
+                    <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>User thường</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Câu lạc bộ</label>
+                <select name="club_id" class="form-select">
+                    <option value="">Tất cả CLB</option>
+                    @foreach($clubs as $club)
+                        <option value="{{ $club->id }}" {{ request('club_id') == $club->id ? 'selected' : '' }}>
+                            {{ $club->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100" title="Tìm kiếm">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ route('admin.permissions') }}" class="btn btn-secondary w-100" title="Làm mới">
+                    <i class="fas fa-refresh"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Danh sách người dùng và phân quyền -->
 <div class="card">
     <div class="card-body">
@@ -58,7 +103,6 @@
                         <th>Người dùng</th>
                         <th>Email</th>
                         <th>Quyền Admin</th>
-                        <th>Câu lạc bộ sở hữu</th>
                         <th>Câu lạc bộ tham gia</th>
                         <th>Ngày tạo</th>
                         <th>Hành động</th>
@@ -95,15 +139,6 @@
                                 <span class="badge bg-{{ $user->is_admin ? 'danger' : 'success' }}">
                                     {{ $user->is_admin ? 'Admin' : 'User' }}
                                 </span>
-                            </td>
-                            <td>
-                                @if($user->ownedClubs->count() > 0)
-                                    @foreach($user->ownedClubs as $club)
-                                        <span class="badge bg-primary me-1">{{ $club->name }}</span>
-                                    @endforeach
-                                @else
-                                    <span class="text-muted">Không có</span>
-                                @endif
                             </td>
                             <td>
                                 @if($user->clubs->count() > 0)
@@ -170,7 +205,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 Không có người dùng nào
                             </td>
                         </tr>
@@ -182,36 +217,10 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                        @if($users->onFirstPage())
-                            <li class="page-item disabled">
-                                <span class="page-link">« Previous</span>
-                            </li>
-                        @else
-                            <li class="page-item">
-                                <a class="page-link" href="{{ $users->previousPageUrl() }}">« Previous</a>
-                            </li>
-                        @endif
-                        
-                        <li class="page-item active">
-                            <span class="page-link">{{ $users->currentPage() }}</span>
-                        </li>
-                        
-                        @if($users->hasMorePages())
-                            <li class="page-item">
-                                <a class="page-link" href="{{ $users->nextPageUrl() }}">Next »</a>
-                            </li>
-                        @else
-                            <li class="page-item disabled">
-                                <span class="page-link">Next »</span>
-                            </li>
-                        @endif
-                    </ul>
-                </nav>
+                {{ $users->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
             </div>
             <div class="text-center text-muted mt-2">
-                Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} results
+                Hiển thị {{ $users->firstItem() }} đến {{ $users->lastItem() }} trong tổng số {{ $users->total() }} kết quả
             </div>
         @endif
     </div>
@@ -238,6 +247,7 @@
         </div>
     </div>
 </div>
+@endsection
 
 <style>
 /* Pagination styling */
@@ -274,4 +284,5 @@
     border-color: #dee2e6;
 }
 </style>
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 @endsection

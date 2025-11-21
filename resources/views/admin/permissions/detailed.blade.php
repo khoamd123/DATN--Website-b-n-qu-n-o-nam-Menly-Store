@@ -127,6 +127,51 @@
     </div>
 </div>
 
+<!-- Bộ lọc và tìm kiếm -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('admin.permissions.detailed') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Tìm kiếm theo tên, email..."
+                       value="{{ request('search') }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Vai trò</label>
+                <select name="role" class="form-select">
+                    <option value="">Tất cả vai trò</option>
+                    <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>User thường</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Câu lạc bộ</label>
+                <select name="club_id" class="form-select">
+                    <option value="">Tất cả CLB</option>
+                    @foreach($clubs as $club)
+                        <option value="{{ $club->id }}" {{ request('club_id') == $club->id ? 'selected' : '' }}>
+                            {{ $club->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100" title="Tìm kiếm">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ route('admin.permissions.detailed') }}" class="btn btn-secondary w-100" title="Làm mới">
+                    <i class="fas fa-refresh"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Danh sách users với CLB -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -263,7 +308,10 @@
         <!-- Phân trang -->
         @if($users->hasPages())
             <div class="d-flex justify-content-center mt-4 custom-pagination">
-                {{ $users->links() }}
+                {{ $users->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+            </div>
+            <div class="text-center text-muted mt-2">
+                Hiển thị {{ $users->firstItem() }} đến {{ $users->lastItem() }} trong tổng số {{ $users->total() }} kết quả
             </div>
         @endif
     </div>

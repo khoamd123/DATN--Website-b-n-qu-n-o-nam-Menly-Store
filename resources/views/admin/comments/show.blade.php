@@ -5,14 +5,31 @@
 @section('content')
 <div class="container-fluid">
     <div class="content-header">
-        <h1><i class="fas fa-comment"></i> Chi tiết bình luận</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.comments') }}">Quản lý bình luận</a></li>
-                <li class="breadcrumb-item active">Chi tiết bình luận</li>
-            </ol>
-        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-comment"></i> Chi tiết bình luận</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('admin.comments') }}">Quản lý bình luận</a></li>
+                        <li class="breadcrumb-item active">Chi tiết bình luận</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="d-flex gap-2">
+                @if($commentable)
+                    <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-primary">
+                        <i class="fas fa-eye me-1"></i> Xem {{ $commentableType }}
+                    </a>
+                @endif
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
+                    <i class="fas fa-trash me-1"></i> Xóa
+                </button>
+                <a href="{{ route('admin.comments') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
@@ -177,130 +194,116 @@
         <div class="col-lg-4">
             <!-- Thông tin bình luận -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin bình luận</h5>
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin bình luận</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-borderless">
-                        <tr>
-                            <td><strong>ID:</strong></td>
-                            <td>{{ $comment->id }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Loại:</strong></td>
-                            <td>
-                                <span class="badge bg-{{ $type === 'post' ? 'primary' : 'warning' }}">
-                                    {{ $commentableType }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Trạng thái:</strong></td>
-                            <td>
-                                @php
-                                    $statusColors = [
-                                        'visible' => 'success',
-                                        'hidden' => 'warning',
-                                        'deleted' => 'danger'
-                                    ];
-                                    $statusLabels = [
-                                        'visible' => 'Hiển thị',
-                                        'hidden' => 'Ẩn',
-                                        'deleted' => 'Đã xóa'
-                                    ];
-                                @endphp
-                                <span class="badge bg-{{ $statusColors[$comment->status] ?? 'secondary' }}">
-                                    {{ $statusLabels[$comment->status] ?? ucfirst($comment->status) }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Ngày tạo:</strong></td>
-                            <td>
-                                <div class="text-dark">
-                                    <i class="fas fa-calendar text-primary"></i> 
-                                    Ngày {{ $comment->created_at->format('d') }}/{{ $comment->created_at->format('m') }}/{{ $comment->created_at->format('Y') }}
-                                    <br>
-                                    <i class="fas fa-clock text-secondary"></i> 
-                                    {{ $comment->created_at->format('H') }} giờ {{ $comment->created_at->format('i') }} phút {{ $comment->created_at->format('s') }} giây
-                                    <br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-history"></i> {{ $comment->created_at->diffForHumans() }}
+                    <div class="mb-3">
+                        <strong>ID:</strong>
+                        <div class="mt-1"><span class="badge bg-secondary">#{{ $comment->id }}</span></div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Loại:</strong>
+                        <div class="mt-1">
+                            <span class="badge bg-{{ $type === 'post' ? 'primary' : 'warning' }}">
+                                {{ $commentableType }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Trạng thái:</strong>
+                        <div class="mt-1">
+                            @php
+                                $statusColors = [
+                                    'visible' => 'success',
+                                    'hidden' => 'warning',
+                                    'deleted' => 'danger'
+                                ];
+                                $statusLabels = [
+                                    'visible' => 'Hiển thị',
+                                    'hidden' => 'Ẩn',
+                                    'deleted' => 'Đã xóa'
+                                ];
+                            @endphp
+                            <span class="badge bg-{{ $statusColors[$comment->status] ?? 'secondary' }}">
+                                {{ $statusLabels[$comment->status] ?? ucfirst($comment->status) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Ngày tạo:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-calendar text-muted me-1"></i>{{ $comment->created_at->format('d/m/Y H:i:s') }}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-history"></i> {{ $comment->created_at->diffForHumans() }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Cập nhật:</strong>
+                        <div class="mt-1">
+                            @if($comment->updated_at->ne($comment->created_at))
+                                <i class="fas fa-clock text-muted me-1"></i>{{ $comment->updated_at->format('d/m/Y H:i:s') }}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-history"></i> {{ $comment->updated_at->diffForHumans() }}
+                                </small>
+                            @else
+                                <span class="text-muted">Chưa cập nhật</span>
+                            @endif
+                        </div>
+                    </div>
+                    @if($comment->parent_id)
+                    <div class="mb-3">
+                        <strong>Bình luận cha:</strong>
+                        <div class="mt-1"><span class="badge bg-info">ID: {{ $comment->parent_id }}</span></div>
+                    </div>
+                    @endif
+                    @if($comment->replies && $comment->replies->count() > 0)
+                    <div class="mb-3">
+                        <strong>Số phản hồi:</strong>
+                        <div class="mt-1"><span class="badge bg-primary">{{ $comment->replies->count() }}</span></div>
+                    </div>
+                    @endif
+                    @if($comment->deletion_reason)
+                    <div class="mb-3">
+                        <strong>Lý do xóa:</strong>
+                        <div class="mt-1">
+                            <div class="alert alert-danger mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                <strong>{{ $comment->deletion_reason }}</strong>
+                                @if($comment->deleted_at)
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-clock"></i> 
+                                        Xóa lúc: {{ $comment->deleted_at->format('d/m/Y H:i:s') }}
                                     </small>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Cập nhật:</strong></td>
-                            <td>
-                                @if($comment->updated_at->ne($comment->created_at))
-                                    <div class="text-dark">
-                                        <i class="fas fa-calendar text-primary"></i> 
-                                        Ngày {{ $comment->updated_at->format('d') }}/{{ $comment->updated_at->format('m') }}/{{ $comment->updated_at->format('Y') }}
-                                        <br>
-                                        <i class="fas fa-clock text-secondary"></i> 
-                                        {{ $comment->updated_at->format('H') }} giờ {{ $comment->updated_at->format('i') }} phút {{ $comment->updated_at->format('s') }} giây
-                                        <br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-history"></i> {{ $comment->updated_at->diffForHumans() }}
-                                        </small>
-                                    </div>
-                                @else
-                                    <span class="text-muted">Chưa cập nhật</span>
                                 @endif
-                            </td>
-                        </tr>
-                        @if($comment->parent_id)
-                            <tr>
-                                <td><strong>Bình luận cha:</strong></td>
-                                <td>ID: {{ $comment->parent_id }}</td>
-                            </tr>
-                        @endif
-                        @if($comment->replies && $comment->replies->count() > 0)
-                            <tr>
-                                <td><strong>Số phản hồi:</strong></td>
-                                <td>{{ $comment->replies->count() }}</td>
-                            </tr>
-                        @endif
-                        @if($comment->deletion_reason)
-                            <tr>
-                                <td><strong>Lý do xóa:</strong></td>
-                                <td>
-                                    <div class="alert alert-danger mb-0">
-                                        <i class="fas fa-exclamation-triangle"></i> 
-                                        <strong>{{ $comment->deletion_reason }}</strong>
-                                        @if($comment->deleted_at)
-                                            <br><small class="text-muted">
-                                                <i class="fas fa-clock"></i> 
-                                                Xóa lúc: {{ $comment->deleted_at->format('d/m/Y H:i:s') }}
-                                            </small>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endif
-                    </table>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
             <!-- Thông tin bài viết/sự kiện -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-link"></i> Liên kết</h5>
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-link me-2"></i>Liên kết</h5>
                 </div>
                 <div class="card-body">
                     @if($commentable)
                         <div class="mb-3">
                             <strong>{{ $commentableType }}:</strong>
-                            <p class="mb-1">
+                            <p class="mb-1 mt-1">
                                 <a href="{{ route($commentableRoute, $commentable->id) }}" 
-                                   class="text-decoration-none">
-                                    {{ $commentable->title ?? 'Không có tiêu đề' }}
+                                   class="text-decoration-none text-primary">
+                                    <strong>{{ $commentable->title ?? 'Không có tiêu đề' }}</strong>
                                 </a>
                             </p>
                             @if($commentable->club)
                                 <small class="text-muted">
-                                    <i class="fas fa-users"></i> {{ $commentable->club->name }}
+                                    <i class="fas fa-users me-1"></i>{{ $commentable->club->name }}
                                 </small>
                             @endif
                         </div>
@@ -309,76 +312,54 @@
                     @endif
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Hành động -->
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-cog"></i> Hành động</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('admin.comments') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại danh sách
-                        </a>
-                        @if($commentable)
-                            <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-info">
-                                <i class="fas fa-eye"></i> Xem {{ $commentableType }}
-                            </a>
-                        @endif
-                        <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
-                            <i class="fas fa-trash"></i> Xóa bình luận
-                        </button>
-
-                        <!-- Modal xóa bình luận -->
-                        <div class="modal fade" id="deleteCommentModal" tabindex="-1" aria-labelledby="deleteCommentModalLabel" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header bg-danger text-white">
-                                        <h5 class="modal-title" id="deleteCommentModalLabel">
-                                            <i class="fas fa-exclamation-triangle"></i> Xóa bình luận
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <form method="POST" action="{{ route('admin.comments.delete', [$type, $comment->id]) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <div class="modal-body">
-                                            <div class="alert alert-warning">
-                                                <i class="fas fa-info-circle"></i> Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="deletion_reason" class="form-label">
-                                                    <strong>Lý do xóa bình luận <span class="text-danger">*</span></strong>
-                                                </label>
-                                                <textarea class="form-control" 
-                                                          id="deletion_reason" 
-                                                          name="deletion_reason" 
-                                                          rows="4" 
-                                                          placeholder="Vui lòng nhập lý do xóa bình luận (tối thiểu 10 ký tự)" 
-                                                          required 
-                                                          minlength="10" 
-                                                          maxlength="1000"></textarea>
-                                                <small class="form-text text-muted">Tối thiểu 10 ký tự, tối đa 1000 ký tự</small>
-                                                @error('deletion_reason')
-                                                    <div class="text-danger">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                <i class="fas fa-times"></i> Hủy
-                                            </button>
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="fas fa-trash"></i> Xác nhận xóa
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+<!-- Modal xóa bình luận -->
+<div class="modal fade" id="deleteCommentModal" tabindex="-1" aria-labelledby="deleteCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCommentModalLabel">
+                    <i class="fas fa-exclamation-triangle"></i> Xóa bình luận
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.comments.delete', [$type, $comment->id]) }}">
+                @csrf
+                @method('DELETE')
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.
+                    </div>
+                    <div class="mb-3">
+                        <label for="deletion_reason" class="form-label">
+                            <strong>Lý do xóa bình luận <span class="text-danger">*</span></strong>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="deletion_reason" 
+                                  name="deletion_reason" 
+                                  rows="4" 
+                                  placeholder="Vui lòng nhập lý do xóa bình luận (tối thiểu 10 ký tự)" 
+                                  required 
+                                  minlength="10" 
+                                  maxlength="1000"></textarea>
+                        <small class="form-text text-muted">Tối thiểu 10 ký tự, tối đa 1000 ký tự</small>
+                        @error('deletion_reason')
+                            <div class="text-danger">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Xác nhận xóa
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

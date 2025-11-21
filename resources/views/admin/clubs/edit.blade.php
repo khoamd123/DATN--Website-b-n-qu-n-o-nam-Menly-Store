@@ -40,7 +40,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-
     <div class="row">
         <div class="col-md-8">
             <div class="card">

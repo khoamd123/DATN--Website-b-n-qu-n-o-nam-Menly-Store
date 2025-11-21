@@ -281,7 +281,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Trạng thái</label>
-                                    <select class="form-select" name="status">
+                                    <select class="form-select" name="status" {{ $event->status === 'completed' ? 'disabled' : '' }}>
                                         <option value="draft" {{ old('status', $event->status) === 'draft' ? 'selected' : '' }}>Bản nháp</option>
                                         <option value="pending" {{ old('status', $event->status) === 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
                                         <option value="approved" {{ old('status', $event->status) === 'approved' ? 'selected' : '' }}>Đã duyệt</option>
@@ -289,6 +289,12 @@
                                         <option value="completed" {{ old('status', $event->status) === 'completed' ? 'selected' : '' }}>Hoàn thành</option>
                                         <option value="cancelled" {{ old('status', $event->status) === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
                                     </select>
+                                    @if($event->status === 'completed')
+                                        <input type="hidden" name="status" value="completed">
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> Không thể thay đổi trạng thái của sự kiện đã hoàn thành.
+                                        </small>
+                                    @endif
                                 </div>
                             </div>
                         </div>

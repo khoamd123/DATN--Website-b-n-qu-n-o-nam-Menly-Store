@@ -49,7 +49,7 @@ class HomeController extends Controller
             ->get();
 
         // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
-        $recentPosts = Post::with(['club', 'user', 'attachments'])
+        $recentPosts = Post::with(['club', 'user'])
             ->where('status', 'published')
             ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderByDesc('created_at')
@@ -97,21 +97,8 @@ class HomeController extends Controller
         $isLoggedIn = session('user_id');
         $viewName = $isLoggedIn ? 'home.index_student' : 'home.index';
         $user = null;
-        $latestAnnouncement = null;
-        
         if ($isLoggedIn) {
             $user = User::with('clubs')->find(session('user_id'));
-            
-            // Lấy thông báo mới nhất từ các CLB mà user tham gia
-            if ($user && $user->clubs->count() > 0) {
-                $userClubIds = $user->clubs->pluck('id')->toArray();
-                $latestAnnouncement = Post::with(['club', 'user'])
-                    ->where('type', 'announcement')
-                    ->where('status', '!=', 'deleted')
-                    ->whereIn('club_id', $userClubIds)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-            }
         }
 
         return view($viewName, [
@@ -125,7 +112,6 @@ class HomeController extends Controller
             'fieldId' => $fieldId,
             'sort' => $sort,
             'user' => $user,
-            'latestAnnouncement' => $latestAnnouncement,
         ]);
     }
 }

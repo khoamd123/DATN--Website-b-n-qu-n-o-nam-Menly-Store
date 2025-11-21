@@ -116,14 +116,71 @@
 
 @section('content')
 <div class="content-header">
-    <h1>Chi tiết câu lạc bộ: <span class="text-primary">{{ $club->name }}</span></h1>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.clubs') }}">Quản lý CLB</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
-        </ol>
-    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1>Chi tiết câu lạc bộ: <span class="text-primary">{{ $club->name }}</span></h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.clubs') }}">Quản lý CLB</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> Chỉnh sửa
+            </a>
+            @if($club->status === 'pending')
+                <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i> Duyệt
+                    </button>
+                </form>
+                <button type="button" class="btn btn-danger" 
+                        data-bs-toggle="modal" data-bs-target="#rejectClubModal" 
+                        data-club-id="{{ $club->id }}" data-club-name="{{ $club->name }}">
+                    <i class="fas fa-times me-1"></i> Từ chối
+                </button>
+            @endif
+            @if(in_array($club->status, ['active', 'approved']))
+                <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="inactive">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Bạn có chắc chắn muốn tạm dừng câu lạc bộ này?')">
+                        <i class="fas fa-pause me-1"></i> Tạm dừng
+                    </button>
+                </form>
+            @endif
+            @if($club->status === 'inactive')
+                <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="active">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-play me-1"></i> Kích hoạt lại
+                    </button>
+                </form>
+            @endif
+            @if($club->status === 'rejected')
+                <form method="POST" action="{{ route('admin.clubs.status', $club->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="status" value="pending">
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-undo me-1"></i> Khôi phục
+                    </button>
+                </form>
+            @endif
+            <a href="{{ route('admin.clubs') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
+            </a>
+        </div>
+    </div>
 </div>
 
 @if(session('success'))
@@ -200,9 +257,6 @@
                 $pendingMembers = $club->clubMembers->filter(function($member) {
                     return $member->status === 'pending';
                 });
-                $approvedMembers = $club->clubMembers->filter(function($member) {
-                    return $member->status === 'approved' || $member->status === 'active';
-                })->unique('user_id'); // Loại bỏ trùng lặp theo user_id
             @endphp
 
             @if($pendingMembers->isNotEmpty())
@@ -275,9 +329,43 @@
             </div>
             @endif
 
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Thành viên đã duyệt
+                            <span class="badge bg-primary rounded-pill">{{ $approvedMembers->total() }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Bài viết
+                            <span class="badge bg-info rounded-pill">{{ $club->posts?->count() ?? 0 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Sự kiện
+                            <span class="badge bg-success rounded-pill">{{ $club->events?->count() ?? 0 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Chờ duyệt
+                            <span class="badge bg-warning rounded-pill">{{ $pendingMembers->count() }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thành viên đã duyệt - Full width -->
+    <div class="row">
+        <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thành viên đã duyệt ({{ $approvedMembers->count() }})</h5>
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Thành viên đã duyệt ({{ $approvedMembers->total() }})</h5>
                     <div>
                         <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                             <i class="fas fa-user-plus me-1"></i> Thêm thành viên
@@ -323,31 +411,40 @@
                                             @php
                                                 $role = $member->position ?? $member->role_in_club ?? 'member';
                                                 $badgeColor = 'primary';
-                                                $roleLabel = 'Member';
+                                                $roleLabel = 'Thành viên';
                                                 
                                                 if($role === 'leader' || $role === 'chunhiem') {
                                                     $badgeColor = 'danger';
-                                                    $roleLabel = 'Leader';
+                                                    $roleLabel = 'Trưởng CLB';
+                                                } elseif($role === 'vice_president') {
+                                                    $badgeColor = 'warning';
+                                                    $roleLabel = 'Phó CLB';
                                                 } elseif($role === 'officer') {
                                                     $badgeColor = 'info';
-                                                    $roleLabel = 'Officer';
+                                                    $roleLabel = 'Cán sự';
                                                 } elseif($role === 'member' || $role === 'thanhvien') {
                                                     $badgeColor = 'success';
-                                                    $roleLabel = 'Member';
+                                                    $roleLabel = 'Thành viên';
                                                 }
                                             @endphp
                                             <span class="badge bg-{{ $badgeColor }}">{{ $roleLabel }}</span>
                                         </td>
                                         <td>{{ $member->created_at->format('d/m/Y') }}</td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-warning" title="Thay đổi vai trò" disabled><i class="fas fa-user-shield"></i></button>
-                                                <button type="button" class="btn btn-sm btn-danger" title="Xóa thành viên"
+                                        <td style="min-width: 120px; width: 120px;">
+                                            <div class="d-flex flex-column gap-1">
+                                                <button type="button" class="btn btn-sm btn-warning text-white w-100" title="Thay đổi vai trò"
+                                                        data-bs-toggle="modal" data-bs-target="#changeRoleModal"
+                                                        data-member-id="{{ $member->id }}"
+                                                        data-member-name="{{ $member->user ? $member->user->name : 'Unknown' }}"
+                                                        data-current-role="{{ $member->position ?? $member->role_in_club ?? 'member' }}">
+                                                    <i class="fas fa-user-shield"></i> Thay đổi vai trò
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger w-100 text-white" title="Xóa thành viên"
                                                         data-bs-toggle="modal" data-bs-target="#removeMemberModal"
                                                         data-member-id="{{ $member->id }}"
                                                         data-member-name="{{ $member->user ? $member->user->name : 'Unknown' }}"
                                                         {{ $member->user_id == $club->owner_id ? 'disabled' : '' }}>
-                                                    <i class="fas fa-user-times"></i>
+                                                    <i class="fas fa-trash"></i> Xóa
                                                 </button>
                                             </div>
                                         </td>
@@ -361,44 +458,22 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Thành viên đã duyệt
-                            <span class="badge bg-primary rounded-pill">{{ $approvedMembers->count() }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Bài viết
-                            <span class="badge bg-info rounded-pill">{{ $club->posts?->count() ?? 0 }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Sự kiện
-                            <span class="badge bg-success rounded-pill">{{ $club->events?->count() ?? 0 }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Chờ duyệt
-                            <span class="badge bg-warning rounded-pill">{{ $pendingMembers->count() }}</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Hành động</h5>
-                </div>
-                <div class="card-body d-grid gap-2">
-                    <a href="{{ route('admin.clubs.edit', $club->id) }}" class="btn btn-warning"><i class="fas fa-edit me-1"></i> Chỉnh sửa</a>
-                    <a href="{{ route('admin.clubs') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i> Quay lại danh sách</a>
+                    
+                    <!-- Phân trang -->
+                    @if($approvedMembers->hasPages())
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div class="text-muted small">
+                                    <i class="fas fa-info-circle"></i>
+                                    Hiển thị <strong>{{ $approvedMembers->firstItem() }}</strong> - <strong>{{ $approvedMembers->lastItem() }}</strong> 
+                                    trong tổng <strong>{{ $approvedMembers->total() }}</strong> kết quả
+                                </div>
+                                <div>
+                                    {{ $approvedMembers->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -441,6 +516,7 @@
             <select class="form-select" id="position" name="position" required>
                 <option value="member" selected>Thành viên</option>
                 <option value="officer">Cán sự</option>
+                <option value="vice_president">Phó CLB</option>
                 <option value="leader">Trưởng CLB</option>
             </select>
           </div>
@@ -502,6 +578,41 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
           <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Thay đổi vai trò -->
+<div class="modal fade" id="changeRoleModal" tabindex="-1" aria-labelledby="changeRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="changeRoleModalLabel">Thay đổi vai trò thành viên</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="changeRoleForm" method="POST" action="">
+        @csrf
+        @method('PATCH')
+        <div class="modal-body">
+          <p>Thành viên: <strong id="memberNameToChangeRole"></strong></p>
+          <div class="mb-3">
+            <label for="newPosition" class="form-label">Vai trò mới <span class="text-danger">*</span></label>
+            <select class="form-select" id="newPosition" name="position" required>
+              <option value="member">Thành viên</option>
+              <option value="officer">Cán sự</option>
+              <option value="vice_president">Phó CLB</option>
+              <option value="leader">Trưởng CLB</option>
+            </select>
+            <small class="form-text text-muted">
+              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 1 phó CLB và tối đa 3 cán sự.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-warning">Xác nhận thay đổi</button>
         </div>
       </form>
     </div>
@@ -648,6 +759,28 @@ document.addEventListener('DOMContentLoaded', function () {
             form.action = actionUrl;
         });
     }
+
+    var changeRoleModal = document.getElementById('changeRoleModal');
+    if(changeRoleModal) {
+        changeRoleModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var memberId = button.getAttribute('data-member-id');
+            var memberName = button.getAttribute('data-member-name');
+            var currentRole = button.getAttribute('data-current-role');
+
+            var memberNameElement = changeRoleModal.querySelector('#memberNameToChangeRole');
+            var form = changeRoleModal.querySelector('#changeRoleForm');
+            var positionSelect = changeRoleModal.querySelector('#newPosition');
+
+            memberNameElement.textContent = memberName;
+            form.action = '{{ url("admin/clubs/".$club->id."/members") }}/' + memberId + '/role';
+            
+            // Set giá trị hiện tại
+            if (positionSelect) {
+                positionSelect.value = currentRole;
+            }
+        });
+    }
 });
 
 function handleBulkAction(action) {
@@ -700,5 +833,53 @@ function toggleSelectAll() {
         userSelect.val(null).trigger('change');
     }
 }
+</script>
+
+<!-- Modal Từ chối Câu lạc bộ -->
+<div class="modal fade" id="rejectClubModal" tabindex="-1" aria-labelledby="rejectClubModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectClubModalLabel">Lý do từ chối câu lạc bộ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="rejectClubForm" method="POST" action="">
+        @csrf
+        @method('PATCH')
+        <div class="modal-body">
+          <p>Bạn sắp từ chối câu lạc bộ: <strong id="clubNameToReject"></strong></p>
+          <input type="hidden" name="status" value="rejected">
+          <div class="mb-3">
+            <label for="rejectionReason" class="form-label">Vui lòng nhập lý do từ chối <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var rejectClubModal = document.getElementById('rejectClubModal');
+    if(rejectClubModal) {
+        rejectClubModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var clubId = button.getAttribute('data-club-id');
+            var clubName = button.getAttribute('data-club-name');
+
+            var modalTitle = rejectClubModal.querySelector('.modal-title');
+            var clubNameElement = rejectClubModal.querySelector('#clubNameToReject');
+            var form = rejectClubModal.querySelector('#rejectClubForm');
+
+            clubNameElement.textContent = clubName;
+            form.action = '{{ url("admin/clubs") }}/' + clubId + '/status';
+        });
+    }
+});
 </script>
 @endsection
