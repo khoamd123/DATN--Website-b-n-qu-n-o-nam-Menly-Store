@@ -354,6 +354,37 @@
             </div>
         </div>
         @endif
+
+        @if($fundRequest->status === 'rejected')
+        <div class="content-card">
+            <div class="alert alert-warning mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Yêu cầu đã bị từ chối.</strong> Bạn có thể sửa lại yêu cầu và gửi lại để duyệt.
+            </div>
+            <div class="d-flex gap-2">
+                @php
+                    $position = $user->getPositionInClub($fundRequest->club_id);
+                @endphp
+                @if($position === 'leader')
+                    <a href="{{ route('student.club-management.fund-requests.edit', $fundRequest->id) }}" 
+                       class="btn btn-warning text-white">
+                        <i class="fas fa-edit me-1"></i> Sửa yêu cầu
+                    </a>
+                    @if($fundRequest->status === 'rejected')
+                        <form action="{{ route('student.club-management.fund-requests.resubmit', $fundRequest->id) }}" 
+                              method="POST" 
+                              class="d-inline"
+                              onsubmit="return confirm('Bạn có chắc chắn muốn gửi lại yêu cầu này để duyệt?');">
+                            @csrf
+                            <button type="submit" class="btn btn-primary text-white">
+                                <i class="fas fa-paper-plane me-1"></i> Gửi lại để duyệt
+                            </button>
+                        </form>
+                    @endif
+                @endif
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 @endsection

@@ -65,17 +65,25 @@ class StudentController extends Controller
             return $user;
         }
 
-        $search = $request->input('search');
+        $search = trim((string) $request->input('search'));
 
         // Lấy ID các CLB mà người dùng đã tham gia
         $myClubIds = $user->clubs->pluck('id')->toArray();
 
-        // Luôn lấy đầy đủ danh sách CLB của tôi, không bị ảnh hưởng bởi tìm kiếm
-        $myClubs = Club::whereIn('id', $myClubIds)
+        // Query CLB của tôi
+        $myClubsQuery = Club::whereIn('id', $myClubIds)
             ->where('status', 'active')
-            ->withCount('members')
-            ->orderBy('name')
-            ->get();
+            ->withCount('members');
+
+        // Áp dụng tìm kiếm cho CLB của tôi nếu có
+        if ($search) {
+            $myClubsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+
+        $myClubs = $myClubsQuery->orderBy('name')->get();
 
         // Query các CLB khác (chưa tham gia)
         $otherClubsQuery = Club::where('status', 'active')
@@ -85,12 +93,13 @@ class StudentController extends Controller
         // Áp dụng bộ lọc tìm kiếm cho các CLB khác
         if ($search) {
             $otherClubsQuery->where(function ($query) use ($search) {
-                $query->where('name', 'like', '%' . $search . '%');
+                $query->where('name', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
 
         // Lấy kết quả với phân trang
-        $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8);
+        $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8)->withQueryString();
 
         return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search'));
     }
@@ -116,28 +125,43 @@ class StudentController extends Controller
         return view('student.clubs._other_clubs_list', compact('otherClubs', 'search'));
     }
 
-    public function events()
+    public function events(Request $request)
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
 
+        $search = trim((string) $request->input('search'));
+
         // Lấy events đang diễn ra (đã bắt đầu nhưng chưa kết thúc) - chỉ lấy events đã được duyệt hoặc ongoing
-        $ongoingEvents = Event::with(['club', 'creator', 'images'])
+        $ongoingEventsQuery = Event::with(['club', 'creator', 'images'])
             ->whereIn('status', ['approved', 'ongoing'])
             ->where('start_time', '<=', now())
-            ->where('end_time', '>=', now())
-            ->orderBy('start_time', 'asc')
-            ->get();
+            ->where('end_time', '>=', now());
 
         // Lấy events sắp tới (chưa bắt đầu) - chỉ lấy events đã được duyệt
-        $upcomingEvents = Event::with(['club', 'creator', 'images'])
+        $upcomingEventsQuery = Event::with(['club', 'creator', 'images'])
             ->where('status', 'approved')
             ->where('start_time', '>', now())
-            ->where('end_time', '>=', now())
-            ->orderBy('start_time', 'asc')
-            ->get();
+            ->where('end_time', '>=', now());
+
+        // Áp dụng tìm kiếm nếu có
+        if ($search) {
+            $ongoingEventsQuery->where(function($query) use ($search) {
+                $query->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%')
+                      ->orWhere('location', 'like', '%' . $search . '%');
+            });
+            $upcomingEventsQuery->where(function($query) use ($search) {
+                $query->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%')
+                      ->orWhere('location', 'like', '%' . $search . '%');
+            });
+        }
+
+        $ongoingEvents = $ongoingEventsQuery->orderBy('start_time', 'asc')->get();
+        $upcomingEvents = $upcomingEventsQuery->orderBy('start_time', 'asc')->get();
 
         // Gộp tất cả events chưa kết thúc (đang diễn ra + sắp tới) để đếm đăng ký
         $allActiveEvents = $ongoingEvents->merge($upcomingEvents);
@@ -148,11 +172,20 @@ class StudentController extends Controller
             ->pluck('event_id')
             ->toArray();
 
-        $registeredEvents = Event::with(['club', 'creator', 'images'])
+        $registeredEventsQuery = Event::with(['club', 'creator', 'images'])
             ->whereIn('id', $registeredEventIds)
-            ->whereIn('status', ['approved', 'ongoing'])
-            ->orderBy('start_time', 'asc')
-            ->get();
+            ->whereIn('status', ['approved', 'ongoing']);
+
+        // Áp dụng tìm kiếm cho registered events
+        if ($search) {
+            $registeredEventsQuery->where(function($query) use ($search) {
+                $query->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%')
+                      ->orWhere('location', 'like', '%' . $search . '%');
+            });
+        }
+
+        $registeredEvents = $registeredEventsQuery->orderBy('start_time', 'asc')->get();
 
         // Đếm số lượng đăng ký cho mỗi event (cả đang diễn ra và sắp tới)
         $eventRegistrations = \App\Models\EventRegistration::whereIn('event_id', $allActiveEvents->pluck('id'))
@@ -203,7 +236,8 @@ class StudentController extends Controller
             'todayEvents',
             'thisWeekEvents',
             'thisMonthEvents',
-            'hotEvents'
+            'hotEvents',
+            'search'
         ));
     }
 
@@ -286,12 +320,37 @@ class StudentController extends Controller
             }
 
             // Tạo đăng ký mới
-            \App\Models\EventRegistration::create([
+            $registration = \App\Models\EventRegistration::create([
                 'user_id' => $user->id,
                 'event_id' => $eventId,
                 'status' => 'registered',
                 'joined_at' => now(),
             ]);
+
+            // Tạo thông báo cho user
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $event->club->leader_id ?? 1, // Gửi từ CLB
+                'type' => 'event_registration',
+                'related_id' => $eventId,
+                'related_type' => 'Event',
+                'title' => 'Đăng ký tham gia sự kiện thành công',
+                'message' => 'Bạn đã đăng ký tham gia sự kiện "' . $event->title . '" của ' . ($event->club->name ?? 'CLB') . '. Thời gian: ' . ($event->start_time ? $event->start_time->format('d/m/Y H:i') : 'Chưa xác định') . '.',
+            ]);
+
+            // Gửi thông báo đến user
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $user->id,
+            ]);
+
+            // Gửi email xác nhận
+            try {
+                \Mail::to($user->email)->send(new \App\Mail\EventRegistrationConfirmation($user, $event));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send event registration email: ' . $e->getMessage());
+                // Vẫn tiếp tục dù gửi email thất bại
+            }
 
             return response()->json([
                 'success' => true,
@@ -327,11 +386,11 @@ class StudentController extends Controller
         try {
             $event = Event::findOrFail($eventId);
 
-            // Kiểm tra sự kiện đã được duyệt chưa
-            if ($event->status !== 'approved') {
+            // Kiểm tra sự kiện có bị hủy không
+            if ($event->status === 'cancelled' || $event->status === 'canceled') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Sự kiện này chưa được duyệt hoặc không khả dụng.'
+                    'message' => 'Sự kiện này đã bị hủy.'
                 ], 400);
             }
 
@@ -348,11 +407,11 @@ class StudentController extends Controller
                 ], 400);
             }
 
-            // Kiểm tra sự kiện đã bắt đầu chưa
-            if ($event->start_time <= now()) {
+            // Chỉ cho phép hủy đăng ký TRƯỚC KHI sự kiện bắt đầu
+            if ($event->start_time && $event->start_time <= now()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Không thể hủy đăng ký vì sự kiện đã bắt đầu.'
+                    'message' => 'Không thể hủy đăng ký vì sự kiện đã bắt đầu hoặc đã kết thúc.'
                 ], 400);
             }
 
@@ -411,6 +470,9 @@ class StudentController extends Controller
                 ->whereIn('status', ['registered', 'pending', 'approved'])
                 ->exists();
 
+            // Kiểm tra có thể hủy đăng ký không (chỉ khi sự kiện chưa bắt đầu)
+            $canCancelRegistration = $isRegistered && $event->start_time && $event->start_time > now();
+
             // Đếm số lượng đăng ký
             $registrationCount = \App\Models\EventRegistration::where('event_id', $eventId)
                 ->whereIn('status', ['registered', 'pending', 'approved'])
@@ -424,6 +486,7 @@ class StudentController extends Controller
                 'user',
                 'event',
                 'isRegistered',
+                'canCancelRegistration',
                 'registrationCount',
                 'availableSlots',
                 'isFull',
@@ -891,7 +954,75 @@ class StudentController extends Controller
             return $user;
         }
 
-        return view('student.notifications.index', compact('user'));
+        // Lấy thông báo dành cho user này
+        $notificationIds = \App\Models\NotificationTarget::where('target_type', 'user')
+            ->where('target_id', $user->id)
+            ->pluck('notification_id');
+
+        // Lấy thông báo từ CLB mà user là thành viên
+        $userClubIds = $user->clubs->pluck('id')->toArray();
+        $clubNotificationIds = \App\Models\NotificationTarget::where('target_type', 'club')
+            ->whereIn('target_id', $userClubIds)
+            ->pluck('notification_id');
+
+        // Gộp tất cả notification IDs
+        $allNotificationIds = $notificationIds->merge($clubNotificationIds)->unique();
+
+        // Lấy thông báo
+        $notifications = \App\Models\Notification::with(['sender'])
+            ->whereIn('id', $allNotificationIds)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        // Lấy trạng thái đã đọc
+        $readNotificationIds = \App\Models\NotificationRead::where('user_id', $user->id)
+            ->where('is_read', true)
+            ->pluck('notification_id')
+            ->toArray();
+
+        return view('student.notifications.index', compact('user', 'notifications', 'readNotificationIds'));
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markNotificationAsRead($notificationId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return response()->json(['success' => false], 401);
+        }
+
+        // Kiểm tra notification có thuộc về user không
+        $notificationTarget = \App\Models\NotificationTarget::where('notification_id', $notificationId)
+            ->where(function($query) use ($user) {
+                $query->where(function($q) use ($user) {
+                    $q->where('target_type', 'user')
+                      ->where('target_id', $user->id);
+                })->orWhere(function($q) use ($user) {
+                    $userClubIds = $user->clubs->pluck('id')->toArray();
+                    $q->where('target_type', 'club')
+                      ->whereIn('target_id', $userClubIds);
+                });
+            })
+            ->first();
+
+        if (!$notificationTarget) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy thông báo'], 404);
+        }
+
+        // Đánh dấu đã đọc
+        \App\Models\NotificationRead::updateOrCreate(
+            [
+                'notification_id' => $notificationId,
+                'user_id' => $user->id,
+            ],
+            [
+                'is_read' => true,
+            ]
+        );
+
+        return response()->json(['success' => true]);
     }
 
     public function contact()
@@ -904,12 +1035,46 @@ class StudentController extends Controller
         return view('student.contact', compact('user'));
     }
 
-    public function clubManagement()
+    /**
+     * Helper method: Get the club that user has management role in
+     * Returns the club membership with the highest priority (leader > vice_president > treasurer)
+     */
+    private function getManagedClub($user)
+    {
+        $allManagedClubs = ClubMember::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'active'])
+            ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
+            ->with('club')
+            ->get();
+        
+        if ($allManagedClubs->isEmpty()) {
+            return null;
+        }
+        
+        // Ưu tiên: leader > vice_president > treasurer, nếu cùng role thì lấy CLB mới nhất
+        $treasurerClubs = $allManagedClubs->where('position', 'treasurer');
+        $vicePresidentClubs = $allManagedClubs->where('position', 'vice_president');
+        $leaderClubs = $allManagedClubs->where('position', 'leader');
+        
+        if ($leaderClubs->count() > 0) {
+            return $leaderClubs->sortByDesc('joined_at')->first();
+        } elseif ($vicePresidentClubs->count() > 0) {
+            return $vicePresidentClubs->sortByDesc('joined_at')->first();
+        } elseif ($treasurerClubs->count() > 0) {
+            return $treasurerClubs->sortByDesc('joined_at')->first();
+        } else {
+            return $allManagedClubs->first();
+        }
+    }
+
+    public function clubManagement(Request $request)
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
+
+        $search = trim((string) $request->input('search'));
 
         // Luôn hiển thị trang, nhưng kiểm tra quyền để hiển thị nội dung phù hợp
         $hasManagementRole = false;
@@ -924,15 +1089,37 @@ class StudentController extends Controller
         $clubMembers = collect();
         $allPermissions = collect();
 
-        if ($user->clubs->count() > 0) {
-            // Assuming a user manages only one club for this view
-            $userClub = $user->clubs->first();
-            $clubId = $userClub->id;
-            
-            // Fetch the full ClubMember object
+        // Tìm CLB mà user có role quản lý (leader, vice_president, treasurer)
+        $clubMembership = $this->getManagedClub($user);
+        $allManagedClubs = ClubMember::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'active'])
+            ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
+            ->with('club')
+            ->get();
+        
+        if ($clubMembership) {
+            $managedClub = $clubMembership->club;
+            $clubId = $managedClub->id;
+            $userPosition = $clubMembership->position;
+            $hasManagementRole = true;
+        } else {
+            // Nếu không có CLB nào có role quản lý, lấy CLB đầu tiên để hiển thị thông báo
+            if ($user->clubs->count() > 0) {
+                $managedClub = $user->clubs->first();
+                $clubId = $managedClub->id;
             $clubMember = ClubMember::where('user_id', $user->id)->where('club_id', $clubId)->first();
             $userPosition = $clubMember ? $clubMember->position : null;
-            $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+                $hasManagementRole = false;
+            } else {
+                $managedClub = null;
+                $clubId = null;
+                $userPosition = null;
+            }
+        }
+        
+        $userClub = $managedClub;
+        
+        if ($userClub && $clubId) {
 
             // Tính toán thống kê cơ bản cho view
             $activeMembers = ClubMember::where('club_id', $clubId)
@@ -1005,10 +1192,20 @@ class StudentController extends Controller
             ];
 
             // Danh sách thành viên (phục vụ các thẻ hoặc view cần)
-            $clubMembers = ClubMember::with('user')
+            $clubMembersQuery = ClubMember::with('user')
                 ->where('club_id', $clubId)
-                ->whereIn('status', ['approved', 'active'])
-                ->orderByRaw("FIELD(position, 'leader', 'vice_president', 'officer', 'member') ASC")
+                ->whereIn('status', ['approved', 'active']);
+
+            // Áp dụng tìm kiếm nếu có
+            if ($search) {
+                $clubMembersQuery->whereHas('user', function($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('email', 'like', '%' . $search . '%');
+                });
+            }
+
+            $clubMembers = $clubMembersQuery
+                ->orderByRaw("FIELD(position, 'leader', 'vice_president', 'treasurer', 'member') ASC")
                 ->orderByDesc('joined_at')
                 ->get()
                 ->map(function ($member) use ($clubId) {
@@ -1017,13 +1214,43 @@ class StudentController extends Controller
                         : [];
                     return $member;
                 });
+
+            // Tìm kiếm sự kiện nếu có
+            $searchEvents = collect();
+            if ($search) {
+                $searchEvents = Event::where('club_id', $clubId)
+                    ->where(function($query) use ($search) {
+                        $query->where('title', 'like', '%' . $search . '%')
+                              ->orWhere('description', 'like', '%' . $search . '%');
+                    })
+                    ->orderBy('start_time', 'desc')
+                    ->limit(5)
+                    ->get();
+            }
+
+            // Tìm kiếm bài viết nếu có
+            $searchPosts = collect();
+            if ($search) {
+                $searchPosts = Post::where('club_id', $clubId)
+                    ->where(function($query) use ($search) {
+                        $query->where('title', 'like', '%' . $search . '%')
+                              ->orWhere('content', 'like', '%' . $search . '%');
+                    })
+                    ->orderBy('created_at', 'desc')
+                    ->limit(5)
+                    ->get();
+            }
+
             $allPermissions = Permission::orderBy('name')->get();
+        } else {
+            $searchEvents = collect();
+            $searchPosts = collect();
         }
 
-        // Truyền thêm $clubId để tránh lỗi undefined variable trong view
+        // Truyền thêm $clubId và $search để tránh lỗi undefined variable trong view
         return view(
             'student.club-management.index',
-            compact('user', 'hasManagementRole', 'userPosition', 'userClub', 'clubId', 'clubStats', 'clubMembers', 'allPermissions')
+            compact('user', 'hasManagementRole', 'userPosition', 'userClub', 'clubId', 'clubStats', 'clubMembers', 'allPermissions', 'search', 'searchEvents', 'searchPosts')
         );
     }
 
@@ -1040,9 +1267,9 @@ class StudentController extends Controller
         $clubId = (int) $clubId;
         $club = Club::findOrFail($clubId);
 
-        // Only leader/vice/officer can access members management
+        // Only leader/vice/treasurer can access members management
         $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->route('student.club-management.index')
                 ->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
         }
@@ -1051,7 +1278,7 @@ class StudentController extends Controller
         $clubMembers = ClubMember::with('user')
             ->where('club_id', $clubId)
             ->whereIn('status', ['approved', 'active'])
-            ->orderByRaw("FIELD(position, 'leader', 'vice_president', 'officer', 'member') ASC")
+            ->orderByRaw("FIELD(position, 'leader', 'vice_president', 'treasurer', 'member') ASC")
             ->orderByDesc('joined_at')
             ->get()
             ->map(function ($member) use ($clubId) {
@@ -1186,9 +1413,7 @@ class StudentController extends Controller
         }
 
         $request->validate([
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'string|exists:permissions,name',
-            'position' => 'nullable|in:member,officer,vice_president',
+            'position' => 'required|in:member,treasurer,vice_president',
         ]);
 
         $clubMember = ClubMember::with('user')
@@ -1205,117 +1430,149 @@ class StudentController extends Controller
             return redirect()->back()->with('error', 'Không thể thay đổi vai trò của Trưởng CLB hoặc Chủ nhiệm.');
         }
 
-        $permissionNames = $request->input('permissions', []);
-        
-        // Nếu không có quyền nào được chọn, tự động gán quyền "xem báo cáo"
-        if (empty($permissionNames)) {
-            $permissionNames = ['xem_bao_cao'];
-        }
-        
-        $permissionIds = Permission::whereIn('name', (array) $permissionNames)->pluck('id');
+        $newPosition = $request->input('position');
+        $oldPosition = $clubMember->position;
 
         try {
-            DB::transaction(function () use ($clubMember, $clubId, $permissionIds, $request) {
-                // Cập nhật permissions
+            DB::transaction(function () use ($clubMember, $clubId, $newPosition, $oldPosition) {
+                // Kiểm tra giới hạn vai trò
+                $checkResult = $this->enforceRoleLimitsForStudent($clubMember->user_id, $clubId, $newPosition, $oldPosition);
+                if (isset($checkResult['error'])) {
+                    throw new \Exception($checkResult['error']);
+                }
+                if (isset($checkResult['position'])) {
+                    $newPosition = $checkResult['position'];
+                }
+
+                // Xóa tất cả quyền cũ
                 DB::table('user_permissions_club')
                     ->where('user_id', $clubMember->user_id)
                     ->where('club_id', $clubId)
                     ->delete();
                     
-                // Đảm bảo luôn có ít nhất quyền "xem báo cáo"
-                $xemBaoCaoId = Permission::where('name', 'xem_bao_cao')->first();
-                if ($xemBaoCaoId) {
-                    $permissionIdsArray = $permissionIds->toArray();
-                    if (!in_array($xemBaoCaoId->id, $permissionIdsArray)) {
-                        $permissionIdsArray[] = $xemBaoCaoId->id;
-                    }
-                    $permissionIds = collect($permissionIdsArray);
-                }
+                // Cấp quyền mặc định theo vai trò
+                $permissionNames = [];
                 
-                foreach ($permissionIds as $pid) {
+                switch ($newPosition) {
+                    case 'vice_president':
+                        // Phó CLB: 4 quyền
+                        $permissionNames = ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+                        break;
+                        
+                    case 'treasurer':
+                        // Thủ quỹ: 2 quyền
+                        $permissionNames = ['quan_ly_quy', 'xem_bao_cao'];
+                        break;
+                        
+                    case 'member':
+                    default:
+                        // Thành viên: Chỉ xem báo cáo
+                        $permissionNames = ['xem_bao_cao'];
+                        break;
+                    }
+
+                // Thêm quyền mới
+                $permissions = Permission::whereIn('name', $permissionNames)->get();
+                foreach ($permissions as $permission) {
                     DB::table('user_permissions_club')->insert([
                         'user_id' => $clubMember->user_id,
-                        'club_id'  => $clubId,
-                        'permission_id' => $pid,
+                        'club_id' => $clubId,
+                        'permission_id' => $permission->id,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
                 
-                // Query lại từ database để đảm bảo tính toán position chính xác
-                $permissionCount = DB::table('user_permissions_club')
-                    ->where('user_id', $clubMember->user_id)
-                    ->where('club_id', $clubId)
-                    ->count();
+                // Cập nhật position - SỬ DỤNG DB::table để đảm bảo cập nhật trực tiếp vào database
+                DB::table('club_members')
+                    ->where('id', $clubMember->id)
+                    ->update(['position' => $newPosition]);
                 
-                $permissionNames = DB::table('user_permissions_club')
-                    ->where('user_id', $clubMember->user_id)
-                    ->where('club_id', $clubId)
-                    ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
-                    ->pluck('permissions.name')
-                    ->toArray();
-                
-                $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-                
-                $calculatedPosition = 'member'; // Mặc định
-                
-                // Xác định vai trò mới dựa trên số quyền
-                if ($permissionCount >= 5) {
-                    // Có đủ 5 quyền -> Leader (Trưởng CLB)
-                    $calculatedPosition = 'leader';
-                } elseif ($permissionCount === 4 && $hasOtherPermissions) {
-                    // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
-                    $calculatedPosition = 'vice_president';
-                } elseif ($hasOtherPermissions && $permissionCount >= 2) {
-                    // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
-                    $calculatedPosition = 'officer';
-                } else {
-                    // Chỉ có xem_bao_cao -> Member
-                    $calculatedPosition = 'member';
-                }
-                
-                // Kiểm tra giới hạn số lượng officer (tối đa 2)
-                if ($calculatedPosition === 'officer' && $clubMember->position !== 'officer') {
-                    $officerCount = ClubMember::where('club_id', $clubId)
-                        ->whereIn('status', ['approved', 'active'])
-                        ->where('position', 'officer')
-                        ->where('id', '!=', $clubMember->id)
-                        ->count();
-                    
-                    if ($officerCount >= 2) {
-                        // Nếu đã đủ officer, chuyển về member
-                        $calculatedPosition = 'member';
-                    }
-                }
-                
-                // Kiểm tra giới hạn số lượng vice_president (chỉ 1)
-                if ($calculatedPosition === 'vice_president' && $clubMember->position !== 'vice_president') {
-                    $vicePresidentCount = ClubMember::where('club_id', $clubId)
-                        ->whereIn('status', ['approved', 'active'])
-                        ->where('position', 'vice_president')
-                        ->where('id', '!=', $clubMember->id)
-                        ->count();
-                    
-                    if ($vicePresidentCount >= 1) {
-                        // Nếu đã có vice president, chuyển về officer nếu có >= 2 quyền, nếu không thì member
-                        $calculatedPosition = ($hasOtherPermissions && $permissionCount >= 2) ? 'officer' : 'member';
-                    }
-                }
-                
-                // Cập nhật position dựa trên quyền (ưu tiên position được tính toán từ quyền)
-                // Chỉ cập nhật nếu vai trò hiện tại không phải là 'leader' để bảo vệ người tạo CLB
-                if ($clubMember->position !== 'leader') {
-                    ClubMember::where('id', $clubMember->id)
-                        ->update(['position' => $calculatedPosition]);
-                    // Log để debug
-                    \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$calculatedPosition} (permission count: {$permissionCount}, has other permissions: " . ($hasOtherPermissions ? 'true' : 'false') . ")");
-                }
+                // Refresh lại model để đảm bảo dữ liệu mới nhất
+                $clubMember->refresh();
+
+                \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$oldPosition} -> {$newPosition}");
             });
 
             return redirect()->back()->with('success', 'Đã cập nhật thành công.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Áp dụng giới hạn vai trò: 2 Vice President, 1 Treasurer
+     */
+    private function enforceRoleLimitsForStudent($userId, $clubId, $newPosition, $oldPosition = null)
+    {
+        $result = ['position' => $newPosition];
+        
+        // KIỂM TRA: User đã là thủ quỹ, phó CLB hoặc chủ nhiệm ở CLB khác chưa?
+        if (in_array($newPosition, ['treasurer', 'vice_president'])) {
+            $existingRole = ClubMember::where('user_id', $userId)
+                ->where('club_id', '!=', $clubId)
+                        ->whereIn('status', ['approved', 'active'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president', 'chunhiem'])
+                ->first();
+                    
+            if ($existingRole) {
+                $existingClub = Club::find($existingRole->club_id);
+                $result['error'] = "Tài khoản này đã là thủ quỹ/phó CLB/chủ nhiệm ở CLB '{$existingClub->name}'. Ở CLB này chỉ được làm thành viên.";
+                $result['position'] = 'member';
+                return $result;
+            }
+        }
+        
+        if ($newPosition === 'vice_president') {
+            // Được có 2 Vice President
+                    $vicePresidentCount = ClubMember::where('club_id', $clubId)
+                        ->where('position', 'vice_president')
+                ->where('user_id', '!=', $userId)
+                ->whereIn('status', ['approved', 'active'])
+                        ->count();
+                    
+            if ($vicePresidentCount >= 2) {
+                // Nếu đã có 2 phó CLB, không cho phép thêm
+                $result['error'] = "CLB này đã có đủ 2 phó CLB. Vui lòng bỏ 1 phó CLB trước khi thêm mới.";
+                $result['position'] = $oldPosition ?: 'member';
+                return $result;
+            }
+            
+        } elseif ($newPosition === 'treasurer') {
+            // Chỉ được có 1 Treasurer
+            $existingTreasurer = ClubMember::where('club_id', $clubId)
+                ->where('position', 'treasurer')
+                ->where('user_id', '!=', $userId)
+                ->whereIn('status', ['approved', 'active'])
+                ->first();
+                
+            if ($existingTreasurer) {
+                // Chuyển thủ quỹ cũ về thành viên
+                DB::table('club_members')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $clubId)
+                    ->update(['position' => 'member']);
+                
+                // Xóa quyền của thủ quỹ cũ, chỉ giữ xem_bao_cao
+                $xemBaoCaoPerm = Permission::where('name', 'xem_bao_cao')->first();
+                DB::table('user_permissions_club')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $clubId)
+                    ->delete();
+                if ($xemBaoCaoPerm) {
+                    DB::table('user_permissions_club')->insert([
+                        'user_id' => $existingTreasurer->user_id,
+                        'club_id' => $clubId,
+                        'permission_id' => $xemBaoCaoPerm->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                \Log::info("Chuyển thủ quỹ cũ {$existingTreasurer->user_id} về thành viên trong CLB {$clubId}");
+            }
+        }
+        
+        return $result;
     }
 
     /**
@@ -1374,7 +1631,7 @@ class StudentController extends Controller
         $clubId = $club->id;
         $position = $user->getPositionInClub($clubId);
 
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->route('student.club-management.index')
                 ->with('error', 'Bạn không có quyền tạo yêu cầu cấp kinh phí.');
         }
@@ -1525,6 +1782,188 @@ class StudentController extends Controller
     }
 
     /**
+     * Edit fund request (only for rejected requests)
+     */
+    public function fundRequestEdit($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::with(['event', 'club'])
+            ->where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép sửa yêu cầu bị từ chối
+        if ($fundRequest->status !== 'rejected') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ có thể sửa yêu cầu đã bị từ chối.');
+        }
+
+        // Kiểm tra quyền (chỉ leader mới được sửa)
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ Trưởng CLB mới được sửa yêu cầu.');
+        }
+
+        $events = Event::where('club_id', $club->id)
+            ->orderBy('start_time', 'desc')
+            ->get();
+
+        return view('student.club-management.fund-request-edit', [
+            'user' => $user,
+            'club' => $club,
+            'fundRequest' => $fundRequest,
+            'events' => $events,
+        ]);
+    }
+
+    /**
+     * Update fund request
+     */
+    public function fundRequestUpdate(Request $request, $id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép sửa yêu cầu bị từ chối
+        if ($fundRequest->status !== 'rejected') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ có thể sửa yêu cầu đã bị từ chối.');
+        }
+
+        // Kiểm tra quyền
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ Trưởng CLB mới được sửa yêu cầu.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'requested_amount' => 'required|numeric|min:0',
+            'event_id' => 'required|exists:events,id',
+            'expense_items' => 'nullable|array',
+            'expense_items.*.item' => 'required_with:expense_items|string|max:255',
+            'expense_items.*.amount' => 'required_with:expense_items|numeric|min:0',
+        ]);
+
+        // Kiểm tra sự kiện thuộc về CLB
+        $event = Event::findOrFail($request->event_id);
+        if ($event->club_id != $club->id) {
+            return redirect()->back()
+                ->with('error', 'Sự kiện không thuộc về CLB của bạn.')
+                ->withInput();
+        }
+
+        // Cập nhật thông tin
+        $fundRequest->title = $request->title;
+        $fundRequest->description = $request->description;
+        $fundRequest->requested_amount = $request->requested_amount;
+        $fundRequest->event_id = $request->event_id;
+        $fundRequest->expense_items = $request->expense_items ?? null;
+
+        // Xử lý tài liệu hỗ trợ mới (nếu có)
+        if ($request->hasFile('supporting_documents')) {
+            $documents = $fundRequest->supporting_documents ?? [];
+            $uploadPath = public_path('storage/fund-requests');
+            
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+            
+            foreach ($request->file('supporting_documents') as $index => $document) {
+                if (!$document || !$document->isValid() || $document->getSize() == 0) {
+                    continue;
+                }
+                
+                try {
+                    $filename = time() . '_' . $index . '_' . $document->getClientOriginalName();
+                    $document->move($uploadPath, $filename);
+                    $documents[] = 'fund-requests/' . $filename;
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            $fundRequest->supporting_documents = $documents;
+        }
+
+        $fundRequest->save();
+
+        return redirect()->route('student.club-management.fund-requests.show', $id)
+            ->with('success', 'Yêu cầu đã được cập nhật thành công! Bạn có thể gửi lại để duyệt.');
+    }
+
+    /**
+     * Resubmit fund request (reset status to pending)
+     */
+    public function fundRequestResubmit($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép gửi lại yêu cầu bị từ chối
+        if ($fundRequest->status !== 'rejected') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ có thể gửi lại yêu cầu đã bị từ chối.');
+        }
+
+        // Kiểm tra quyền
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->route('student.club-management.fund-requests.show', $id)
+                ->with('error', 'Chỉ Trưởng CLB mới được gửi lại yêu cầu.');
+        }
+
+        // Reset status về pending và xóa thông tin duyệt
+        $fundRequest->status = 'pending';
+        $fundRequest->approved_by = null;
+        $fundRequest->approved_at = null;
+        $fundRequest->approved_amount = null;
+        $fundRequest->approval_notes = null;
+        // Giữ lại rejection_reason để người dùng biết lý do từ chối trước đó
+        $fundRequest->settlement_status = 'pending';
+        $fundRequest->save();
+
+        return redirect()->route('student.club-management.fund-requests.show', $id)
+            ->with('success', 'Yêu cầu đã được gửi lại thành công! Đang chờ duyệt.');
+    }
+
+    /**
      * Remove a member from the club
      */
     public function removeMember(Request $request, $clubId, $memberId)
@@ -1582,7 +2021,7 @@ class StudentController extends Controller
         $clubId = (int) $clubId;
         $club = Club::findOrFail($clubId);
         $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->route('student.club-management.index')
                 ->with('error', 'Bạn không có quyền xem đơn tham gia CLB này.');
         }
@@ -1608,21 +2047,21 @@ class StudentController extends Controller
         }
         $clubId = (int) $clubId;
         $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền duyệt đơn.');
         }
         $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
             $req->status = 'approved';
-            $req->approved_by = $user->id;
-            $req->approved_at = now();
+            $req->reviewed_by = $user->id;
+            $req->reviewed_at = now();
             $req->save();
             // thêm vào bảng club_members nếu cần, tùy logic hiện có
         }
         return redirect()->back()->with('success', 'Đã duyệt đơn tham gia.');
     }
 
-    public function rejectClubJoinRequest($clubId, $requestId)
+    public function rejectClubJoinRequest(Request $request, $clubId, $requestId)
     {
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
@@ -1630,17 +2069,49 @@ class StudentController extends Controller
         }
         $clubId = (int) $clubId;
         $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền từ chối đơn.');
         }
-        $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
+        
+        $request->validate([
+            'rejection_reason' => 'required|string|max:1000'
+        ]);
+        
+        $req = JoinReq::with(['user', 'club'])->where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
+            $rejectionReason = $request->input('rejection_reason');
             $req->status = 'rejected';
-            $req->approved_by = $user->id;
-            $req->approved_at = now();
+            $req->reviewed_by = $user->id;
+            $req->reviewed_at = now();
+            $req->rejection_reason = $rejectionReason;
             $req->save();
+            
+            // Tạo thông báo cho user
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'type' => 'club_rejection',
+                'related_id' => $req->id,
+                'related_type' => 'ClubJoinRequest',
+                'title' => 'Đơn tham gia CLB đã bị từ chối',
+                'message' => 'Đơn tham gia CLB "' . ($req->club->name ?? 'CLB') . '" của bạn đã bị từ chối. ' . ($rejectionReason ? 'Lý do: ' . $rejectionReason : ''),
+            ]);
+
+            // Gửi thông báo đến user
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $req->user_id,
+            ]);
+            
+            // Gửi email thông báo
+            try {
+                \Mail::to($req->user->email)->send(new \App\Mail\ClubJoinRequestRejected($req, $rejectionReason));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send rejection email: ' . $e->getMessage());
+                // Vẫn tiếp tục dù gửi email thất bại
+            }
         }
-        return redirect()->back()->with('success', 'Đã từ chối đơn tham gia.');
+        return redirect()->back()->with('success', 'Đã từ chối đơn tham gia và gửi thông báo qua email.');
     }
 
     /**
@@ -1653,7 +2124,7 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Get club from query parameter or use first club
+        // Get club from query parameter or use managed club
         $clubId = $request->query('club');
         if ($clubId) {
             $club = Club::findOrFail($clubId);
@@ -1668,19 +2139,26 @@ class StudentController extends Controller
                     ->with('error', 'Bạn cần là thành viên của CLB này để xem báo cáo.');
             }
         } else {
-            // Determine user's club (first club)
+            // Tìm CLB mà user có role quản lý
+            $clubMembership = $this->getManagedClub($user);
+            
+            if (!$clubMembership) {
+                // Nếu không có CLB nào có role quản lý, lấy CLB đầu tiên để hiển thị thông báo
             if ($user->clubs->isEmpty()) {
                 return redirect()->route('student.clubs.index')
                     ->with('error', 'Bạn chưa tham gia CLB nào.');
             }
             $club = $user->clubs->first();
+            } else {
+                $club = $clubMembership->club;
+            }
         }
         $clubId = $club->id;
 
-        // Kiểm tra quyền xem báo cáo (chỉ leader/officer có quyền xem thông tin quỹ)
+        // Kiểm tra quyền xem báo cáo (chỉ leader/treasurer có quyền xem thông tin quỹ)
         $canViewReports = $user->hasPermission('xem_bao_cao', $clubId);
         $userPosition = $user->getPositionInClub($clubId);
-        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
 
         // Simple stats
         $totalMembers = ClubMember::where('club_id', $clubId)
@@ -1696,18 +2174,18 @@ class StudentController extends Controller
             ->where('start_time', '>=', now())
             ->count();
 
-        // Fund stats - chỉ tính cho leader/officer
+        // Fund stats - hiển thị cho tất cả thành viên có quyền xem báo cáo
         $fund = Fund::where('club_id', $clubId)->first();
         $fundId = $fund?->id ?? null;
         $totalIncome = 0;
         $totalExpense = 0;
         $balance = 0;
-        $expenseByCategory = [];
+        $totalTransactions = 0;
         $publicExpenses = collect(); // Danh sách chi tiêu công khai cho thành viên xem
 
         if ($fundId) {
-            if ($canViewReports && $isLeaderOrOfficer) {
-                // Leader/Officer: xem tất cả thông tin quỹ
+            if ($canViewReports) {
+                // Tất cả thành viên có quyền xem báo cáo: xem thông tin quỹ (chỉ xem, không tạo)
                 $totalIncome = FundTransaction::where('fund_id', $fundId)
                     ->where('type', 'income')
                     ->where('status', 'approved')
@@ -1718,14 +2196,10 @@ class StudentController extends Controller
                     ->sum('amount');
                 // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
                 $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
-                // breakdown by category (if field exists)
-                $expenseByCategory = FundTransaction::where('fund_id', $fundId)
-                    ->where('type', 'expense')
+                // Tổng số giao dịch
+                $totalTransactions = FundTransaction::where('fund_id', $fundId)
                     ->where('status', 'approved')
-                    ->select('category', DB::raw('SUM(amount) as total'))
-                    ->groupBy('category')
-                    ->pluck('total', 'category')
-                    ->toArray();
+                    ->count();
             } else {
                 // Thành viên thông thường: chỉ xem các khoản chi đã được duyệt (công khai)
                 $publicExpenses = FundTransaction::with(['fund', 'creator', 'approver'])
@@ -1743,11 +2217,11 @@ class StudentController extends Controller
             }
         }
 
-        // Member structure (leader/officer/member) simple distribution
+        // Member structure (leader/treasurer/member) simple distribution
         $structureMap = [
             'leader' => 'Trưởng',
             'vice_president' => 'Phó',
-            'officer' => 'Cán sự',
+            'treasurer' => 'Thủ quỹ',
             'member' => 'Thành viên',
         ];
         $memberStructureCounts = ClubMember::where('club_id', $clubId)
@@ -1761,7 +2235,7 @@ class StudentController extends Controller
             'data' => [
                 $memberStructureCounts['leader'] ?? 0,
                 $memberStructureCounts['vice_president'] ?? 0,
-                $memberStructureCounts['officer'] ?? 0,
+                $memberStructureCounts['treasurer'] ?? 0,
                 $memberStructureCounts['member'] ?? 0,
             ],
         ];
@@ -1817,7 +2291,7 @@ class StudentController extends Controller
                 'totalIncome' => (int) $totalIncome,
                 'totalExpense' => (int) $totalExpense,
                 'balance' => (int) $balance,
-                'expenseByCategory' => $expenseByCategory,
+                'totalTransactions' => (int) ($totalTransactions ?? 0),
             ],
             'memberStructure' => $memberStructure,
             'eventsByMonth' => ['labels' => $labels12, 'data' => $events12],
@@ -1847,7 +2321,7 @@ class StudentController extends Controller
         // Kiểm tra quyền
         $canPostAnnouncement = $user->hasPermission('dang_thong_bao', $clubId);
         $userPosition = $user->getPositionInClub($clubId);
-        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
         
         if (!$canPostAnnouncement && !$isLeaderOrOfficer) {
             return redirect()->route('student.clubs.show', $clubId)
@@ -1914,7 +2388,7 @@ class StudentController extends Controller
         
         // Kiểm tra quyền
         $userPosition = $user->getPositionInClub($clubId);
-        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
         
         if (!$isLeaderOrOfficer) {
             return redirect()->route('student.clubs.show', $clubId)
@@ -1961,7 +2435,7 @@ class StudentController extends Controller
         
         // Kiểm tra quyền
         $userPosition = $user->getPositionInClub($clubId);
-        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
         
         if (!$isLeaderOrOfficer) {
             return redirect()->route('student.clubs.show', $clubId)
@@ -1989,7 +2463,7 @@ class StudentController extends Controller
         
         // Kiểm tra quyền
         $userPosition = $user->getPositionInClub($clubId);
-        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'officer']);
+        $isLeaderOrOfficer = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
         
         if (!$isLeaderOrOfficer) {
             return redirect()->route('student.clubs.show', $clubId)
@@ -2243,11 +2717,31 @@ class StudentController extends Controller
             return $user;
         }
 
-        if ($user->clubs->isEmpty()) {
+        // Lấy CLB từ query parameter hoặc từ managed club
+        $clubId = $request->query('club');
+        if ($clubId) {
+            $club = Club::findOrFail($clubId);
+            // Kiểm tra user có phải thành viên của CLB này không
+            $isMember = ClubMember::where('club_id', $clubId)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->exists();
+            
+            if (!$isMember) {
+                return redirect()->route('student.clubs.show', $clubId)
+                    ->with('error', 'Bạn cần là thành viên của CLB này để xem giao dịch quỹ.');
+            }
+        } else {
+            // Tìm CLB mà user có role quản lý (leader, vice_president, treasurer)
+            $clubMembership = $this->getManagedClub($user);
+            
+            if (!$clubMembership) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+                    ->with('error', 'Bạn không có quyền quản lý CLB nào.');
         }
-        $club = $user->clubs->first();
+            
+            $club = $clubMembership->club;
+        }
 
         // Permission: reuse view report permission
         if (!$user->hasPermission('xem_bao_cao', $club->id)) {
@@ -2311,14 +2805,36 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-        if ($user->clubs->isEmpty()) {
+        
+        // Lấy CLB từ query parameter hoặc từ managed club
+        $clubId = $request->query('club');
+        if ($clubId) {
+            $club = Club::findOrFail($clubId);
+            // Kiểm tra user có phải thành viên của CLB này không
+            $isMember = ClubMember::where('club_id', $clubId)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->exists();
+            
+            if (!$isMember) {
+                return redirect()->route('student.clubs.show', $clubId)
+                    ->with('error', 'Bạn cần là thành viên của CLB này để tạo giao dịch quỹ.');
+            }
+            
+            $position = $user->getPositionInClub($clubId);
+        } else {
+            // Tìm CLB mà user có role quản lý
+            $clubMembership = $this->getManagedClub($user);
+            
+            if (!$clubMembership) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+                    ->with('error', 'Bạn không có quyền quản lý CLB nào.');
         }
-        $club = $user->clubs->first();
-        // Officer/Leader can create, member view only
-        $position = $user->getPositionInClub($club->id);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+            
+            $club = $clubMembership->club;
+            $position = $clubMembership->position;
+        }
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->route('student.club-management.fund-transactions')
                 ->with('error', 'Bạn không có quyền tạo giao dịch.');
         }
@@ -2329,7 +2845,7 @@ class StudentController extends Controller
     }
 
     /**
-     * Store transaction (leader auto-approved, officer pending)
+     * Store transaction (leader auto-approved, treasurer pending)
      */
     public function fundTransactionStore(Request $request)
     {
@@ -2337,18 +2853,21 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-        if ($user->clubs->isEmpty()) {
+        // Tìm CLB mà user có role quản lý
+        $clubMembership = $this->getManagedClub($user);
+        
+        if (!$clubMembership) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+                ->with('error', 'Bạn không có quyền quản lý CLB nào.');
         }
-        $club = $user->clubs->first();
+        
+        $club = $clubMembership->club;
+        $position = $clubMembership->position;
         $fund = Fund::firstOrCreate(['club_id' => $club->id], [
             'name' => 'Quỹ ' . $club->name,
             'current_amount' => 0,
         ]);
-
-        $position = $user->getPositionInClub($club->id);
-        if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
+        if (!in_array($position, ['leader', 'vice_president', 'treasurer'])) {
             return redirect()->route('student.club-management.fund-transactions')
                 ->with('error', 'Bạn không có quyền tạo giao dịch.');
         }
@@ -2436,12 +2955,16 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-        if ($user->clubs->isEmpty()) {
+        // Tìm CLB mà user có role quản lý
+        $clubMembership = $this->getManagedClub($user);
+        
+        if (!$clubMembership) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+                ->with('error', 'Bạn không có quyền quản lý CLB nào.');
         }
-        $club = $user->clubs->first();
-        $position = $user->getPositionInClub($club->id);
+        
+        $club = $clubMembership->club;
+        $position = $clubMembership->position;
         if ($position !== 'leader') {
             return redirect()->back()->with('error', 'Chỉ Trưởng CLB mới được duyệt.');
         }
@@ -2467,12 +2990,16 @@ class StudentController extends Controller
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
         }
-        if ($user->clubs->isEmpty()) {
+        // Tìm CLB mà user có role quản lý
+        $clubMembership = $this->getManagedClub($user);
+        
+        if (!$clubMembership) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn chưa tham gia CLB nào.');
+                ->with('error', 'Bạn không có quyền quản lý CLB nào.');
         }
-        $club = $user->clubs->first();
-        $position = $user->getPositionInClub($club->id);
+        
+        $club = $clubMembership->club;
+        $position = $clubMembership->position;
         if ($position !== 'leader') {
             return redirect()->back()->with('error', 'Chỉ Trưởng CLB mới được từ chối.');
         }
@@ -2593,9 +3120,10 @@ class StudentController extends Controller
         // Thông báo luôn sắp xếp theo mới nhất
         $announcementsQuery->orderBy('created_at', 'desc');
 
-        $posts = $postsQuery->paginate(3);
+        $posts = $postsQuery->paginate(3)->withQueryString();
         $announcements = $announcementsQuery->limit(5)->get();
         $clubs = Club::where('status', 'active')->get();
+        $search = $request->input('search', '');
 
         // Lấy thông báo mới nhất để hiển thị modal
         $latestAnnouncement = $announcementsQuery->first();
@@ -2614,7 +3142,7 @@ class StudentController extends Controller
             }
         }
 
-        return view('student.posts.index', compact('posts', 'clubs', 'user', 'latestAnnouncement', 'shouldShowModal', 'announcements'));
+        return view('student.posts.index', compact('posts', 'clubs', 'user', 'latestAnnouncement', 'shouldShowModal', 'announcements', 'search', 'filter'));
     }
 
     /**
@@ -3130,10 +3658,10 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Business logic: A user can only be a leader/officer in one club.
-        // Let's check if the user is already a leader or officer in any club.
+        // Business logic: A user can only be a leader/treasurer in one club.
+        // Let's check if the user is already a leader or treasurer in any club.
         $isLeaderOrOfficer = ClubMember::where('user_id', $user->id) // Tìm vai trò của user
-            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+            ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
             ->whereIn('status', ['active', 'approved']) // Chỉ kiểm tra các vai trò đang hoạt động
             ->whereHas('club', function ($query) { // Chỉ tính các CLB chưa bị xóa
                 $query->whereNull('deleted_at');
@@ -3141,7 +3669,7 @@ class StudentController extends Controller
             ->exists();
 
         if ($isLeaderOrOfficer) {
-            return redirect()->route('student.clubs.index')->with('error', 'Bạn đã là cán sự hoặc trưởng của một CLB khác và không thể tạo thêm CLB mới.');
+            return redirect()->route('student.clubs.index')->with('error', 'Bạn đã là thủ quỹ/phó CLB hoặc trưởng của một CLB khác và không thể tạo thêm CLB mới.');
         }
 
         $fields = Field::orderBy('name')->get();
@@ -3161,7 +3689,7 @@ class StudentController extends Controller
 
         // Re-check eligibility
         $isLeaderOrOfficer = ClubMember::where('user_id', $user->id) // Tìm vai trò của user
-            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+            ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
             ->whereIn('status', ['active', 'approved']) // Thêm dòng này để sửa lỗi
             ->whereHas('club', function ($query) { // Chỉ tính các CLB chưa bị xóa
                 $query->whereNull('deleted_at');

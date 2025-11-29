@@ -38,63 +38,22 @@
             </div>
 
             <div class="content-card">
-                <form method="GET" action="{{ route('student.posts') }}" class="mb-3">
-                    @if(request('filter'))
-                        <input type="hidden" name="filter" value="{{ request('filter') }}">
-                    @endif
-                    <div class="row g-3">
-                    <div class="col-md-4">
-                            <label class="form-label small text-muted mb-1">Tìm kiếm</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white">
-                                    <i class="fas fa-search text-muted"></i>
-                                </span>
-                                <input type="text" name="search" value="{{ request('search') }}" 
-                                       class="form-control" 
-                                       placeholder="Tìm kiếm bài viết...">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">Câu lạc bộ</label>
-                        <select name="club_id" class="form-select">
-                            <option value="">Tất cả CLB</option>
-                            @foreach($clubs as $club)
-                                <option value="{{ $club->id }}" {{ (string)request('club_id') === (string)$club->id ? 'selected' : '' }}>
-                                    {{ $club->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">Loại bài viết</label>
-                            <select name="type" class="form-select">
-                                <option value="">Tất cả loại</option>
-                                <option value="post" {{ request('type') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
-                                <option value="announcement" {{ request('type') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
-                                <option value="document" {{ request('type') == 'document' ? 'selected' : '' }}>Tài liệu</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-teal w-100" style="background-color: #14b8a6; color: white;">
-                                <i class="fas fa-filter me-1"></i> Lọc
-                        </button>
-                        </div>
-                    </div>
-                    @if(request('search') || request('club_id') || request('type'))
-                        <div class="mt-2">
-                            <a href="{{ route('student.posts', ['filter' => request('filter')]) }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> Xóa bộ lọc
-                            </a>
-                        </div>
-                    @endif
-                </form>
-
                 <div class="row">
                     <!-- Cột bài viết (chiếm toàn bộ) -->
                     <div class="col-12">
-                        <h5 class="mb-3">
-                            <i class="fas fa-newspaper text-teal me-2"></i>Bài viết
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-newspaper text-teal me-2"></i>
+                                @if(isset($search) && !empty($search))
+                                    Kết quả tìm kiếm cho "{{ $search }}"
+                                @else
+                                    Bài viết
+                                @endif
+                            </h5>
+                            @if(isset($search) && !empty($search))
+                                <span class="text-muted small">{{ $posts->total() }} kết quả</span>
+                            @endif
+                        </div>
                 @forelse($posts as $post)
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="row g-0">
@@ -278,8 +237,15 @@
                     </div>
                 @empty
                     <div class="text-center py-5">
-                        <i class="far fa-newspaper fa-2x text-muted mb-3"></i>
-                        <p class="text-muted mb-0">Chưa có bài viết nào.</p>
+                        @if(isset($search) && !empty($search))
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Không tìm thấy bài viết nào</h5>
+                            <p class="text-muted">Không có kết quả cho từ khóa "<strong>{{ $search }}</strong>"</p>
+                            <a href="{{ route('student.posts') }}" class="btn btn-outline-primary mt-2">Xem tất cả bài viết</a>
+                        @else
+                            <i class="far fa-newspaper fa-2x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">Chưa có bài viết nào.</p>
+                        @endif
                     </div>
                 @endforelse
 

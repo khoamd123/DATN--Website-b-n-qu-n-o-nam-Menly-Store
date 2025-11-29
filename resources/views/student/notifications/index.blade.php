@@ -25,54 +25,24 @@
 
         <!-- Notifications -->
         <div class="content-card">
-            @if(isset($announcements) && $announcements->count() > 0)
-                @foreach($announcements as $announcement)
-                    <div class="notification-item {{ $announcement->created_at->isToday() ? 'unread' : '' }}">
-                        <div class="notification-icon bg-warning">
-                            <i class="fas fa-bullhorn"></i>
-                        </div>
-                        <div class="notification-content">
-                            <div class="notification-header">
-                                <h6 class="mb-1">{{ $announcement->title }}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i> {{ $announcement->created_at->format('d/m/Y H:i') }}
-                                </small>
-                            </div>
-                            <p class="notification-text mb-2">
-                                {{ \Illuminate\Support\Str::limit(strip_tags($announcement->content), 150) }}
-                            </p>
-                            <div class="notification-meta mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i> {{ $announcement->club->name ?? 'UniClubs' }}
-                                    @if($announcement->user)
-                                        <span class="mx-2">•</span>
-                                        <i class="fas fa-user me-1"></i> {{ $announcement->user->name }}
-                                    @endif
-                                </small>
-                            </div>
-                            <div class="notification-actions">
-                                <a href="{{ route('student.posts.show', $announcement->id) }}" class="btn btn-sm btn-warning">Xem chi tiết</a>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-
-                <!-- Pagination -->
-                <div class="mt-4">
-                    {{ $announcements->links() }}
-                </div>
-            @else
-                <div class="text-center py-5">
-                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Bạn chưa có thông báo nào từ các CLB.</p>
-                </div>
-            @endif
-
-            @if(isset($systemNotifications) && $systemNotifications->count() > 0)
-                @foreach($systemNotifications as $notification)
-                    <div class="notification-item">
-                        <div class="notification-icon bg-primary">
-                            <i class="fas fa-info-circle"></i>
+            @if(isset($notifications) && $notifications->count() > 0)
+                @foreach($notifications as $notification)
+                    @php
+                        $isRead = in_array($notification->id, $readNotificationIds ?? []);
+                        $iconClass = 'bg-primary';
+                        $icon = 'fa-info-circle';
+                        
+                        if ($notification->type === 'event_registration') {
+                            $iconClass = 'bg-success';
+                            $icon = 'fa-calendar-check';
+                        } elseif ($notification->type === 'club_rejection') {
+                            $iconClass = 'bg-danger';
+                            $icon = 'fa-times-circle';
+                        }
+                    @endphp
+                    <div class="notification-item {{ !$isRead ? 'unread' : '' }}" data-notification-id="{{ $notification->id }}">
+                        <div class="notification-icon {{ $iconClass }}">
+                            <i class="fas {{ $icon }}"></i>
                         </div>
                         <div class="notification-content">
                             <div class="notification-header">
@@ -85,11 +55,25 @@
                                 {{ $notification->message }}
                             </p>
                             <div class="notification-actions">
-                                <button class="btn btn-sm btn-outline-primary">Xem chi tiết</button>
+                                @if($notification->type === 'event_registration' && $notification->related_id)
+                                    <a href="{{ route('student.events.show', $notification->related_id) }}" class="btn btn-sm btn-outline-primary">Xem sự kiện</a>
+                                @elseif($notification->type === 'club_rejection')
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-primary">Xem CLB</a>
+                                @endif
                             </div>
                         </div>
                     </div>
                 @endforeach
+
+                <!-- Pagination -->
+                <div class="mt-4">
+                    {{ $notifications->links() }}
+                </div>
+            @else
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Bạn chưa có thông báo nào.</p>
+                </div>
             @endif
         </div>
 
@@ -314,6 +298,28 @@
 
 @push('scripts')
 <script>
+    // Đánh dấu notification là đã đọc khi click
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.notification-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                const notificationId = this.getAttribute('data-notification-id');
+                if (notificationId && !this.classList.contains('read')) {
+                    // Gửi request đánh dấu đã đọc
+                    fetch('/student/notifications/' + notificationId + '/read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    }).then(function() {
+                        this.classList.remove('unread');
+                        this.classList.add('read');
+                    }.bind(this));
+                }
+            });
+        });
+    });
+
     @if(isset($latestAnnouncement) && $latestAnnouncement)
     document.addEventListener('DOMContentLoaded', function() {
         // Hiển thị modal mỗi khi trang load

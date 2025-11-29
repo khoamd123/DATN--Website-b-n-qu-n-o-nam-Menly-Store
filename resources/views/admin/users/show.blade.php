@@ -159,9 +159,12 @@
                                         if($position === 'leader' || $position === 'chunhiem') {
                                             $badgeColor = 'danger';
                                             $positionLabel = 'Trưởng CLB';
-                                        } elseif($position === 'officer' || $position === 'phonhiem') {
+                                        } elseif($position === 'treasurer') {
                                             $badgeColor = 'info';
-                                            $positionLabel = 'Cán sự';
+                                            $positionLabel = 'Thủ quỹ';
+                                        } elseif($position === 'phonhiem') {
+                                            $badgeColor = 'warning';
+                                            $positionLabel = 'Phó CLB';
                                         } elseif($position === 'member' || $position === 'thanhvien') {
                                             $badgeColor = 'success';
                                             $positionLabel = 'Thành viên';

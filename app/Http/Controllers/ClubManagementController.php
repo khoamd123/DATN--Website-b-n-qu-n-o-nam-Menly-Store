@@ -114,7 +114,7 @@ class ClubManagementController extends Controller
         $request->validate([
             'user_id' => 'required|array',
             'user_id.*' => 'exists:users,id',
-            'position' => 'required|in:member,officer,leader'
+            'position' => 'required|in:member,treasurer,vice_president,leader'
         ]);
 
         // Kiểm tra quyền (chỉ admin mới được thêm)
@@ -137,11 +137,11 @@ class ClubManagementController extends Controller
                 continue;
             }
 
-            // Nếu thêm làm leader/officer, kiểm tra giới hạn
-            if (in_array($request->position, ['leader', 'officer'])) {
+            // Nếu thêm làm leader/treasurer/vice_president, kiểm tra giới hạn
+            if (in_array($request->position, ['leader', 'treasurer', 'vice_president'])) {
                 $alreadyLeaderOfficer = ClubMember::where('user_id', $userId)
                     ->whereIn('status', ['approved', 'active'])
-                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                     ->whereHas('club', function($query) {
                         $query->whereNull('deleted_at');
                     })
@@ -149,7 +149,7 @@ class ClubManagementController extends Controller
                     
                 if ($alreadyLeaderOfficer) {
                     $club = Club::find($alreadyLeaderOfficer->club_id);
-                    $errors[] = "Người này đã là cán sự/trưởng ở CLB '{$club->name}'.";
+                    $errors[] = "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$club->name}'.";
                     continue;
                 }
             }

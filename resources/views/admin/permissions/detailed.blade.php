@@ -269,8 +269,8 @@
                                                     @case('phonhiem')
                                                         <span class="badge bg-warning">Phó CLB</span>
                                                         @break
-                                                    @case('officer')
-                                                        <span class="badge bg-info">Cán sự</span>
+                                                    @case('treasurer')
+                                                        <span class="badge bg-info">Thủ quỹ</span>
                                                         @break
                                                     @case('member')
                                                     @case('thanhvien')
@@ -322,7 +322,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Chỉnh sửa quyền</h5>
+                <h5 class="modal-title">Chỉnh sửa vai trò</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -337,37 +337,28 @@
                     <small class="text-muted d-none" id="clubSelectNote">Không thể chọn CLB khác vì thành viên chỉ thuộc 1 CLB này</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Chọn quyền:</label>
-                    <div class="row" id="permissionsList">
-                        @foreach($permissions as $permission)
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input permission-checkbox" 
-                                       type="checkbox" 
-                                       value="{{ $permission->id }}" 
-                                       id="perm_{{ $permission->id }}"
-                                       name="permissions[]">
-                                <label class="form-check-label" for="perm_{{ $permission->id }}">
-                                    <strong>{{ $permission->name }}</strong><br>
-                                    <small class="text-muted">{{ $permission->description }}</small>
-                                </label>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
+                    <label for="positionSelect" class="form-label">Vai trò:</label>
+                    <select class="form-select" id="positionSelect" name="position">
+                        <option value="member">Thành viên</option>
+                        <option value="treasurer">Thủ quỹ</option>
+                        <option value="vice_president">Phó CLB</option>
+                        <option value="leader">Trưởng CLB</option>
+                    </select>
                 </div>
                 <div class="alert alert-info mt-3">
                     <strong>Ghi chú:</strong>
                     <ul class="mb-0 mt-2">
-                        <li>Có <strong>5 quyền trở lên</strong> → Tự động thành <strong>Trưởng CLB</strong></li>
-                        <li>Có <strong>2-4 quyền</strong> → Tự động thành <strong>Cán sự</strong></li>
-                        <li>Chỉ có <strong>xem_bao_cao</strong> → Tự động thành <strong>Thành viên</strong></li>
+                        <li><strong>Trưởng CLB</strong>: Tất cả quyền (5 quyền)</li>
+                        <li><strong>Phó CLB</strong>: 4 quyền (quản lý thành viên, tạo sự kiện, đăng thông báo, xem báo cáo)</li>
+                        <li><strong>Thủ quỹ</strong>: 2 quyền (quản lý quỹ, xem báo cáo)</li>
+                        <li><strong>Thành viên</strong>: 1 quyền (xem báo cáo)</li>
+                        <li>Quyền sẽ được tự động cấp theo vai trò được chọn</li>
                     </ul>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" onclick="savePermissions()">Lưu quyền</button>
+                <button type="button" class="btn btn-primary" onclick="savePermissions()">Lưu vai trò</button>
             </div>
         </div>
     </div>
@@ -435,7 +426,7 @@ function editPermissions(userId, userName, clubIds) {
             currentClubId = clubIds[0];
             loadPermissions(userId, clubIds[0]);
             
-            // Load permissions khi chọn CLB khác
+            // Load position khi chọn CLB khác
             clubSelect.onchange = function() {
                 currentClubId = this.value;
                 if (currentClubId) {
@@ -458,7 +449,7 @@ function editPermissions(userId, userName, clubIds) {
         
         currentClubId = null;
         
-        // Load permissions khi chọn CLB
+        // Load position khi chọn CLB
         clubSelect.onchange = function() {
             currentClubId = this.value;
             if (currentClubId) {
@@ -467,8 +458,8 @@ function editPermissions(userId, userName, clubIds) {
         };
     }
     
-    // Reset checkboxes
-    document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+    // Reset position select
+    document.getElementById('positionSelect').value = 'member';
     
     // Show modal
     const modalElement = document.getElementById('editPermissionsModal');
@@ -483,40 +474,30 @@ function editPermissions(userId, userName, clubIds) {
 }
 
 function loadPermissions(userId, clubId) {
-    // Reset checkboxes
-    document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
-    
-    // Load current permissions
-    fetch(`{{ url('/admin/permissions/user-permissions') }}?user_id=${userId}&club_id=${clubId}`)
+    // Load current position
+    fetch(`{{ url('/admin/permissions/user-position') }}?user_id=${userId}&club_id=${clubId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.permissions) {
-                // Check permissions based on current position
-                data.permissions.forEach(perm => {
-                    const permissionId = getPermissionIdByName(perm);
-                    if (permissionId) {
-                        const checkbox = document.querySelector(`input[value="${permissionId}"]`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                        }
-                    }
-                });
+            if (data.success && data.position) {
+                document.getElementById('positionSelect').value = data.position;
+            } else {
+                document.getElementById('positionSelect').value = 'member';
             }
         })
         .catch(error => {
-            console.error('Error loading permissions:', error);
+            console.error('Error loading position:', error);
+            document.getElementById('positionSelect').value = 'member';
         });
 }
 
 function savePermissions() {
     // Kiểm tra đã chọn CLB chưa
     if (!currentClubId) {
-        alert('Vui lòng chọn CLB trước khi lưu quyền!');
+        alert('Vui lòng chọn CLB trước khi lưu vai trò!');
         return;
     }
     
-    const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
-        .map(cb => cb.value);
+    const selectedPosition = document.getElementById('positionSelect').value;
     
     // Hiển thị loading
     const saveBtn = event.target;
@@ -533,17 +514,17 @@ function savePermissions() {
         body: JSON.stringify({
             user_id: currentUserId,
             club_id: currentClubId,
-            permissions: selectedPermissions
+            position: selectedPosition
         })
     })
     .then(response => response.json())
     .then(data => {
         console.log('Response data:', data);
         if (data.success) {
-            alert(data.message || 'Đã cập nhật quyền thành công!');
+            alert(data.message || 'Đã cập nhật vai trò thành công!');
             location.reload();
         } else {
-            alert('Lỗi: ' + (data.message || 'Không thể cập nhật quyền.'));
+            alert('Lỗi: ' + (data.message || 'Không thể cập nhật vai trò.'));
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         }

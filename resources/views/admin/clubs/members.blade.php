@@ -75,8 +75,8 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-info">{{ $members->where('position', 'officer')->count() }}</h5>
-                <p class="card-text">Cán sự</p>
+                <h5 class="text-info">{{ $members->where('position', 'treasurer')->count() }}</h5>
+                <p class="card-text">Thủ quỹ</p>
             </div>
         </div>
     </div>
@@ -131,13 +131,13 @@
                                     $positionColors = [
                                         'leader' => 'danger',
                                         'vice_president' => 'warning',
-                                        'officer' => 'info',
+                                        'treasurer' => 'info',
                                         'member' => 'secondary'
                                     ];
                                     $positionLabels = [
                                         'leader' => 'Trưởng CLB',
                                         'vice_president' => 'Phó trưởng',
-                                        'officer' => 'Cán sự',
+                                        'treasurer' => 'Thủ quỹ',
                                         'member' => 'Thành viên'
                                     ];
                                 @endphp

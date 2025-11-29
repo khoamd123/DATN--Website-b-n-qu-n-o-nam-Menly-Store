@@ -794,13 +794,17 @@ class AdminController extends Controller
                        ($m->position === 'leader' || $m->position === 'chunhiem');
             });
             
-            $officers = $approvedMembers->filter(function($m) use ($uniqueUserIds) {
-                return $uniqueUserIds->contains($m->user_id) && $m->position === 'officer';
+            $treasurers = $approvedMembers->filter(function($m) use ($uniqueUserIds) {
+                return $uniqueUserIds->contains($m->user_id) && $m->position === 'treasurer';
+            });
+            $vicePresidents = $approvedMembers->filter(function($m) use ($uniqueUserIds) {
+                return $uniqueUserIds->contains($m->user_id) && $m->position === 'vice_president';
             });
             
             // Gán vào club object để dùng trong view
             $club->approved_members_count = $uniqueUserIds->count();
-            $club->officers_count = $officers->unique('user_id')->count();
+            $club->treasurers_count = $treasurers->unique('user_id')->count();
+            $club->vice_presidents_count = $vicePresidents->unique('user_id')->count();
             $club->leaders_count = $leaders->unique('user_id')->count();
         }
         
@@ -844,7 +848,7 @@ class AdminController extends Controller
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
             ]);
 
-            // Validate: one user can be leader/officer of only one club
+            // Validate: one user can be leader/treasurer of only one club
             if ($request->leader_id) {
                 // Kiểm tra xem user đã là leader ở CLB khác chưa
                 $alreadyLeading = Club::where('leader_id', $request->leader_id)->whereNull('deleted_at')->exists();
@@ -852,10 +856,10 @@ class AdminController extends Controller
                     return back()->with('error', 'Người này đã là Trưởng của một CLB khác.')->withInput();
                 }
                 
-                // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+                // Kiểm tra xem user đã là treasurer/leader trong bảng club_members ở CLB khác chưa
                 $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
                     ->whereIn('status', ['approved', 'active'])
-                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                     ->whereHas('club', function($query) {
                         $query->whereNull('deleted_at');
                     })
@@ -863,7 +867,7 @@ class AdminController extends Controller
                     
                 if ($existingLeaderOfficer) {
                     $existingClub = Club::find($existingLeaderOfficer->club_id);
-                    return back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.")->withInput();
+                    return back()->with('error', "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm thủ quỹ/phó CLB/trưởng ở 1 CLB.")->withInput();
                 }
             }
 
@@ -1036,7 +1040,7 @@ class AdminController extends Controller
 
             $club = Club::findOrFail($id);
 
-            // Validate: one user can be leader/officer of only one club
+            // Validate: one user can be leader/treasurer of only one club
             if ($request->leader_id) {
                 // Kiểm tra xem user đã là leader ở CLB khác chưa
                 $alreadyLeading = Club::where('leader_id', $request->leader_id)
@@ -1047,10 +1051,10 @@ class AdminController extends Controller
                     return back()->with('error', 'Người này đã là Trưởng của một CLB khác.');
                 }
                 
-                // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+                // Kiểm tra xem user đã là treasurer/leader trong bảng club_members ở CLB khác chưa
                 $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
                     ->whereIn('status', ['approved', 'active'])
-                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                     ->where('club_id', '!=', $club->id)
                     ->whereHas('club', function($query) {
                         $query->whereNull('deleted_at');
@@ -2859,18 +2863,50 @@ class AdminController extends Controller
     /**
      * Reject a single join request
      */
-    public function rejectJoinRequest($id)
+    public function rejectJoinRequest(Request $request, $id)
     {
         if (!session('logged_in') || !session('is_admin')) {
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
-        $req = \App\Models\ClubJoinRequest::findOrFail($id);
+        $request->validate([
+            'rejection_reason' => 'nullable|string|max:1000'
+        ]);
+
+        $req = \App\Models\ClubJoinRequest::with(['user', 'club'])->findOrFail($id);
         if ($req->isRejected()) {
             return back()->with('info', 'Đơn này đã bị từ chối trước đó.');
         }
-        $req->reject(session('user_id') ?? 1);
-        return back()->with('success', 'Đã từ chối đơn tham gia.');
+        
+        $rejectionReason = $request->input('rejection_reason');
+        $req->reject(session('user_id') ?? 1, $rejectionReason);
+        
+        // Tạo thông báo cho user
+        $notification = \App\Models\Notification::create([
+            'sender_id' => session('user_id') ?? 1,
+            'type' => 'club_rejection',
+            'related_id' => $req->id,
+            'related_type' => 'ClubJoinRequest',
+            'title' => 'Đơn tham gia CLB đã bị từ chối',
+            'message' => 'Đơn tham gia CLB "' . ($req->club->name ?? 'CLB') . '" của bạn đã bị từ chối. ' . ($rejectionReason ? 'Lý do: ' . $rejectionReason : ''),
+        ]);
+
+        // Gửi thông báo đến user
+        \App\Models\NotificationTarget::create([
+            'notification_id' => $notification->id,
+            'target_type' => 'user',
+            'target_id' => $req->user_id,
+        ]);
+        
+        // Gửi email thông báo
+        try {
+            \Mail::to($req->user->email)->send(new \App\Mail\ClubJoinRequestRejected($req, $rejectionReason));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send rejection email: ' . $e->getMessage());
+            // Vẫn tiếp tục dù gửi email thất bại
+        }
+        
+        return back()->with('success', 'Đã từ chối đơn tham gia và gửi thông báo qua email.');
     }
 
     /**
@@ -3142,44 +3178,6 @@ class AdminController extends Controller
             'events'
         ])->findOrFail($club);
 
-        // Tự động đồng bộ position dựa trên số quyền cho tất cả thành viên
-        foreach ($club->clubMembers as $clubMember) {
-            $permissionCount = \DB::table('user_permissions_club')
-                ->where('user_id', $clubMember->user_id)
-                ->where('club_id', $club->id)
-                ->count();
-            
-            $permissionNames = \DB::table('user_permissions_club')
-                ->where('user_id', $clubMember->user_id)
-                ->where('club_id', $club->id)
-                ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
-                ->pluck('permissions.name')
-                ->toArray();
-            
-            $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-            
-            // Xác định position mong muốn
-            $expectedPosition = 'member';
-            if ($permissionCount >= 5) {
-                $expectedPosition = 'leader';
-            } elseif ($hasOtherPermissions && $permissionCount == 4) {
-                // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
-                $expectedPosition = 'vice_president';
-            } elseif ($hasOtherPermissions && $permissionCount >= 2 && $permissionCount <= 3) {
-                // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
-                $expectedPosition = 'officer';
-            }
-            
-            // Nếu position không đúng, cập nhật lại
-            if ($clubMember->position !== $expectedPosition) {
-                \DB::table('club_members')
-                    ->where('id', $clubMember->id)
-                    ->update(['position' => $expectedPosition]);
-                $clubMember->position = $expectedPosition; // Cập nhật trong memory
-                \Log::info("Updated position for user {$clubMember->user_id} in club {$club->id}: {$clubMember->position} -> {$expectedPosition} (permission count: {$permissionCount})");
-            }
-        }
-        
         // Refresh lại relationship để đảm bảo dữ liệu mới nhất
         $club->load('clubMembers');
 
@@ -3235,7 +3233,7 @@ class AdminController extends Controller
                     ->whereIn('status', ['approved', 'active'])
                     ->groupBy('user_id');
             })
-            ->orderByRaw("FIELD(position, 'leader', 'officer', 'member') ASC")
+            ->orderByRaw("FIELD(position, 'leader', 'vice_president', 'treasurer', 'member') ASC")
             ->orderBy('created_at', 'desc')
             ->paginate(10, ['*'], 'members_page');
 
@@ -3283,7 +3281,7 @@ class AdminController extends Controller
             'remove_logo' => 'nullable|boolean',
         ]);
         
-        // Validate: one user can be leader/officer of only one club
+        // Validate: one user can be leader/treasurer of only one club
         if ($request->leader_id) {
             // Kiểm tra xem user đã là leader ở CLB khác chưa
             $alreadyLeading = Club::where('leader_id', $request->leader_id)
@@ -3294,10 +3292,10 @@ class AdminController extends Controller
                 return back()->with('error', 'Người này đã là Trưởng của một CLB khác.');
             }
             
-            // Kiểm tra xem user đã là officer/leader trong bảng club_members ở CLB khác chưa
+            // Kiểm tra xem user đã là treasurer/leader trong bảng club_members ở CLB khác chưa
             $existingLeaderOfficer = \App\Models\ClubMember::where('user_id', $request->leader_id)
                 ->whereIn('status', ['approved', 'active'])
-                ->whereIn('position', ['leader', 'officer'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                 ->where('club_id', '!=', $club->id)
                 ->whereHas('club', function($query) {
                     $query->whereNull('deleted_at');
@@ -3504,7 +3502,7 @@ class AdminController extends Controller
         }
 
         $request->validate([
-            'position' => 'required|in:member,officer,leader'
+            'position' => 'required|in:member,treasurer,vice_president,leader'
         ]);
 
         $clubMember = ClubMember::where('id', $member)
@@ -3535,10 +3533,10 @@ class AdminController extends Controller
                 return redirect()->back()->with('error', 'Người này đã là Trưởng của một CLB khác.');
             }
 
-            // Kiểm tra xem user đã là officer/leader ở CLB khác chưa
+            // Kiểm tra xem user đã là treasurer/leader ở CLB khác chưa
             $existingLeaderOfficer = ClubMember::where('user_id', $userId)
                 ->whereIn('status', ['approved', 'active'])
-                ->whereIn('position', ['leader', 'officer'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                 ->where('club_id', '!=', $club)
                 ->whereHas('club', function($query) {
                     $query->whereNull('deleted_at');
@@ -3547,7 +3545,7 @@ class AdminController extends Controller
                 
             if ($existingLeaderOfficer) {
                 $existingClub = Club::find($existingLeaderOfficer->club_id);
-                return redirect()->back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
+                return redirect()->back()->with('error', "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm thủ quỹ/phó CLB/trưởng ở 1 CLB.");
             }
 
             // Chỉ được có 1 Leader
@@ -3557,19 +3555,30 @@ class AdminController extends Controller
                 ->first();
                 
             if ($existingLeader) {
-                // Chuyển Leader cũ thành Officer
+                // Chuyển Leader cũ về thành viên
                 DB::table('club_members')
                     ->where('user_id', $existingLeader->user_id)
                     ->where('club_id', $club)
-                    ->update(['position' => 'officer']);
+                    ->update(['position' => 'member']);
                 
-                // Xóa leader_id cũ trong bảng clubs
+                // Xóa quyền của leader cũ, chỉ giữ xem_bao_cao
                 $oldLeaderId = $clubModel->leader_id;
                 if ($oldLeaderId) {
                     DB::table('user_permissions_club')
                         ->where('user_id', $oldLeaderId)
                         ->where('club_id', $club)
                         ->delete();
+                    
+                    $xemBaoCaoPerm = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
+                    if ($xemBaoCaoPerm) {
+                        DB::table('user_permissions_club')->insert([
+                            'user_id' => $oldLeaderId,
+                            'club_id' => $club,
+                            'permission_id' => $xemBaoCaoPerm->id,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
             }
 
@@ -3593,11 +3602,11 @@ class AdminController extends Controller
                 ]);
             }
 
-        } elseif ($newPosition === 'officer') {
-            // Kiểm tra xem user đã là officer/leader ở CLB khác chưa
+        } elseif ($newPosition === 'vice_president') {
+            // Kiểm tra xem user đã là vice_president/leader ở CLB khác chưa
             $existingLeaderOfficer = ClubMember::where('user_id', $userId)
                 ->whereIn('status', ['approved', 'active'])
-                ->whereIn('position', ['leader', 'officer'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                 ->where('club_id', '!=', $club)
                 ->whereHas('club', function($query) {
                     $query->whereNull('deleted_at');
@@ -3606,32 +3615,117 @@ class AdminController extends Controller
                 
             if ($existingLeaderOfficer) {
                 $existingClub = Club::find($existingLeaderOfficer->club_id);
-                return redirect()->back()->with('error', "Người này đã là cán sự/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm cán sự/trưởng ở 1 CLB.");
+                return redirect()->back()->with('error', "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm thủ quỹ/phó CLB/trưởng ở 1 CLB.");
             }
 
-            // Tối đa 3 Officer (trừ chính user này ra)
-            $currentOfficerCount = ClubMember::where('club_id', $club)
-                ->where('position', 'officer')
+            // Được có 2 Vice President
+            $vicePresidentCount = ClubMember::where('club_id', $club)
+                ->where('position', 'vice_president')
                 ->where('user_id', '!=', $userId)
+                ->whereIn('status', ['approved', 'active'])
                 ->count();
                 
-            if ($currentOfficerCount >= 3) {
-                return redirect()->back()->with('error', 'CLB này đã có đủ 3 cán sự. Không thể thêm cán sự mới.');
+            if ($vicePresidentCount >= 2) {
+                return redirect()->back()->with('error', 'CLB này đã có đủ 2 phó CLB. Vui lòng bỏ 1 phó CLB trước khi thêm mới.');
             }
 
-            // Xóa quyền cũ và cấp quyền mặc định cho cán sự
+            // Xóa quyền cũ và cấp quyền mặc định cho phó CLB
             DB::table('user_permissions_club')
                 ->where('user_id', $userId)
                 ->where('club_id', $club)
                 ->delete();
             
-            // Cán sự có quyền: tao_su_kien, dang_thong_bao, xem_bao_cao
-            $officerPermissions = \App\Models\Permission::whereIn('name', ['tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'])->get();
-            foreach ($officerPermissions as $permission) {
+            // Phó CLB có quyền: quan_ly_thanh_vien, tao_su_kien, dang_thong_bao, xem_bao_cao
+            $vicePresidentPermissions = \App\Models\Permission::whereIn('name', ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'])->get();
+            foreach ($vicePresidentPermissions as $permission) {
                 DB::table('user_permissions_club')->insert([
                     'user_id' => $userId,
                     'club_id' => $club,
                     'permission_id' => $permission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+            
+        } elseif ($newPosition === 'treasurer') {
+            // Kiểm tra xem user đã là treasurer/leader ở CLB khác chưa
+            $existingLeaderOfficer = ClubMember::where('user_id', $userId)
+                ->whereIn('status', ['approved', 'active'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
+                ->where('club_id', '!=', $club)
+                ->whereHas('club', function($query) {
+                    $query->whereNull('deleted_at');
+                })
+                ->first();
+                
+            if ($existingLeaderOfficer) {
+                $existingClub = Club::find($existingLeaderOfficer->club_id);
+                return redirect()->back()->with('error', "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm thủ quỹ/phó CLB/trưởng ở 1 CLB.");
+            }
+
+            // Chỉ được có 1 Treasurer
+            $existingTreasurer = ClubMember::where('club_id', $club)
+                ->where('position', 'treasurer')
+                ->where('user_id', '!=', $userId)
+                ->whereIn('status', ['approved', 'active'])
+                ->first();
+                
+            if ($existingTreasurer) {
+                // Chuyển thủ quỹ cũ về thành viên
+                DB::table('club_members')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $club)
+                    ->update(['position' => 'member']);
+                
+                // Xóa quyền của thủ quỹ cũ, chỉ giữ xem_bao_cao
+                DB::table('user_permissions_club')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $club)
+                    ->delete();
+                
+                $xemBaoCaoPerm = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
+                if ($xemBaoCaoPerm) {
+                    DB::table('user_permissions_club')->insert([
+                        'user_id' => $existingTreasurer->user_id,
+                        'club_id' => $club,
+                        'permission_id' => $xemBaoCaoPerm->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            // Xóa quyền cũ và cấp quyền mặc định cho thủ quỹ
+            DB::table('user_permissions_club')
+                ->where('user_id', $userId)
+                ->where('club_id', $club)
+                ->delete();
+            
+            // Thủ quỹ có quyền: quan_ly_quy, xem_bao_cao
+            $treasurerPermissions = \App\Models\Permission::whereIn('name', ['quan_ly_quy', 'xem_bao_cao'])->get();
+            foreach ($treasurerPermissions as $permission) {
+                DB::table('user_permissions_club')->insert([
+                    'user_id' => $userId,
+                    'club_id' => $club,
+                    'permission_id' => $permission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+            
+        } elseif ($newPosition === 'member') {
+            // Xóa tất cả quyền cũ, chỉ giữ xem_bao_cao
+            DB::table('user_permissions_club')
+                ->where('user_id', $userId)
+                ->where('club_id', $club)
+                ->delete();
+            
+            $xemBaoCaoPerm = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
+            if ($xemBaoCaoPerm) {
+                DB::table('user_permissions_club')->insert([
+                    'user_id' => $userId,
+                    'club_id' => $club,
+                    'permission_id' => $xemBaoCaoPerm->id,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -3641,36 +3735,16 @@ class AdminController extends Controller
         // Nếu đang chuyển từ leader sang vai trò khác, xóa leader_id
         if ($oldPosition === 'leader' && $newPosition !== 'leader') {
             $clubModel->update(['leader_id' => null]);
-            
-            // Xóa quyền của leader cũ
-            DB::table('user_permissions_club')
-                ->where('user_id', $userId)
-                ->where('club_id', $club)
-                ->delete();
+            // Không cần xóa quyền ở đây vì đã được xóa và cấp lại ở các block if/elseif trên
         }
 
-        // Nếu chuyển từ officer về member, chỉ giữ lại quyền xem_bao_cao
-        if ($oldPosition === 'officer' && $newPosition === 'member') {
-            DB::table('user_permissions_club')
-                ->where('user_id', $userId)
-                ->where('club_id', $club)
-                ->delete();
-            
-            // Chỉ cấp quyền xem_bao_cao cho member
-            $viewReportPermission = \App\Models\Permission::where('name', 'xem_bao_cao')->first();
-            if ($viewReportPermission) {
-                DB::table('user_permissions_club')->insert([
-                    'user_id' => $userId,
-                    'club_id' => $club,
-                    'permission_id' => $viewReportPermission->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        // Cập nhật position
-        $clubMember->update(['position' => $newPosition]);
+        // Cập nhật position - SỬ DỤNG DB::table để đảm bảo cập nhật trực tiếp vào database
+        DB::table('club_members')
+            ->where('id', $clubMember->id)
+            ->update(['position' => $newPosition]);
+        
+        // Refresh lại model để đảm bảo dữ liệu mới nhất
+        $clubMember->refresh();
 
         return redirect()->back()->with('success', 'Đã cập nhật vai trò thành viên thành công!');
     }

@@ -22,46 +22,83 @@
 @section('content')
     {{-- Removed summary stats section per request --}}
 
-    {{-- Đưa khung tìm kiếm lên trên --}}
-    <div id="club-search" class="card border-0 shadow-sm p-3 mb-4">
-        <form method="GET" action="{{ route('home') }}" class="row gy-3 align-items-end">
-            <div class="col-md-5">
-                <label for="search" class="form-label">Tìm kiếm CLB</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent"><i class="fas fa-search"></i></span>
-                    <input type="text" name="search" id="search" class="form-control" placeholder="Tên hoặc mô tả CLB" value="{{ $search }}">
+    {{-- Banner Carousel Section --}}
+    <div class="mb-4">
+        @php
+            $bannerDir = public_path('images/banners');
+            $existingBanners = [];
+            if (is_dir($bannerDir)) {
+                $files = scandir($bannerDir);
+                foreach ($files as $file) {
+                    if ($file !== '.' && $file !== '..') {
+                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                            $existingBanners[] = $file;
+                        }
+                    }
+                }
+            }
+        @endphp
+        
+        @if(count($existingBanners) > 0)
+            <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000">
+                <div class="carousel-indicators">
+                    @foreach($existingBanners as $index => $banner)
+                        <button type="button" data-bs-target="#bannerCarousel" data-bs-slide-to="{{ $index }}" 
+                                class="{{ $index === 0 ? 'active' : '' }}" 
+                                aria-current="{{ $index === 0 ? 'true' : 'false' }}" 
+                                aria-label="Slide {{ $index + 1 }}"></button>
+                    @endforeach
+                </div>
+                <div class="carousel-inner rounded-4 overflow-hidden shadow-sm">
+                    @foreach($existingBanners as $index => $banner)
+                        <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                            <img src="{{ asset('images/banners/' . $banner) }}" 
+                                 class="d-block w-100" 
+                                 alt="Banner {{ $index + 1 }}"
+                                 style="height: 400px; object-fit: cover;">
+                            <div class="carousel-caption d-none d-md-block">
+                                <div class="bg-dark bg-opacity-50 rounded p-3">
+                                    <h3 class="fw-bold mb-2">Chào mừng đến với UniClubs</h3>
+                                    <p class="lead mb-3">Nơi kết nối sinh viên và câu lạc bộ</p>
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-light btn-lg px-4">
+                                        <i class="fas fa-rocket me-2"></i>Khám phá ngay
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                @if(count($existingBanners) > 1)
+                    <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                @endif
+            </div>
+        @else
+            {{-- Fallback banner nếu chưa có ảnh --}}
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-5 text-white text-center">
+                    <h3 class="fw-bold mb-3">Chào mừng đến với UniClubs</h3>
+                    <p class="lead mb-4">Nơi kết nối sinh viên và câu lạc bộ</p>
+                    <a href="{{ route('student.clubs.index') }}" class="btn btn-light btn-lg px-4">
+                        <i class="fas fa-rocket me-2"></i>Khám phá ngay
+                    </a>
                 </div>
             </div>
-            <div class="col-md-3">
-                <label for="field" class="form-label">Lĩnh vực</label>
-                <select name="field" id="field" class="form-select">
-                    <option value="">Tất cả lĩnh vực</option>
-                    @foreach($fields as $field)
-                        <option value="{{ $field->id }}" @selected($fieldId == $field->id)>{{ $field->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="sort" class="form-label">Sắp xếp</label>
-                <select name="sort" id="sort" class="form-select">
-                    <option value="popular" @selected($sort === 'popular')>Phổ biến</option>
-                    <option value="newest" @selected($sort === 'newest')>Mới nhất</option>
-                    <option value="name" @selected($sort === 'name')>Theo tên</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-success w-100">
-                    Lọc kết quả
-                </button>
-            </div>
-        </form>
+        @endif
     </div>
 
     @php
         $joinedClubIds = $user && $user->clubs ? $user->clubs->pluck('id')->toArray() : [];
     @endphp
 
-    @if($featuredClubs->count())
+    @if(!$search && $featuredClubs->count())
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">Câu lạc bộ nổi bật</h5>
             <span class="text-muted small">{{ $clubs->total() }} CLB</span>
@@ -141,15 +178,216 @@
         </div>
     @endif
 
-    {{-- Khung tìm kiếm đã được đưa lên trước --}}
+    @if($search)
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h4 fw-bold mb-0">Kết quả tìm kiếm</h3>
+            <span class="text-muted small">
+                {{ $clubs->total() }} kết quả cho từ khóa "<strong>{{ $search }}</strong>"
+            </span>
+        </div>
+
+        @if($clubs->count())
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3 mb-4">
+                @foreach($clubs as $club)
+                    @php $joined = in_array($club->id, $joinedClubIds); @endphp
+                    <div class="col">
+                        <div class="card h-100 shadow-sm club-featured-card">
+                            @php
+                                $logoUrl = null;
+                                $hasLogo = false;
+                                if ($club->logo) {
+                                    $logoPath = $club->logo;
+                                    if (str_starts_with($logoPath, 'http://') || str_starts_with($logoPath, 'https://')) {
+                                        $logoUrl = $logoPath;
+                                        $hasLogo = true;
+                                    } else {
+                                        $fullPath = public_path($logoPath);
+                                        if (file_exists($fullPath)) {
+                                            $logoUrl = asset($logoPath);
+                                            $hasLogo = true;
+                                        }
+                                    }
+                                }
+                            @endphp
+                            @if($hasLogo && $logoUrl)
+                                <div class="club-image-container" style="height: 180px; overflow: hidden; background: linear-gradient(135deg, #f0fdfa 0%, #e0f2f1 100%); position: relative;">
+                                    <img src="{{ $logoUrl }}" alt="{{ $club->name }}" class="w-100 h-100" style="object-fit: cover;" 
+                                         onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<div style=\'height: 180px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><div class=\'text-white text-center\'><i class=\'fas fa-users fa-3x mb-2\'></i><div class=\'fw-bold\' style=\'font-size: 1.5rem;\'>{{ substr($club->name, 0, 2) }}</div></div></div>';">
+                                </div>
+                            @else
+                                <div class="club-image-placeholder" style="height: 180px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white text-center">
+                                        <i class="fas fa-users fa-3x mb-2"></i>
+                                        <div class="fw-bold" style="font-size: 1.5rem;">{{ substr($club->name, 0, 2) }}</div>
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-tags me-1"></i>{{ $club->field->name ?? 'Lĩnh vực khác' }}
+                                    </span>
+                                    <small class="text-muted">
+                                        <i class="fas fa-users me-1"></i>{{ number_format($club->active_members_count) }} thành viên
+                                    </small>
+                                </div>
+                                <h6 class="fw-bold mb-2">
+                                    {{ $club->name }}
+                                    @if($joined)
+                                        <span class="badge bg-success ms-1">Đã gia nhập</span>
+                                    @endif
+                                </h6>
+                                @php $clubDescription = strip_tags(html_entity_decode($club->description ?? '', ENT_QUOTES, 'UTF-8')); @endphp
+                                <p class="text-muted small flex-grow-1 mb-3">{{ Str::words($clubDescription, 24, '...') }}</p>
+                                <div class="d-flex gap-2">
+                                    @if(!$joined)
+                                        <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-primary">
+                                            Tham gia ngay
+                                        </a>
+                                    @else
+                                        <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                            Xem CLB của tôi
+                                        </a>
+                                    @endif
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                        Chi tiết
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-4">
+                {{ $clubs->links('pagination::bootstrap-5') }}
+            </div>
+        @else
+            <div class="text-center py-5 bg-white rounded-4 border border-dashed">
+                <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                <h5 class="fw-semibold mb-2">Không tìm thấy câu lạc bộ phù hợp</h5>
+                <p class="text-muted mb-3">Hãy thử đổi từ khóa hoặc chọn lĩnh vực khác.</p>
+                <a href="{{ route('home') }}" class="btn btn-outline-teal">Xóa bộ lọc</a>
+            </div>
+        @endif
+    @endif
 
     <div class="row g-4 align-items-stretch" id="events">
-        <div class="col-lg-7">
+        {{-- Bài viết mới (đổi sang bên trái) --}}
+        <div class="col-lg-7" id="posts">
+            <div class="card border-0 shadow-sm h-100 post-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0 fw-bold">
+                            <i class="fas fa-newspaper text-teal me-2"></i>Bài viết mới
+                        </h4>
+                        <a href="{{ route('student.posts') }}" class="text-decoration-none text-teal fw-semibold">
+                            Xem thêm <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                    @if($recentPosts->count())
+                        <div class="post-list">
+                            @foreach($recentPosts->take(3) as $post)
+                                @php
+                                    // Lấy ảnh của bài viết
+                                    $imageUrl = null;
+                                    if ($post->type !== 'announcement') {
+                                        $imageField = $post->image;
+                                        // Fallback: first attachment if image column is empty
+                                        if (empty($imageField) && isset($post->attachments) && $post->attachments->count() > 0) {
+                                            $firstImageAttachment = $post->attachments->firstWhere('file_type', 'image') ?? $post->attachments->first();
+                                            $imageField = $firstImageAttachment->file_url ?? null;
+                                        }
+                                        // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
+                                        if (empty($imageField) && !empty($post->content)) {
+                                            if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
+                                                $imageField = $m[1] ?? null;
+                                            }
+                                        }
+                                        if (!empty($imageField)) {
+                                            if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                $imageUrl = $imageField;
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } else {
+                                                $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                            }
+                                        }
+                                    }
+                                    
+                                    $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
+                                    $text = strip_tags($raw);
+                                    $text = str_replace("\xc2\xa0", ' ', $text);
+                                    $text = preg_replace('/\s+/u', ' ', $text);
+                                    $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
+                                    $postExcerpt = trim($text);
+                                    
+                                    $commentCount = $post->comments_count ?? ($post->comments ? $post->comments->count() : 0);
+                                @endphp
+                                <div class="mb-4 pb-3 border-bottom">
+                                    @if($imageUrl)
+                                        <div class="mb-3">
+                                            <a href="{{ route('student.posts.show', $post->id) }}">
+                                                <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 rounded" style="height: 250px; object-fit: cover;">
+                                            </a>
+                                        </div>
+                                    @endif
+                                    <h6 class="fw-bold mb-2">
+                                        <a href="{{ route('student.posts.show', $post->id) }}" class="text-dark text-decoration-none">{{ $post->title }}</a>
+                                    </h6>
+                                    <div class="text-muted small mb-2">
+                                        <i class="fas fa-users me-1 text-teal"></i>{{ $post->club->name ?? 'Cộng đồng UniClubs' }}
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-user-circle me-1 text-teal"></i>{{ $post->user->name ?? 'Ban quản trị' }}
+                                    </div>
+                                    <p class="text-muted small mb-2">{{ Str::words($postExcerpt, 25, '...') }}</p>
+                                    
+                                    {{-- Hiển thị 1 bình luận đầu tiên --}}
+                                    @if($post->comments && $post->comments->count() > 0)
+                                        @php $firstComment = $post->comments->first(); @endphp
+                                        <div class="bg-light rounded p-2 mb-2">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <strong class="small me-2">{{ $firstComment->user->name ?? 'Người dùng' }}</strong>
+                                                <small class="text-muted">{{ $firstComment->created_at->diffForHumans() }}</small>
+                                            </div>
+                                            <p class="small text-muted mb-0">{{ Str::words($firstComment->content, 30, '...') }}</p>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Nút thích và bình luận --}}
+                                    <div class="d-flex gap-2 mt-2">
+                                        <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-teal">
+                                            <i class="far fa-heart me-1"></i>Thích
+                                        </a>
+                                        <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-teal">
+                                            <i class="far fa-comment me-1"></i>Bình luận
+                                            @if($commentCount > 0)
+                                                <span class="badge bg-teal ms-1">{{ $commentCount }}</span>
+                                            @endif
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-4">
+                            <i class="fas fa-newspaper fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Chưa có bài viết công khai.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        
+        {{-- Sự kiện sắp diễn ra (đổi sang bên phải) --}}
+        <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100 event-card">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="mb-0 fw-bold">
-                            <i class="fas fa-calendar-alt text-teal me-2"></i>Sự kiện sắp diễn ra
+                            <i class="fas fa-calendar-alt text-teal me-2"></i>Sự kiện
                         </h4>
                         <a href="{{ route('student.events.index') }}" class="text-decoration-none text-teal fw-semibold">
                             Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
@@ -207,101 +445,6 @@
                         <div class="text-center py-4">
                             <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
                             <p class="text-muted mb-0">Hiện chưa có sự kiện nào sắp diễn ra.</p>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5" id="posts">
-            <div class="card border-0 shadow-sm h-100 post-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="mb-0 fw-bold">
-                            <i class="fas fa-newspaper text-teal me-2"></i>Bài viết mới
-                        </h4>
-                        <a href="{{ route('student.posts') }}" class="text-decoration-none text-teal fw-semibold">
-                            Xem thêm <i class="fas fa-arrow-right ms-1"></i>
-                        </a>
-                    </div>
-                    @if($recentPosts->count())
-                        <div class="post-list">
-                            @foreach($recentPosts->take(3) as $post)
-                                @php
-                                    $imageUrl = null;
-                                    $imageField = $post->image;
-                                    
-                                    // Xử lý ảnh từ trường image
-                                    if (!empty($imageField)) {
-                                        if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
-                                            $imageUrl = $imageField;
-                                        } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
-                                            $imageUrl = asset(ltrim($imageField, '/'));
-                                        } elseif (\Illuminate\Support\Str::startsWith($imageField, ['storage/', '/storage/'])) {
-                                            $imageUrl = asset(ltrim($imageField, '/'));
-                                        } else {
-                                            $imageUrl = asset('storage/' . ltrim($imageField, '/'));
-                                        }
-                                    }
-                                    
-                                    // Fallback: lấy ảnh từ attachments nếu không có trong image field
-                                    if (empty($imageUrl) && $post->attachments && $post->attachments->count() > 0) {
-                                        $firstImageAttachment = $post->attachments->firstWhere('file_type', 'image') ?? $post->attachments->first();
-                                        if ($firstImageAttachment && isset($firstImageAttachment->file_url)) {
-                                            $fileUrl = $firstImageAttachment->file_url;
-                                            if (\Illuminate\Support\Str::startsWith($fileUrl, ['http://', 'https://'])) {
-                                                $imageUrl = $fileUrl;
-                                            } elseif (\Illuminate\Support\Str::startsWith($fileUrl, ['uploads/', '/uploads/'])) {
-                                                $imageUrl = asset(ltrim($fileUrl, '/'));
-                                            } else {
-                                                $imageUrl = asset(ltrim($fileUrl, '/'));
-                                            }
-                                        }
-                                    }
-                                    
-                                    $hasImage = !empty($imageUrl);
-                                @endphp
-                                <a href="{{ route('student.posts.show', $post->id) }}" class="post-item-link text-decoration-none">
-                                    <div class="post-item-home mb-4 rounded overflow-hidden border">
-                                        <div class="d-flex">
-                                            @if($hasImage)
-                                                <div class="post-image-thumb">
-                                                    <img src="{{ $imageUrl }}" 
-                                                         alt="{{ $post->title }}" 
-                                                         class="w-100 h-100" 
-                                                         style="object-fit: cover;"
-                                                         onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div class=\'post-icon-placeholder\'><i class=\'fas fa-newspaper\'></i></div>';">
-                                                </div>
-                                            @else
-                                                <div class="post-icon-placeholder">
-                                                    <i class="fas fa-newspaper"></i>
-                                                </div>
-                                            @endif
-                                            <div class="flex-grow-1 p-4 d-flex flex-column">
-                                                <h5 class="fw-bold mb-2 text-dark">{{ $post->title }}</h5>
-                                                @php
-                                                    $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
-                                                    $text = strip_tags($raw);
-                                                    $text = str_replace("\xc2\xa0", ' ', $text); // &nbsp;
-                                                    $text = preg_replace('/\s+/u', ' ', $text);
-                                                    $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
-                                                    $postExcerpt = trim($text);
-                                                @endphp
-                                                <p class="text-muted mb-3 flex-grow-1">{{ Str::words($postExcerpt, 15, '...') }}</p>
-                                                <div class="align-self-start">
-                                                    <span class="btn btn-sm btn-outline-teal">
-                                                        Xem thêm <i class="fas fa-arrow-right ms-1"></i>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="text-center py-4">
-                            <i class="fas fa-newspaper fa-2x text-muted mb-2"></i>
-                            <p class="text-muted mb-0">Chưa có bài viết công khai.</p>
                         </div>
                     @endif
                 </div>

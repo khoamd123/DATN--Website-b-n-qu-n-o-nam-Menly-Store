@@ -12,10 +12,29 @@
         <div class="content-card mb-4">
             <div class="d-flex align-items-center mb-3">
                 <div class="club-logo-large me-4">
-                    @if($club->logo)
-                        <img src="{{ asset($club->logo) }}" alt="{{ $club->name }} Logo" class="img-fluid rounded-circle">
+                    @php
+                        $logoUrl = null;
+                        $hasLogo = false;
+                        if ($club->logo) {
+                            $logoPath = $club->logo;
+                            if (str_starts_with($logoPath, 'http://') || str_starts_with($logoPath, 'https://')) {
+                                $logoUrl = $logoPath;
+                                $hasLogo = true;
+                            } else {
+                                $fullPath = public_path($logoPath);
+                                if (file_exists($fullPath)) {
+                                    $logoUrl = asset($logoPath);
+                                    $hasLogo = true;
+                                }
+                            }
+                        }
+                    @endphp
+                    @if($hasLogo && $logoUrl)
+                        <img src="{{ $logoUrl }}" alt="{{ $club->name }} Logo" class="img-fluid rounded-circle club-logo-img-large" 
+                             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <span class="club-logo-fallback-large" style="display: none;">{{ substr($club->name, 0, 2) }}</span>
                     @else
-                        {{ substr($club->name, 0, 2) }}
+                        <span class="club-logo-fallback-large">{{ substr($club->name, 0, 2) }}</span>
                     @endif
                 </div>
                 <div>
@@ -25,7 +44,7 @@
                         <span class="mx-2">|</span>
                         <i class="fas fa-tag me-1"></i> {{ $club->field->name ?? 'Chưa phân loại' }}
                     </p>
-                    <p class="mb-0">{{ $club->description }}</p>
+                    <p class="mb-0">{!! nl2br(e(strip_tags(html_entity_decode($club->description ?? '', ENT_QUOTES, 'UTF-8')))) !!}</p>
                 </div>
             </div>
             <hr>
@@ -414,7 +433,7 @@
             <div class="modal-body">
                 <p>Bạn có chắc chắn muốn rời khỏi CLB <strong>{{ $club->name }}</strong> không?</p>
                 <p class="text-danger">Hành động này không thể hoàn tác và bạn sẽ mất tất cả vai trò, quyền hạn cũng như thành tích trong CLB này.</p>
-                <p>Nếu bạn là trưởng CLB hoặc cán sự, vui lòng đảm bảo đã bàn giao công việc trước khi rời đi.</p>
+                <p>Nếu bạn là trưởng CLB, phó CLB hoặc thủ quỹ, vui lòng đảm bảo đã bàn giao công việc trước khi rời đi.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
@@ -441,12 +460,22 @@
         justify-content: center;
         font-size: 2.5rem;
         font-weight: bold;
-        overflow: hidden; /* Ensure image fits */
+        overflow: hidden;
+        position: relative;
     }
-    .club-logo-large img {
+    
+    .club-logo-img-large {
         width: 100%;
         height: 100%;
         object-fit: cover;
+    }
+    
+    .club-logo-fallback-large {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
     .text-teal {
         color: #14b8a6 !important;
@@ -455,11 +484,21 @@
         background-color: #14b8a6 !important;
     }
     .nav-tabs .nav-link.active {
-        color: #14b8a6;
+        color: #14b8a6 !important;
         border-color: #14b8a6 #14b8a6 #fff;
+        background-color: #fff !important;
+        font-weight: 600;
     }
     .nav-tabs .nav-link {
-        color: #6c757d;
+        color: #6c757d !important;
+    }
+    .nav-tabs .nav-link:hover {
+        color: #14b8a6 !important;
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+    .nav-tabs .nav-link.active i,
+    .nav-tabs .nav-link.active {
+        color: #14b8a6 !important;
     }
     .nav-tabs .nav-link.text-danger:hover {
         border-color: #f8d7da;

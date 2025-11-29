@@ -419,9 +419,9 @@
                                                 } elseif($role === 'vice_president') {
                                                     $badgeColor = 'warning';
                                                     $roleLabel = 'Phó CLB';
-                                                } elseif($role === 'officer') {
+                                                } elseif($role === 'treasurer') {
                                                     $badgeColor = 'info';
-                                                    $roleLabel = 'Cán sự';
+                                                    $roleLabel = 'Thủ quỹ';
                                                 } elseif($role === 'member' || $role === 'thanhvien') {
                                                     $badgeColor = 'success';
                                                     $roleLabel = 'Thành viên';
@@ -515,7 +515,7 @@
             <label for="position" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
             <select class="form-select" id="position" name="position" required>
                 <option value="member" selected>Thành viên</option>
-                <option value="officer">Cán sự</option>
+                <option value="treasurer">Thủ quỹ</option>
                 <option value="vice_president">Phó CLB</option>
                 <option value="leader">Trưởng CLB</option>
             </select>
@@ -601,12 +601,12 @@
             <label for="newPosition" class="form-label">Vai trò mới <span class="text-danger">*</span></label>
             <select class="form-select" id="newPosition" name="position" required>
               <option value="member">Thành viên</option>
-              <option value="officer">Cán sự</option>
+              <option value="treasurer">Thủ quỹ</option>
               <option value="vice_president">Phó CLB</option>
               <option value="leader">Trưởng CLB</option>
             </select>
             <small class="form-text text-muted">
-              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 1 phó CLB và tối đa 3 cán sự.
+              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 2 phó CLB và 1 thủ quỹ.
             </small>
           </div>
         </div>

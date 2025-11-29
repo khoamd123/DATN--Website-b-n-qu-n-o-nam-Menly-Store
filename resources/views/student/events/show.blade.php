@@ -422,9 +422,13 @@
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2 mb-4">
-                @if($isRegistered)
+                @if($canCancelRegistration)
                     <button class="btn btn-outline-danger" onclick="cancelRegistration({{ $event->id }}, this)">
                         <i class="fas fa-times me-1"></i> Hủy đăng ký
+                    </button>
+                @elseif($isRegistered)
+                    <button class="btn btn-success" disabled>
+                        <i class="fas fa-check me-1"></i> Đã đăng ký
                     </button>
                 @elseif(!$isFull && !$isDeadlinePassed && $event->status !== 'cancelled')
                     <button class="btn btn-primary" onclick="registerEvent({{ $event->id }}, this)">
@@ -628,7 +632,7 @@
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
         
         fetch(`/student/events/${eventId}/cancel-registration`, {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')

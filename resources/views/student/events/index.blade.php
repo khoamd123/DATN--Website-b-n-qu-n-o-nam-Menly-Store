@@ -19,7 +19,7 @@
 
 <div class="row">
     <!-- Main Content -->
-    <div class="col-lg-8">
+    <div class="col-12">
         <!-- Page Header -->
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -149,6 +149,7 @@
                         $registrationCount = $eventRegistrations[$event->id] ?? 0;
                         $availableSlots = $event->max_participants > 0 ? $event->max_participants - $registrationCount : null;
                         $isRegistered = in_array($event->id, $registeredEvents->pluck('id')->toArray());
+                        $canCancelRegistration = $isRegistered && $event->start_time && $event->start_time > now();
                         $isFull = $event->max_participants > 0 && $registrationCount >= $event->max_participants;
                         $isDeadlinePassed = $event->registration_deadline && $event->registration_deadline < now();
                         $hasImages = $event->images && $event->images->count() > 0;
@@ -223,9 +224,11 @@
                                         <button class="btn btn-success btn-sm flex-fill" disabled>
                                             <i class="fas fa-check me-1"></i> Đã đăng ký
                                         </button>
-                                        <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
-                                            <i class="fas fa-times me-1"></i> Hủy
-                                        </button>
+                                        @if($canCancelRegistration)
+                                            <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
+                                                <i class="fas fa-times me-1"></i> Hủy
+                                            </button>
+                                        @endif
                                     @elseif($isFull || $isDeadlinePassed)
                                         <button class="btn btn-secondary btn-sm flex-fill" disabled>
                                             <i class="fas fa-ban me-1"></i> Không thể đăng ký
@@ -262,6 +265,7 @@
                     @php
                         $hasImages = $event->images && $event->images->count() > 0;
                         $hasOldImage = !empty($event->image);
+                        $canCancelRegistration = $event->start_time && $event->start_time > now();
                     @endphp
                     <div class="col-md-6 mb-4 event-item" data-type="registered">
                         <div class="card border-0 shadow-sm h-100 event-card-hover">
@@ -315,9 +319,11 @@
                                     <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-primary btn-sm flex-fill">
                                         <i class="fas fa-eye me-1"></i> Xem chi tiết
                                     </a>
-                                    <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
-                                        <i class="fas fa-times me-1"></i> Hủy
-                                    </button>
+                                    @if($canCancelRegistration)
+                                        <button class="btn btn-outline-danger btn-sm" onclick="cancelRegistration({{ $event->id }}, this)">
+                                            <i class="fas fa-times me-1"></i> Hủy
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -335,69 +341,6 @@
                     </div>
                 @endforelse
             </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="sidebar">
-            <h5 class="sidebar-title">
-                <i class="fas fa-calendar-week"></i> Lịch sự kiện
-            </h5>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar-day"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Hôm nay</div>
-                    <small class="text-muted">{{ $todayEvents }} sự kiện</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar-alt"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Tuần này</div>
-                    <small class="text-muted">{{ $thisWeekEvents }} sự kiện</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Tháng này</div>
-                    <small class="text-muted">{{ $thisMonthEvents }} sự kiện</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar mt-4">
-            <h5 class="sidebar-title">
-                <i class="fas fa-fire"></i> Sự kiện hot
-            </h5>
-            @forelse($hotEvents as $event)
-                <div class="sidebar-item">
-                    <div class="sidebar-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold">{{ \Illuminate\Support\Str::limit($event->title, 25) }}</div>
-                        <small class="text-muted">{{ $event->registration_percentage }}% đã đăng ký</small>
-                    </div>
-                </div>
-            @empty
-                <div class="sidebar-item">
-                    <div class="sidebar-icon">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold">Chưa có sự kiện hot</div>
-                        <small class="text-muted">Hãy quay lại sau</small>
-                    </div>
-                </div>
-            @endforelse
         </div>
     </div>
 </div>
@@ -665,7 +608,7 @@
         const cancelUrl = '{{ route("student.events.cancel_registration", ":id") }}'.replace(':id', eventId);
         
         fetch(cancelUrl, {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',

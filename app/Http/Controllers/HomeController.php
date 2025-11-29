@@ -41,15 +41,22 @@ class HomeController extends Controller
             ->limit(4)
             ->get();
 
-        // Upcoming events
+        // All events (sorted by start_time, newest first)
         $upcomingEvents = Event::with('club')
-            ->where('start_time', '>=', now())
-            ->orderBy('start_time')
+            ->orderBy('start_time', 'desc')
             ->limit(6)
             ->get();
 
-        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
-        $recentPosts = Post::with(['club', 'user', 'attachments'])
+        // Latest public posts (chỉ lấy bài viết, không lấy thông báo) với comments
+        $recentPosts = Post::with(['club', 'user', 'attachments', 'comments' => function($query) {
+                $query->whereNull('deleted_at')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(1)
+                    ->with('user');
+            }])
+            ->withCount(['comments' => function($query) {
+                $query->whereNull('deleted_at');
+            }])
             ->where('status', 'published')
             ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderByDesc('created_at')

@@ -33,8 +33,8 @@
                             <br><small class="text-muted">{{ $member->user->student_id ?? 'N/A' }}</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-{{ $member->position === 'leader' ? 'danger' : ($member->position === 'officer' ? 'info' : 'secondary') }}">
-                                {{ $member->position === 'leader' ? 'Trưởng CLB' : ($member->position === 'officer' ? 'Cán sự' : 'Thành viên') }}
+                            <span class="badge bg-{{ $member->position === 'leader' ? 'danger' : ($member->position === 'treasurer' ? 'info' : ($member->position === 'vice_president' ? 'warning' : 'secondary')) }}">
+                                {{ $member->position === 'leader' ? 'Trưởng CLB' : ($member->position === 'treasurer' ? 'Thủ quỹ' : ($member->position === 'vice_president' ? 'Phó CLB' : 'Thành viên')) }}
                             </span>
                             <form action="{{ route('admin.clubs.members.remove', ['club' => $club->id, 'member' => $member->id]) }}" 
                                   method="POST" 

@@ -16,7 +16,7 @@ class UpdateClubMembersTable extends Migration
         Schema::table('club_members', function (Blueprint $table) {
             // Thêm cột position nếu chưa có
             if (!Schema::hasColumn('club_members', 'position')) {
-                $table->enum('position', ['leader', 'vice_president', 'officer', 'member'])->default('member');
+                $table->enum('position', ['leader', 'vice_president', 'treasurer', 'member'])->default('member');
             }
             
             // Thêm cột status nếu chưa có

@@ -163,6 +163,15 @@
                                            class="btn btn-sm btn-primary text-white w-100">
                                             <i class="fas fa-eye"></i> Xem chi tiết
                                         </a>
+                                        @php
+                                            $position = $user->getPositionInClub($club->id);
+                                        @endphp
+                                        @if($request->status === 'rejected' && $position === 'leader')
+                                            <a href="{{ route('student.club-management.fund-requests.edit', $request->id) }}" 
+                                               class="btn btn-sm btn-warning text-white w-100">
+                                                <i class="fas fa-edit"></i> Sửa
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

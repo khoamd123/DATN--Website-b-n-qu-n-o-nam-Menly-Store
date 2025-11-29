@@ -27,9 +27,9 @@
                         <span class="badge bg-info">
                             <i class="fas fa-user-tie me-1"></i> Phó CLB {{ $clubName }}
                         </span>
-                    @elseif($position === 'officer')
+                    @elseif($position === 'treasurer')
                         <span class="badge bg-success">
-                            <i class="fas fa-user-shield me-1"></i> Cán sự {{ $clubName }}
+                            <i class="fas fa-wallet me-1"></i> Thủ quỹ {{ $clubName }}
                         </span>
                     @else
                         <span class="badge bg-secondary">
@@ -99,13 +99,13 @@
             @endif
         </div>
 
-        <!-- Club Management Section (for leaders/officers) -->
+        <!-- Club Management Section (for leaders/treasurers) -->
         @php
             $hasManagementRole = false;
             if ($user->clubs->count() > 0) {
                 $clubId = $user->clubs->first()->id;
                 $position = $user->getPositionInClub($clubId);
-                $hasManagementRole = in_array($position, ['leader', 'vice_president', 'officer']);
+                $hasManagementRole = in_array($position, ['leader', 'vice_president', 'treasurer']);
             }
         @endphp
         @if($hasManagementRole)

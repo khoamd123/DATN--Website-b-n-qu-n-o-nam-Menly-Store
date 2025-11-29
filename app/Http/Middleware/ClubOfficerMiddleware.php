@@ -32,12 +32,12 @@ class ClubOfficerMiddleware
             return redirect()->back()->with('error', 'Không tìm thấy thông tin câu lạc bộ.');
         }
 
-        // Kiểm tra user có phải là leader hoặc officer của CLB không
+        // Kiểm tra user có phải là leader, vice_president hoặc treasurer của CLB không
         $clubRoles = session('club_roles', []);
         $userRole = $clubRoles[$clubId] ?? null;
 
-        if (!in_array($userRole, ['leader', 'vice_president', 'officer'])) {
-            return redirect()->back()->with('error', 'Bạn không có quyền truy cập chức năng này. Chỉ trưởng CLB, phó CLB và cán sự mới có thể thực hiện.');
+        if (!in_array($userRole, ['leader', 'vice_president', 'treasurer'])) {
+            return redirect()->back()->with('error', 'Bạn không có quyền truy cập chức năng này. Chỉ trưởng CLB, phó CLB và thủ quỹ mới có thể thực hiện.');
         }
 
         return $next($request);

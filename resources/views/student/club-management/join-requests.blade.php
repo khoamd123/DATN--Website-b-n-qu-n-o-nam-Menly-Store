@@ -42,10 +42,11 @@
                             @csrf
                             <button type="submit" class="btn btn-sm btn-success">Duyệt</button>
                         </form>
-                        <form method="POST" action="{{ route('student.club-management.join-requests.reject', ['club' => $clubId, 'request' => $req->id]) }}" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">Từ chối</button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#rejectModal{{ $req->id }}">
+                            Từ chối
+                        </button>
                         @else
                             <small class="text-muted">Đã {{ $req->status === 'approved' ? 'duyệt' : 'từ chối' }}</small>
                         @endif
@@ -64,6 +65,37 @@
         {{ $requests->links() }}
     </div>
 </div>
+
+<!-- Modal Từ chối đơn tham gia -->
+@foreach($requests as $req)
+@if($req->status === 'pending')
+<div class="modal fade" id="rejectModal{{ $req->id }}" tabindex="-1" aria-labelledby="rejectModalLabel{{ $req->id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectModalLabel{{ $req->id }}">Từ chối đơn tham gia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('student.club-management.join-requests.reject', ['club' => $clubId, 'request' => $req->id]) }}">
+                @csrf
+                <div class="modal-body">
+                    <p>Bạn sắp từ chối đơn tham gia của: <strong>{{ $req->user->name ?? 'N/A' }}</strong></p>
+                    <div class="mb-3">
+                        <label for="rejection_reason{{ $req->id }}" class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejection_reason{{ $req->id }}" name="rejection_reason" rows="4" required placeholder="Nhập lý do từ chối đơn tham gia..."></textarea>
+                        <small class="text-muted">Lý do từ chối sẽ được gửi qua email cho người đăng ký.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+@endforeach
 @endsection
 
 
