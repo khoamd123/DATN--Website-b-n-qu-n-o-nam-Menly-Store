@@ -25,118 +25,66 @@
 
         <!-- Notifications -->
         <div class="content-card">
-            <div class="notification-item unread">
-                <div class="notification-icon bg-primary">
-                    <i class="fas fa-info-circle"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Chào mừng bạn đến với UniClubs!</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->format('d/m/Y H:i') }}
-                        </small>
+            @forelse($notifications as $notification)
+                <div class="notification-item {{ !$notification->is_read ? 'unread' : '' }}">
+                    @php
+                        // Xác định icon và màu sắc dựa trên tiêu đề
+                        $icon = 'fa-info-circle';
+                        $bgColor = 'bg-primary';
+                        if (str_contains(strtolower($notification->title), 'duyệt') || str_contains(strtolower($notification->title), 'thành công')) {
+                            $icon = 'fa-check-circle';
+                            $bgColor = 'bg-success';
+                        } elseif (str_contains(strtolower($notification->title), 'từ chối') || str_contains(strtolower($notification->title), 'thất bại')) {
+                            $icon = 'fa-times-circle';
+                            $bgColor = 'bg-danger';
+                        } elseif (str_contains(strtolower($notification->title), 'clb') || str_contains(strtolower($notification->title), 'câu lạc bộ')) {
+                            $icon = 'fa-users';
+                            $bgColor = 'bg-info';
+                        } elseif (str_contains(strtolower($notification->title), 'sự kiện') || str_contains(strtolower($notification->title), 'event')) {
+                            $icon = 'fa-calendar';
+                            $bgColor = 'bg-warning';
+                        }
+                    @endphp
+                    <div class="notification-icon {{ $bgColor }}">
+                        <i class="fas {{ $icon }}"></i>
                     </div>
-                    <p class="notification-text mb-2">
-                        Cảm ơn bạn đã tham gia UniClubs. Hãy khám phá các câu lạc bộ thú vị và đăng ký tham gia các sự kiện.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-outline-primary">Xem chi tiết</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-success">
-                    <i class="fas fa-calendar-plus"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Sự kiện mới: Workshop "Lập trình Web hiện đại"</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subHours(2)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        CLB Công nghệ thông tin tổ chức workshop về lập trình web hiện đại. Đăng ký ngay để không bỏ lỡ cơ hội học hỏi.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-primary">Đăng ký tham gia</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Nhắc nhở: Game Jam 2024 sắp hết hạn đăng ký</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subHours(5)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        Chỉ còn 2 ngày để đăng ký tham gia Game Jam 2024. Đừng bỏ lỡ cơ hội thể hiện tài năng lập trình game của bạn.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-warning">Đăng ký ngay</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
+                    <div class="notification-content">
+                        <div class="notification-header">
+                            <h6 class="mb-1">{{ $notification->title }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i> {{ $notification->created_at->format('d/m/Y H:i') }}
+                            </small>
+                        </div>
+                        <p class="notification-text mb-2">
+                            {{ $notification->message }}
+                        </p>
+                        <div class="notification-actions">
+                            @if(!$notification->is_read)
+                                <form action="{{ route('student.notifications.mark-read', $notification->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
+                                </form>
+                            @else
+                                <span class="text-muted small"><i class="fas fa-check me-1"></i> Đã đọc</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-info">
-                    <i class="fas fa-users"></i>
+            @empty
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Chưa có thông báo nào</h5>
+                    <p class="text-muted">Thông báo mới sẽ xuất hiện ở đây khi có cập nhật.</p>
                 </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Thông báo từ CLB Công nghệ thông tin</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subDays(1)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        CLB sẽ tổ chức buổi họp mặt định kỳ vào cuối tuần này. Tất cả thành viên vui lòng tham gia đầy đủ.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-info">Xem chi tiết</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notification-item">
-                <div class="notification-icon bg-secondary">
-                    <i class="fas fa-trophy"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header">
-                        <h6 class="mb-1">Cuộc thi Hackathon 2024 đã kết thúc</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> {{ now()->subDays(3)->format('d/m/Y H:i') }}
-                        </small>
-                    </div>
-                    <p class="notification-text mb-2">
-                        Cuộc thi Hackathon 2024 đã kết thúc thành công. Kết quả sẽ được công bố trong tuần tới.
-                    </p>
-                    <div class="notification-actions">
-                        <button class="btn btn-sm btn-secondary">Xem kết quả</button>
-                        <button class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                    </div>
-                </div>
-            </div>
+            @endforelse
         </div>
 
-        <!-- Load More -->
-        <div class="text-center">
-            <button class="btn btn-outline-primary">
-                <i class="fas fa-chevron-down me-2"></i> Xem thêm thông báo
-            </button>
-        </div>
+        <!-- Pagination -->
+        @if($notifications->hasPages())
+            <div class="text-center mt-4">
+                {{ $notifications->links('vendor.pagination.bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
     <!-- Sidebar -->

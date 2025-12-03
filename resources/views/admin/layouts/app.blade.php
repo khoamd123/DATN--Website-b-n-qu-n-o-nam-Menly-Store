@@ -612,7 +612,19 @@
                         <i class="fas fa-bell"></i>
                         @php
                             try {
-                                $notificationCount = \App\Models\Notification::where('read_at', null)->count();
+                                $currentUserId = session('user_id');
+                                if ($currentUserId) {
+                                    // Lấy thông báo có target là user hiện tại và chưa được đọc
+                                    $notificationCount = \App\Models\Notification::whereHas('targets', function($query) use ($currentUserId) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $currentUserId);
+                                    })->whereDoesntHave('reads', function($query) use ($currentUserId) {
+                                        $query->where('user_id', $currentUserId)
+                                              ->where('is_read', true);
+                                    })->count();
+                                } else {
+                                    $notificationCount = 0;
+                                }
                             } catch (Exception $e) {
                                 $notificationCount = 0;
                             }
