@@ -373,9 +373,14 @@
                             @php
                                 $unreadCount = 0;
                                 try {
-                                    $unreadCount = \App\Models\Notification::where('user_id', $user->id)
-                                        ->whereNull('read_at')
-                                        ->count();
+                                    // Lấy thông báo có target là user hiện tại và chưa được đọc
+                                    $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $user->id);
+                                    })->whereDoesntHave('reads', function($query) use ($user) {
+                                        $query->where('user_id', $user->id)
+                                              ->where('is_read', true);
+                                    })->count();
                                 } catch (\Exception $e) {
                                     $unreadCount = 0;
                                 }

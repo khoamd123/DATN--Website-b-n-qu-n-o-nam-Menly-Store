@@ -130,6 +130,7 @@ Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileControl
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
+Route::post('/student/notifications/{id}/mark-read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.mark-read');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
@@ -393,9 +394,16 @@ Route::prefix('admin')->group(function () {
     
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+    Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
+    
+    // Quản lý yêu cầu tham gia CLB
+    Route::get('/join-requests', [AdminController::class, 'joinRequestsIndex'])->name('admin.join-requests.index');
+    Route::post('/join-requests/{id}/approve', [AdminController::class, 'approveJoinRequest'])->name('admin.join-requests.approve');
+    Route::post('/join-requests/{id}/reject', [AdminController::class, 'rejectJoinRequest'])->name('admin.join-requests.reject');
+    Route::post('/join-requests/bulk', [AdminController::class, 'bulkJoinRequests'])->name('admin.join-requests.bulk');
     
     // Hồ sơ và cài đặt
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');

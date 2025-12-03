@@ -13,4 +13,28 @@ class Notification extends Model
         'title',
         'message',
     ];
+
+    /**
+     * Get the notification targets
+     */
+    public function targets()
+    {
+        return $this->hasMany(NotificationTarget::class);
+    }
+
+    /**
+     * Get the notification reads
+     */
+    public function reads()
+    {
+        return $this->hasMany(NotificationRead::class);
+    }
+
+    /**
+     * Get the sender user
+     */
+    public function sender()
+    {
+        return $this->belongsTo(User::class, 'sender_id');
+    }
 }
