@@ -284,11 +284,22 @@ class StudentController extends Controller
             }
 
             // Tạo đăng ký mới
-            \App\Models\EventRegistration::create([
+            $registration = \App\Models\EventRegistration::create([
                 'user_id' => $user->id,
                 'event_id' => $eventId,
                 'status' => 'registered',
                 'joined_at' => now(),
+            ]);
+
+            // Tạo thông báo cho admin
+            \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'type' => 'event_registration',
+                'title' => 'Đăng ký sự kiện mới',
+                'message' => "{$user->name} đã đăng ký tham gia sự kiện \"{$event->title}\"",
+                'related_id' => $eventId,
+                'related_type' => \App\Models\Event::class,
+                'read_at' => null,
             ]);
 
             return response()->json([
@@ -671,6 +682,90 @@ class StudentController extends Controller
                         'sort_order' => $index,
                     ]);
                 }
+            }
+
+            // Tạo thông báo cho admin khi user tạo sự kiện mới
+            // Đảm bảo thông báo được tạo ngay cả khi có lỗi nhỏ
+            $clubName = $userClub->name ?? 'Không xác định';
+            $userName = $user->name ?? 'Người dùng';
+            $eventTitle = $event->title ?? 'Sự kiện mới';
+            
+            try {
+                // Kiểm tra xem bảng notifications có cột type không
+                $hasTypeColumn = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type');
+                $hasRelatedColumns = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id') 
+                    && \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type');
+                
+                if (!$hasTypeColumn || !$hasRelatedColumns) {
+                    \Log::error('Notifications table missing required columns', [
+                        'has_type' => $hasTypeColumn,
+                        'has_related' => $hasRelatedColumns,
+                        'event_id' => $event->id,
+                    ]);
+                    // Vẫn thử tạo với dữ liệu tối thiểu
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $user->id,
+                        'title' => 'Sự kiện mới cần duyệt',
+                        'message' => "{$userName} đã tạo sự kiện mới \"{$eventTitle}\" cho CLB {$clubName}. Sự kiện đang chờ duyệt.",
+                    ]);
+                } else {
+                    // Tạo thông báo đầy đủ
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $user->id,
+                        'type' => 'event_created',
+                        'title' => 'Sự kiện mới cần duyệt',
+                        'message' => "{$userName} đã tạo sự kiện mới \"{$eventTitle}\" cho CLB {$clubName}. Sự kiện đang chờ duyệt.",
+                        'related_id' => $event->id,
+                        'related_type' => \App\Models\Event::class,
+                        'read_at' => null,
+                    ]);
+                }
+                
+                // Kiểm tra xem thông báo có được tạo thành công không
+                if ($notification && $notification->id) {
+                    \Log::info('✅ Notification created successfully', [
+                        'notification_id' => $notification->id, 
+                        'event_id' => $event->id,
+                        'user_id' => $user->id,
+                        'club_id' => $clubId,
+                        'type' => $notification->type ?? 'N/A'
+                    ]);
+                } else {
+                    \Log::warning('⚠️ Notification creation returned null or no ID', [
+                        'event_id' => $event->id,
+                        'user_id' => $user->id
+                    ]);
+                }
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Lỗi database - có thể do migration chưa chạy
+                \Log::error('❌ Database error when creating notification', [
+                    'error' => $e->getMessage(),
+                    'sql' => $e->getSql() ?? 'N/A',
+                    'bindings' => $e->getBindings() ?? [],
+                    'user_id' => $user->id,
+                    'event_id' => $event->id ?? null,
+                ]);
+                
+                // Thử tạo lại với dữ liệu tối thiểu (không có type và related)
+                try {
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $user->id,
+                        'title' => 'Sự kiện mới cần duyệt',
+                        'message' => "{$userName} đã tạo sự kiện mới \"{$eventTitle}\" cho CLB {$clubName}. Sự kiện đang chờ duyệt.",
+                    ]);
+                    \Log::info('✅ Notification created with minimal data', ['notification_id' => $notification->id ?? 'N/A']);
+                } catch (\Exception $e2) {
+                    \Log::error('❌ Failed to create notification even with minimal data', ['error' => $e2->getMessage()]);
+                }
+            } catch (\Exception $e) {
+                // Log lỗi chi tiết nhưng không làm gián đoạn quá trình tạo sự kiện
+                \Log::error('❌ Failed to create notification for new event', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'user_id' => $user->id,
+                    'event_id' => $event->id ?? null,
+                ]);
             }
 
             return redirect()->route('student.club-management.index')

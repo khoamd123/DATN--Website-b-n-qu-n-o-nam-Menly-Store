@@ -612,24 +612,65 @@
                         <i class="fas fa-bell"></i>
                         @php
                             try {
-                                $notificationCount = \App\Models\Notification::where('read_at', null)->count();
+                                $notificationCount = \App\Models\Notification::whereNull('read_at')->count();
+                                $recentNotifications = \App\Models\Notification::whereNull('read_at')
+                                    ->with('sender')
+                                    ->orderBy('created_at', 'desc')
+                                    ->limit(5)
+                                    ->get();
                             } catch (Exception $e) {
                                 $notificationCount = 0;
+                                $recentNotifications = collect();
                             }
                         @endphp
                         @if($notificationCount > 0)
                             <span class="notification-badge">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
                         @endif
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
-                        <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+                        <li><h6 class="dropdown-header">🔔 Thông báo 
+                            @if($notificationCount > 0)
+                                <span class="badge bg-danger ms-2">{{ $notificationCount }}</span>
+                            @endif
+                        </h6></li>
                         @if($notificationCount > 0)
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
+                            @foreach($recentNotifications as $notification)
+                                <li>
+                                    <a class="dropdown-item notification-item-dropdown {{ $notification->read_at ? '' : 'fw-bold' }}" 
+                                       href="{{ route('admin.notifications.show', $notification->id) }}">
+                                        <div class="d-flex align-items-start">
+                                            <div class="me-2">
+                                                @if($notification->type === 'event_registration')
+                                                    <i class="fas fa-calendar-check text-primary"></i>
+                                                @elseif($notification->type === 'event_created')
+                                                    <i class="fas fa-calendar-plus text-warning"></i>
+                                                @else
+                                                    <i class="fas fa-bell text-info"></i>
+                                                @endif
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="small text-muted">{{ $notification->title }}</div>
+                                                <div class="small">{{ Str::limit($notification->message, 50) }}</div>
+                                                <div class="small text-muted mt-1">
+                                                    {{ $notification->created_at->diffForHumans() }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                @if(!$loop->last)
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                @endif
+                            @endforeach
                         @else
-                            <li><a class="dropdown-item text-muted" href="#"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
+                            <li><a class="dropdown-item text-muted text-center" href="#">
+                                <i class="fas fa-check-circle text-success"></i> Không có thông báo mới
+                            </a></li>
                         @endif
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">Xem tất cả thông báo</a></li>
+                        <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">
+                            <i class="fas fa-list me-1"></i> Xem tất cả thông báo
+                        </a></li>
                     </ul>
                 </div>
                 

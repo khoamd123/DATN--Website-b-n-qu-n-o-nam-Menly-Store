@@ -691,12 +691,112 @@ class AdminController extends Controller
         }
 
         try {
-            $notifications = \App\Models\Notification::orderBy('created_at', 'desc')->paginate(20);
+            $query = \App\Models\Notification::query();
+            
+            // Filter theo type
+            if ($request->has('type') && $request->type) {
+                $query->where('type', $request->type);
+            }
+            
+            // Filter theo status
+            if ($request->has('status') && $request->status) {
+                if ($request->status === 'unread') {
+                    $query->whereNull('read_at');
+                } elseif ($request->status === 'read') {
+                    $query->whereNotNull('read_at');
+                }
+            }
+            
+            $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
         } catch (Exception $e) {
             $notifications = collect();
         }
 
         return view('admin.notifications', compact('notifications'));
+    }
+
+    /**
+     * Hiển thị chi tiết thông báo
+     */
+    public function showNotification($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $notification = \App\Models\Notification::with(['sender', 'related'])->findOrFail($id);
+            
+            // Đánh dấu thông báo là đã đọc
+            if (!$notification->read_at) {
+                $notification->markAsRead();
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('admin.notifications')->with('error', 'Không tìm thấy thông báo.');
+        }
+
+        return view('admin.notifications.show', compact('notification'));
+    }
+
+    /**
+     * Test tạo thông báo (tạm thời để debug)
+     */
+    public function testNotification()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $user = User::find(session('user_id'));
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
+
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'type' => 'event_created',
+                'title' => 'Test thông báo',
+                'message' => 'Đây là thông báo test để kiểm tra hệ thống.',
+                'related_id' => null,
+                'related_type' => null,
+                'read_at' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Thông báo test đã được tạo thành công!',
+                'notification_id' => $notification->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+
+    /**
+     * Đánh dấu tất cả thông báo đã đọc
+     */
+    public function markAllRead()
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            \App\Models\Notification::whereNull('read_at')
+                ->update(['read_at' => now()]);
+            
+            return redirect()->route('admin.notifications')->with('success', 'Đã đánh dấu tất cả thông báo là đã đọc.');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra khi đánh dấu thông báo.');
+        }
     }
 
     /**
