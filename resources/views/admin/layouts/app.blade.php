@@ -612,8 +612,20 @@
                         <i class="fas fa-bell"></i>
                         @php
                             try {
-                                $notificationCount = \App\Models\Notification::where('read_at', null)->count();
-                            } catch (Exception $e) {
+                                $adminId = session('user_id');
+                                if ($adminId) {
+                                    // Đếm thông báo chưa đọc dành cho admin này
+                                    $notificationCount = \App\Models\Notification::whereHas('targets', function($query) use ($adminId) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $adminId);
+                                    })->whereDoesntHave('reads', function($query) use ($adminId) {
+                                        $query->where('user_id', $adminId)
+                                              ->where('is_read', true);
+                                    })->count();
+                                } else {
+                                    $notificationCount = 0;
+                                }
+                            } catch (\Exception $e) {
                                 $notificationCount = 0;
                             }
                         @endphp
@@ -621,9 +633,70 @@
                             <span class="notification-badge">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
                         @endif
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
                         <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
-                        @if($notificationCount > 0)
+                        @php
+                            $latestNotifications = collect();
+                            if ($notificationCount > 0 && isset($adminId) && $adminId) {
+                                try {
+                                    // Lấy 5 thông báo mới nhất chưa đọc
+                                    $latestNotifications = \App\Models\Notification::whereHas('targets', function($query) use ($adminId) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $adminId);
+                                    })->whereDoesntHave('reads', function($query) use ($adminId) {
+                                        $query->where('user_id', $adminId)
+                                              ->where('is_read', true);
+                                    })->orderBy('created_at', 'desc')
+                                      ->limit(5)
+                                      ->get();
+                                } catch (\Exception $e) {
+                                    $latestNotifications = collect();
+                                }
+                            }
+                        @endphp
+                        @if($notificationCount > 0 && $latestNotifications->count() > 0)
+                            @foreach($latestNotifications as $notification)
+                                @php
+                                    try {
+                                        $sender = null;
+                                        if ($notification->sender_id) {
+                                            $sender = \App\Models\User::find($notification->sender_id);
+                                        }
+                                        $timeAgo = $notification->created_at ? $notification->created_at->diffForHumans() : '';
+                                        $shortMessage = $notification->message ? \Illuminate\Support\Str::limit($notification->message, 80) : '';
+                                    } catch (\Exception $e) {
+                                        $sender = null;
+                                        $timeAgo = '';
+                                        $shortMessage = '';
+                                    }
+                                @endphp
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.notifications') }}" style="padding: 12px 16px;">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-2">
+                                                <i class="fas fa-bell text-primary"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold text-dark mb-1">{{ $notification->title }}</div>
+                                                <div class="text-muted small mb-1">{{ $shortMessage }}</div>
+                                                <div class="text-muted" style="font-size: 11px;">
+                                                    <i class="far fa-clock"></i> {{ $timeAgo }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                @if(!$loop->last)
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                @endif
+                            @endforeach
+                            @if($notificationCount > $latestNotifications->count())
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center text-primary fw-bold" href="{{ route('admin.notifications') }}">
+                                    Xem thêm {{ $notificationCount - $latestNotifications->count() }} thông báo khác
+                                </a></li>
+                            @endif
+                        @elseif($notificationCount > 0)
                             <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
                         @else
                             <li><a class="dropdown-item text-muted" href="#"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
@@ -643,7 +716,7 @@
                         @php
                             try {
                                 $messageCount = \App\Models\Notification::where('type', 'message')->where('read_at', null)->count();
-                            } catch (Exception $e) {
+                            } catch (\Exception $e) {
                                 $messageCount = 0;
                             }
                         @endphp
@@ -803,7 +876,7 @@
                                   \App\Models\Post::onlyTrashed()->count() + 
                                   \App\Models\ClubMember::onlyTrashed()->count() + 
                                   \App\Models\PostComment::onlyTrashed()->count();
-                 } catch (Exception $e) {
+                 } catch (\Exception $e) {
                      $trashCount = 0;
                  }
              @endphp

@@ -128,6 +128,7 @@ Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileControl
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
+Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
@@ -147,6 +148,14 @@ Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::c
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
 Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
 Route::post('/student/posts/mark-announcement-viewed', [\App\Http\Controllers\StudentController::class, 'markAnnouncementViewed'])->name('student.posts.mark-announcement-viewed');
+
+// Student Announcements Routes
+Route::get('/student/announcements/create', [\App\Http\Controllers\StudentController::class, 'createAnnouncement'])->name('student.announcements.create');
+Route::post('/student/announcements', [\App\Http\Controllers\StudentController::class, 'storeAnnouncement'])->name('student.announcements.store');
+Route::get('/student/announcements/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editAnnouncement'])->whereNumber('id')->name('student.announcements.edit');
+Route::put('/student/announcements/{id}', [\App\Http\Controllers\StudentController::class, 'updateAnnouncement'])->whereNumber('id')->name('student.announcements.update');
+// Student Posts Upload Image Route
+Route::post('/student/posts/upload-image', [\App\Http\Controllers\PostController::class, 'uploadEditorImage'])->name('student.posts.upload-image');
 
 // Club Management Routes
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
@@ -228,6 +237,36 @@ Route::get(
     '/student/club-management/fund-requests/{id}',
     [\App\Http\Controllers\StudentController::class, 'fundRequestShow']
 )->name('student.club-management.fund-requests.show');
+
+Route::get(
+    '/student/club-management/{club}/posts',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementPosts']
+)->whereNumber('club')->name('student.club-management.posts');
+
+Route::get(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResources']
+)->whereNumber('club')->name('student.club-management.resources');
+Route::get(
+    '/student/club-management/{club}/resources/create',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesCreate']
+)->whereNumber('club')->name('student.club-management.resources.create');
+Route::post(
+    '/student/club-management/{club}/resources',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesStore']
+)->whereNumber('club')->name('student.club-management.resources.store');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesShow']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.show');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}/edit',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesEdit']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.edit');
+Route::put(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesUpdate']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.update');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 
@@ -391,6 +430,8 @@ Route::prefix('admin')->group(function () {
     
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+    Route::post('/notifications/{id}/mark-read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.mark-read');
+    Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');

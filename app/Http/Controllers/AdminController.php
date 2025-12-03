@@ -10,6 +10,7 @@ use App\Models\Post;
 use App\Models\Field;
 use App\Models\Notification;
 use App\Models\NotificationTarget;
+use App\Models\NotificationRead;
 use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
@@ -691,12 +692,161 @@ class AdminController extends Controller
         }
 
         try {
-            $notifications = \App\Models\Notification::orderBy('created_at', 'desc')->paginate(20);
-        } catch (Exception $e) {
+            $adminId = session('user_id');
+            
+            // Lấy thông báo dành cho admin này
+            $query = \App\Models\Notification::whereHas('targets', function($q) use ($adminId) {
+                $q->where('target_type', 'user')
+                  ->where('target_id', $adminId);
+            });
+            
+            // Bộ lọc: Trạng thái đọc/chưa đọc
+            $filter = $request->get('filter', 'all');
+            if ($filter === 'unread') {
+                $query->whereDoesntHave('reads', function($q) use ($adminId) {
+                    $q->where('user_id', $adminId)
+                      ->where('is_read', true);
+                });
+            } elseif ($filter === 'read') {
+                $query->whereHas('reads', function($q) use ($adminId) {
+                    $q->where('user_id', $adminId)
+                      ->where('is_read', true);
+                });
+            }
+            
+            // Bộ lọc: Theo người gửi
+            if ($request->has('sender_id') && $request->sender_id) {
+                $query->where('sender_id', $request->sender_id);
+            }
+            
+            // Bộ lọc: Theo loại thông báo (tiêu đề)
+            if ($request->has('type') && $request->type) {
+                $query->where('title', $request->type);
+            }
+            
+            // Bộ lọc: Tìm kiếm
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $senderIds = \App\Models\User::where('name', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->pluck('id');
+                
+                $query->where(function($q) use ($search, $senderIds) {
+                    $q->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('message', 'like', '%' . $search . '%');
+                    if ($senderIds->count() > 0) {
+                        $q->orWhereIn('sender_id', $senderIds);
+                    }
+                });
+            }
+            
+            $notifications = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+            
+            // Lấy danh sách người gửi để filter
+            $senderIds = \App\Models\Notification::whereHas('targets', function($q) use ($adminId) {
+                $q->where('target_type', 'user')
+                  ->where('target_id', $adminId);
+            })->whereNotNull('sender_id')
+              ->distinct()
+              ->pluck('sender_id');
+            
+            $senders = \App\Models\User::whereIn('id', $senderIds)->get();
+            
+            // Lấy danh sách loại thông báo
+            $notificationTypes = \App\Models\Notification::whereHas('targets', function($q) use ($adminId) {
+                $q->where('target_type', 'user')
+                  ->where('target_id', $adminId);
+            })->whereNotNull('title')
+              ->distinct()
+              ->pluck('title')
+              ->filter()
+              ->values();
+            
+        } catch (\Exception $e) {
             $notifications = collect();
+            $senders = collect();
+            $notificationTypes = collect();
         }
 
-        return view('admin.notifications', compact('notifications'));
+        return view('admin.notifications', compact('notifications', 'senders', 'notificationTypes'));
+    }
+
+    /**
+     * Đánh dấu thông báo đã đọc
+     */
+    public function markNotificationRead(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $adminId = session('user_id');
+            $notification = \App\Models\Notification::findOrFail($id);
+            
+            // Kiểm tra xem admin có quyền xem thông báo này không
+            $hasAccess = \App\Models\NotificationTarget::where('notification_id', $id)
+                ->where('target_type', 'user')
+                ->where('target_id', $adminId)
+                ->exists();
+            
+            if (!$hasAccess) {
+                return redirect()->route('admin.notifications')->with('error', 'Bạn không có quyền xem thông báo này.');
+            }
+            
+            // Đánh dấu đã đọc
+            \App\Models\NotificationRead::updateOrCreate(
+                [
+                    'notification_id' => $id,
+                    'user_id' => $adminId,
+                ],
+                [
+                    'is_read' => true,
+                ]
+            );
+            
+            return redirect()->route('admin.notifications')->with('success', 'Đã đánh dấu thông báo đã đọc.');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Xóa thông báo
+     */
+    public function deleteNotification(Request $request, $id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $adminId = session('user_id');
+            $notification = \App\Models\Notification::findOrFail($id);
+            
+            // Kiểm tra xem admin có quyền xem thông báo này không
+            $hasAccess = \App\Models\NotificationTarget::where('notification_id', $id)
+                ->where('target_type', 'user')
+                ->where('target_id', $adminId)
+                ->exists();
+            
+            if (!$hasAccess) {
+                return redirect()->route('admin.notifications')->with('error', 'Bạn không có quyền xóa thông báo này.');
+            }
+            
+            // Xóa notification targets và notification reads liên quan
+            \App\Models\NotificationTarget::where('notification_id', $id)->delete();
+            \App\Models\NotificationRead::where('notification_id', $id)->delete();
+            
+            // Xóa thông báo
+            $notification->delete();
+            
+            return redirect()->route('admin.notifications')->with('success', 'Đã xóa thông báo thành công.');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
     }
 
     /**

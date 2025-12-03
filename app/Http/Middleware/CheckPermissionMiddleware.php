@@ -21,10 +21,31 @@ class CheckPermissionMiddleware
         }
 
         $userId = session('user_id');
-        $user = \App\Models\User::find($userId);
-        
-        if (!$user) {
-            return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+        try {
+            $user = \App\Models\User::find($userId);
+            
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Xử lý lỗi kết nối database
+            \Log::error('Database connection error in CheckPermissionMiddleware: ' . $e->getMessage());
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.'
+                ], 503);
+            }
+            return redirect()->route('simple.login')->with('error', 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.');
+        } catch (\Exception $e) {
+            \Log::error('Error in CheckPermissionMiddleware: ' . $e->getMessage());
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+                ], 500);
+            }
+            return redirect()->route('simple.login')->with('error', 'Đã xảy ra lỗi. Vui lòng thử lại sau.');
         }
 
         // Lấy club_id từ route hoặc request

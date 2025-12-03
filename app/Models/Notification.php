@@ -21,4 +21,12 @@ class Notification extends Model
     {
         return $this->hasMany(NotificationTarget::class);
     }
+
+    /**
+     * Get the notification reads
+     */
+    public function reads()
+    {
+        return $this->hasMany(NotificationRead::class);
+    }
 }
