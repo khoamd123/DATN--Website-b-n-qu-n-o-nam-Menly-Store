@@ -952,6 +952,7 @@ class StudentController extends Controller
             return $user;
         }
 
+<<<<<<< HEAD
         // Lấy danh sách CLB mà user là thành viên
         $userClubIds = $user->clubs->pluck('id')->toArray();
         
@@ -1085,6 +1086,42 @@ class StudentController extends Controller
         // );
         
         return response()->json(['success' => true, 'message' => 'Đã lưu cài đặt thông báo']);
+    }
+
+    public function markNotificationRead($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        try {
+            $notification = \App\Models\Notification::findOrFail($id);
+            
+            // Kiểm tra xem user có quyền đọc thông báo này không
+            $hasAccess = $notification->targets()
+                ->where('target_type', 'user')
+                ->where('target_id', $user->id)
+                ->exists();
+            
+            if (!$hasAccess) {
+                return back()->with('error', 'Bạn không có quyền truy cập thông báo này.');
+            }
+
+            // Cập nhật hoặc tạo notification_read record
+            $notificationRead = \App\Models\NotificationRead::firstOrNew([
+                'notification_id' => $notification->id,
+                'user_id' => $user->id,
+            ]);
+            
+            $notificationRead->is_read = true;
+            $notificationRead->save();
+
+            return back()->with('success', 'Đã đánh dấu thông báo là đã đọc.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi đánh dấu thông báo.');
+        }
+>>>>>>> origin/huy
     }
 
     public function contact()
@@ -1879,13 +1916,31 @@ class StudentController extends Controller
         if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền duyệt đơn.');
         }
-        $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
+        $req = JoinReq::with('club')->where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
-            $req->status = 'approved';
-            $req->approved_by = $user->id;
-            $req->approved_at = now();
-            $req->save();
-            // thêm vào bảng club_members nếu cần, tùy logic hiện có
+            $req->approve($user->id);
+            
+            // Load lại club relationship sau khi approve
+            $req->load('club');
+            
+            // Gửi thông báo cho người dùng về việc đơn được duyệt
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'title' => 'Đơn tham gia CLB đã được duyệt',
+                'message' => "Đơn tham gia CLB \"{$req->club->name}\" của bạn đã được duyệt bởi ban quản trị CLB. Chúc mừng bạn đã trở thành thành viên của CLB!",
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $req->user_id,
+            ]);
+            
+            \App\Models\NotificationRead::create([
+                'notification_id' => $notification->id,
+                'user_id' => $req->user_id,
+                'is_read' => false,
+            ]);
         }
         return redirect()->back()->with('success', 'Đã duyệt đơn tham gia.');
     }
@@ -1901,12 +1956,31 @@ class StudentController extends Controller
         if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền từ chối đơn.');
         }
-        $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
+        $req = JoinReq::with('club')->where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
-            $req->status = 'rejected';
-            $req->approved_by = $user->id;
-            $req->approved_at = now();
-            $req->save();
+            $req->reject($user->id);
+            
+            // Load lại club relationship sau khi reject
+            $req->load('club');
+            
+            // Gửi thông báo cho người dùng về việc đơn bị từ chối
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'title' => 'Đơn tham gia CLB đã bị từ chối',
+                'message' => "Rất tiếc, đơn tham gia CLB \"{$req->club->name}\" của bạn đã bị từ chối bởi ban quản trị CLB. Vui lòng liên hệ với ban quản trị để biết thêm chi tiết.",
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $req->user_id,
+            ]);
+            
+            \App\Models\NotificationRead::create([
+                'notification_id' => $notification->id,
+                'user_id' => $req->user_id,
+                'is_read' => false,
+            ]);
         }
         return redirect()->back()->with('success', 'Đã từ chối đơn tham gia.');
     }
@@ -3074,12 +3148,43 @@ class StudentController extends Controller
         }
 
         // 3. Tạo yêu cầu tham gia mới
-        ClubJoinRequest::create([
+        $joinRequest = ClubJoinRequest::create([
             'club_id' => $club->id,
             'user_id' => $user->id,
             'status' => 'pending',
             'message' => $request->input('message'), // Tùy chọn: có thể thêm ô lời nhắn
         ]);
+
+        // 4. Gửi thông báo cho tất cả admin về yêu cầu tham gia mới
+        $admins = \App\Models\User::where(function($query) {
+                $query->where('is_admin', true)
+                      ->orWhere('role', 'admin');
+            })
+            ->get();
+        
+        if ($admins->count() > 0) {
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'title' => 'Yêu cầu tham gia CLB mới',
+                'message' => "Người dùng {$user->name} đã gửi yêu cầu tham gia CLB \"{$club->name}\". Vui lòng xem xét và duyệt đơn.",
+            ]);
+            
+            // Tạo notification_targets và notification_reads cho từng admin
+            foreach ($admins as $admin) {
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $admin->id,
+                ]);
+                
+                // Tạo notification_read record với is_read = false
+                \App\Models\NotificationRead::create([
+                    'notification_id' => $notification->id,
+                    'user_id' => $admin->id,
+                    'is_read' => false,
+                ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Đã gửi yêu cầu tham gia thành công! Vui lòng chờ ban quản trị CLB duyệt.');
     }

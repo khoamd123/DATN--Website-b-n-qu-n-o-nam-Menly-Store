@@ -692,6 +692,7 @@ class AdminController extends Controller
         }
 
         try {
+<<<<<<< HEAD
             $adminId = session('user_id');
             
             // Lấy thông báo dành cho admin này
@@ -930,6 +931,47 @@ class AdminController extends Controller
             return redirect()->route('admin.notifications')->with('success', 'Đã đánh dấu tất cả thông báo là đã đọc.');
         } catch (\Exception $e) {
             return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra khi đánh dấu thông báo.');
+        }
+    }
+
+    /**
+     * Xem chi tiết thông báo
+     */
+    public function showNotification($id)
+    {
+        // Kiểm tra đăng nhập admin
+        if (!session('logged_in') || !session('is_admin')) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
+        }
+
+        try {
+            $currentUserId = session('user_id');
+            
+            $notification = \App\Models\Notification::whereHas('targets', function($query) use ($currentUserId) {
+                    $query->where('target_type', 'user')
+                          ->where('target_id', $currentUserId);
+                })
+                ->with(['sender', 'targets', 'reads' => function($query) use ($currentUserId) {
+                    $query->where('user_id', $currentUserId);
+                }])
+                ->findOrFail($id);
+
+            // Đánh dấu là đã đọc
+            $notificationRead = \App\Models\NotificationRead::firstOrNew([
+                'notification_id' => $notification->id,
+                'user_id' => $currentUserId,
+            ]);
+            
+            if (!$notificationRead->is_read) {
+                $notificationRead->is_read = true;
+                $notificationRead->save();
+            }
+
+            $notification->is_read = true;
+
+            return view('admin.notifications.show', compact('notification'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.notifications')->with('error', 'Không tìm thấy thông báo.');
         }
     }
 
@@ -3086,11 +3128,45 @@ class AdminController extends Controller
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
-        $req = \App\Models\ClubJoinRequest::findOrFail($id);
+        $req = \App\Models\ClubJoinRequest::with('club')->findOrFail($id);
         if ($req->isApproved()) {
             return back()->with('info', 'Đơn này đã được duyệt trước đó.');
         }
-        $req->approve(session('user_id') ?? 1);
+        
+        $adminId = session('user_id') ?? 1;
+        
+        // Lưu thông tin trước khi approve
+        $userId = $req->user_id;
+        $clubId = $req->club_id;
+        
+        $req->approve($adminId);
+        
+        // Load lại relationships sau khi approve
+        $req->load(['club', 'user']);
+        
+        // Gửi thông báo cho người dùng về việc đơn được duyệt
+        try {
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $adminId,
+                'title' => 'Đơn tham gia CLB đã được duyệt',
+                'message' => "Đơn tham gia CLB \"{$req->club->name}\" của bạn đã được duyệt. Chúc mừng bạn đã trở thành thành viên của CLB!",
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $userId,
+            ]);
+            
+            \App\Models\NotificationRead::create([
+                'notification_id' => $notification->id,
+                'user_id' => $userId,
+                'is_read' => false,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for approved join request: ' . $e->getMessage());
+        }
+        
         return back()->with('success', 'Đã duyệt đơn tham gia.');
     }
 
@@ -3112,35 +3188,56 @@ class AdminController extends Controller
             return back()->with('info', 'Đơn này đã bị từ chối trước đó.');
         }
         
+        $adminId = session('user_id') ?? 1;
         $rejectionReason = $request->input('rejection_reason');
-        $req->reject(session('user_id') ?? 1, $rejectionReason);
         
-        // Tạo thông báo cho user
-        $notification = \App\Models\Notification::create([
-            'sender_id' => session('user_id') ?? 1,
-            'type' => 'club_rejection',
-            'related_id' => $req->id,
-            'related_type' => 'ClubJoinRequest',
-            'title' => 'Đơn tham gia CLB đã bị từ chối',
-            'message' => 'Đơn tham gia CLB "' . ($req->club->name ?? 'CLB') . '" của bạn đã bị từ chối. ' . ($rejectionReason ? 'Lý do: ' . $rejectionReason : ''),
-        ]);
-
-        // Gửi thông báo đến user
-        \App\Models\NotificationTarget::create([
-            'notification_id' => $notification->id,
-            'target_type' => 'user',
-            'target_id' => $req->user_id,
-        ]);
+        // Lưu thông tin trước khi reject
+        $userId = $req->user_id;
+        $clubId = $req->club_id;
+        
+        $req->reject($adminId, $rejectionReason);
+        
+        // Load lại relationships sau khi reject
+        $req->load(['club', 'user']);
+        
+        // Gửi thông báo cho người dùng về việc đơn bị từ chối
+        try {
+            $message = "Rất tiếc, đơn tham gia CLB \"{$req->club->name}\" của bạn đã bị từ chối.";
+            if ($rejectionReason) {
+                $message .= " Lý do: {$rejectionReason}";
+            } else {
+                $message .= " Vui lòng liên hệ với ban quản trị để biết thêm chi tiết.";
+            }
+            
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $adminId,
+                'title' => 'Đơn tham gia CLB đã bị từ chối',
+                'message' => $message,
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $userId,
+            ]);
+            
+            \App\Models\NotificationRead::create([
+                'notification_id' => $notification->id,
+                'user_id' => $userId,
+                'is_read' => false,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for rejected join request: ' . $e->getMessage());
+        }
         
         // Gửi email thông báo
         try {
             \Mail::to($req->user->email)->send(new \App\Mail\ClubJoinRequestRejected($req, $rejectionReason));
         } catch (\Exception $e) {
             \Log::error('Failed to send rejection email: ' . $e->getMessage());
-            // Vẫn tiếp tục dù gửi email thất bại
         }
         
-        return back()->with('success', 'Đã từ chối đơn tham gia và gửi thông báo qua email.');
+        return back()->with('success', 'Đã từ chối đơn tham gia và gửi thông báo.');
     }
 
     /**
@@ -3163,13 +3260,73 @@ class AdminController extends Controller
         $reviewer = session('user_id') ?? 1;
 
         $count = 0;
-        foreach (\App\Models\ClubJoinRequest::whereIn('id', $ids)->get() as $req) {
+        foreach (\App\Models\ClubJoinRequest::with(['club', 'user'])->whereIn('id', $ids)->get() as $req) {
             if ($action === 'approve' && !$req->isApproved()) {
+                // Lưu thông tin trước khi approve
+                $userId = $req->user_id;
+                
                 $req->approve($reviewer);
+                
+                // Load lại relationships sau khi approve
+                $req->load(['club', 'user']);
+                
+                // Gửi thông báo cho người dùng về việc đơn được duyệt
+                try {
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $reviewer,
+                        'title' => 'Đơn tham gia CLB đã được duyệt',
+                        'message' => "Đơn tham gia CLB \"{$req->club->name}\" của bạn đã được duyệt. Chúc mừng bạn đã trở thành thành viên của CLB!",
+                    ]);
+                    
+                    \App\Models\NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $userId,
+                    ]);
+                    
+                    \App\Models\NotificationRead::create([
+                        'notification_id' => $notification->id,
+                        'user_id' => $userId,
+                        'is_read' => false,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Error creating notification for approved join request (bulk): ' . $e->getMessage());
+                }
+                
                 $count++;
             }
             if ($action === 'reject' && !$req->isRejected()) {
+                // Lưu thông tin trước khi reject
+                $userId = $req->user_id;
+                
                 $req->reject($reviewer);
+                
+                // Load lại relationships sau khi reject
+                $req->load(['club', 'user']);
+                
+                // Gửi thông báo cho người dùng về việc đơn bị từ chối
+                try {
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $reviewer,
+                        'title' => 'Đơn tham gia CLB đã bị từ chối',
+                        'message' => "Rất tiếc, đơn tham gia CLB \"{$req->club->name}\" của bạn đã bị từ chối. Vui lòng liên hệ với ban quản trị để biết thêm chi tiết.",
+                    ]);
+                    
+                    \App\Models\NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $userId,
+                    ]);
+                    
+                    \App\Models\NotificationRead::create([
+                        'notification_id' => $notification->id,
+                        'user_id' => $userId,
+                        'is_read' => false,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Error creating notification for rejected join request (bulk): ' . $e->getMessage());
+                }
+                
                 $count++;
             }
         }
@@ -3471,7 +3628,14 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10, ['*'], 'members_page');
 
-        return view('admin.clubs.show', compact('club', 'statusColors', 'statusLabels', 'addableUsers', 'approvedMembers'));
+        // Lấy danh sách yêu cầu tham gia CLB đang chờ duyệt
+        $pendingJoinRequests = \App\Models\ClubJoinRequest::where('club_id', $club->id)
+            ->where('status', 'pending')
+            ->with(['user:id,name,email,avatar', 'club:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('admin.clubs.show', compact('club', 'statusColors', 'statusLabels', 'addableUsers', 'approvedMembers', 'pendingJoinRequests'));
     }
 
     /**
