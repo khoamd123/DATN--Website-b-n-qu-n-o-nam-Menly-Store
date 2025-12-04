@@ -64,4 +64,12 @@ class Notification extends Model
             $this->update(['read_at' => now()]);
         }
     }
+
+    /**
+     * Get the notification reads
+     */
+    public function reads()
+    {
+        return $this->hasMany(NotificationRead::class);
+    }
 }

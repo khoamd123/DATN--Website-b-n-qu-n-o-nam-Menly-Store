@@ -41,22 +41,15 @@ class HomeController extends Controller
             ->limit(4)
             ->get();
 
-        // All events (sorted by start_time, newest first)
+        // Upcoming events
         $upcomingEvents = Event::with('club')
-            ->orderBy('start_time', 'desc')
+            ->where('start_time', '>=', now())
+            ->orderBy('start_time')
             ->limit(6)
             ->get();
 
-        // Latest public posts (chỉ lấy bài viết, không lấy thông báo) với comments
-        $recentPosts = Post::with(['club', 'user', 'attachments', 'comments' => function($query) {
-                $query->whereNull('deleted_at')
-                    ->orderBy('created_at', 'desc')
-                    ->limit(1)
-                    ->with('user');
-            }])
-            ->withCount(['comments' => function($query) {
-                $query->whereNull('deleted_at');
-            }])
+        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
+        $recentPosts = Post::with(['club', 'user'])
             ->where('status', 'published')
             ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderByDesc('created_at')
@@ -104,21 +97,8 @@ class HomeController extends Controller
         $isLoggedIn = session('user_id');
         $viewName = $isLoggedIn ? 'home.index_student' : 'home.index';
         $user = null;
-        $latestAnnouncement = null;
-        
         if ($isLoggedIn) {
             $user = User::with('clubs')->find(session('user_id'));
-            
-            // Lấy thông báo mới nhất từ các CLB mà user tham gia
-            if ($user && $user->clubs->count() > 0) {
-                $userClubIds = $user->clubs->pluck('id')->toArray();
-                $latestAnnouncement = Post::with(['club', 'user'])
-                    ->where('type', 'announcement')
-                    ->where('status', '!=', 'deleted')
-                    ->whereIn('club_id', $userClubIds)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-            }
         }
 
         return view($viewName, [
@@ -132,7 +112,6 @@ class HomeController extends Controller
             'fieldId' => $fieldId,
             'sort' => $sort,
             'user' => $user,
-            'latestAnnouncement' => $latestAnnouncement,
         ]);
     }
 }

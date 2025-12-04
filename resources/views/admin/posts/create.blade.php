@@ -60,13 +60,13 @@
                                 <div class="mb-3">
                                     <small class="text-muted">
                                         Liên kết tĩnh: <span class="me-1">{{ url('posts') }}/</span>
-                                        <span id="slug-preview" class="fw-semibold">{{ Str::slug(old('title', 'viet-tieu-de-tai-day')) }}</span>
+                                        <span id="slug-preview" class="fw-semibold">{{ \Illuminate\Support\Str::slug(old('title', 'viet-tieu-de-tai-day')) }}</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="edit-slug-btn">Chỉnh sửa</button>
                                     </small>
                                     <div id="slug-edit-row" class="mt-2" style="display:none;">
                                         <div class="input-group input-group-sm" style="max-width: 420px;">
                                             <span class="input-group-text">{{ url('posts') }}/</span>
-                                            <input type="text" class="form-control" name="slug" id="slug-input" value="{{ old('slug') ?? Str::slug(old('title')) }}">
+                                            <input type="text" class="form-control" name="slug" id="slug-input" value="{{ old('slug') ?? \Illuminate\Support\Str::slug(old('title')) }}">
                                             <button type="button" class="btn btn-primary" id="save-slug-btn">OK</button>
                                             <button type="button" class="btn btn-outline-secondary" id="cancel-slug-btn">Hủy</button>
                                         </div>
@@ -434,6 +434,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Bỏ toàn bộ logic xem trước/ quản lý danh sách ảnh được chọn
 
     async function uploadImageAndInsert(file) {
+        if (!window.editor) {
+            throw new Error('Editor chưa được khởi tạo');
+        }
         const formData = new FormData();
         formData.append('image', file);
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
@@ -442,16 +445,37 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: { 'X-CSRF-TOKEN': token },
             body: formData
         });
-        if (!res.ok) throw new Error('Upload failed');
-        const { url } = await res.json();
-        const imageHtml = `<figure class="image"><img src="${url}" alt="${file.name}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></figure>`;
-        window.editor.model.change(writer => {
-            const viewFragment = window.editor.data.processor.toView(imageHtml);
-            const modelFragment = window.editor.data.toModel(viewFragment);
-            const root = window.editor.model.document.getRoot();
-            const lastPosition = writer.createPositionAt(root, 'end');
-            window.editor.model.insertContent(modelFragment, lastPosition);
-        });
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error('Upload failed: ' + errorText);
+        }
+        const data = await res.json();
+        if (!data || !data.url) {
+            throw new Error('Không nhận được URL ảnh từ server');
+        }
+        const imageHtml = `<figure class="image"><img src="${data.url}" alt="${file.name || 'Image'}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></figure>`;
+        try {
+            // Sử dụng insertContent API của CKEditor 5
+            const currentData = window.editor.getData();
+            const newContent = currentData + (currentData ? '<p></p>' : '') + imageHtml;
+            window.editor.setData(newContent);
+            
+            // Scroll to bottom để hiển thị ảnh vừa chèn
+            setTimeout(() => {
+                const editorElement = window.editor.ui.getEditableElement();
+                if (editorElement) {
+                    editorElement.scrollTop = editorElement.scrollHeight;
+                }
+            }, 100);
+        } catch (e) {
+            console.error('Error inserting image:', e);
+            // Fallback: append to textarea directly
+            const textarea = document.getElementById('content');
+            if (textarea) {
+                textarea.value = (textarea.value || '') + imageHtml;
+            }
+            throw e;
+        }
     }
 
     window.addSingleImageToEditor = async function(index) {
@@ -464,7 +488,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Không thể tải ảnh lên. Vui lòng thử lại.');
             }
             window.selectedImages.splice(index, 1);
-            displaySelectedImages();
+            if (typeof displaySelectedImages === 'function') {
+                displaySelectedImages();
+            }
         }
     };
 
@@ -477,7 +503,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             showSuccessMessage(`Đã tải và chèn ${success}/${files.length} ảnh.`);
             window.selectedImages = [];
-            displaySelectedImages();
+            if (typeof displaySelectedImages === 'function') {
+                displaySelectedImages();
+            }
         }
     };
 

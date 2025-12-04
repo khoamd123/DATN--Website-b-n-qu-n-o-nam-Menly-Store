@@ -16,6 +16,18 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
+<<<<<<< HEAD
+            ['name' => 'Nguyen Van A', 'email' => 'nguyenvana@example.com', 'phone' => '0912345678', 'address' => 'Hà Nội', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => true,],
+            ['name' => 'Tran Thi B', 'email' => 'tranthib@example.com', 'phone' => '0923456789', 'address' => 'TP. Hồ Chí Minh', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Le Van C', 'email' => 'levanc@example.com', 'phone' => '0934567890', 'address' => 'Đà Nẵng', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Pham Thi D', 'email' => 'phamthid@example.com', 'phone' => '0945678901', 'address' => 'Hải Phòng', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Hoang Van E', 'email' => 'hoangvane@example.com', 'phone' => '0956789012', 'address' => 'Cần Thơ', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Nguyen Thi F', 'email' => 'nguyenthif@example.com', 'phone' => '0967890123', 'address' => 'Huế', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Tran Van G', 'email' => 'tranvang@example.com', 'phone' => '0978901234', 'address' => 'Quảng Ninh', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Le Thi H', 'email' => 'lethih@example.com', 'phone' => '0989012345', 'address' => 'Bình Dương', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Pham Van I', 'email' => 'phamvani@example.com', 'phone' => '0990123456', 'address' => 'Nha Trang', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+            ['name' => 'Do Thi J', 'email' => 'dothij@example.com', 'phone' => '0901234567', 'address' => 'Hải Dương', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false,],
+=======
             ['name' => 'Nguyen Van A', 'email' => 'admin@university.edu.vn', 'phone' => '0912345678', 'address' => 'Hà Nội', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => true, 'role' => 'admin', 'student_id' => '2024001'],
             ['name' => 'Tran Thi B', 'email' => 'tranthib@university.edu.vn', 'phone' => '0923456789', 'address' => 'TP. Hồ Chí Minh', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false, 'role' => 'club_manager', 'student_id' => '2024002'],
             ['name' => 'Le Van C', 'email' => 'levanc@university.edu.vn', 'phone' => '0934567890', 'address' => 'Đà Nẵng', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false, 'role' => 'executive_board', 'student_id' => '2024003'],
@@ -26,6 +38,7 @@ class UserSeeder extends Seeder
             ['name' => 'Le Thi H', 'email' => 'lethih@university.edu.vn', 'phone' => '0989012345', 'address' => 'Bình Dương', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false, 'role' => 'user', 'student_id' => '2024008'],
             ['name' => 'Pham Van I', 'email' => 'phamvani@university.edu.vn', 'phone' => '0990123456', 'address' => 'Nha Trang', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false, 'role' => 'user', 'student_id' => '2024009'],
             ['name' => 'Do Thi J', 'email' => 'dothij@university.edu.vn', 'phone' => '0901234567', 'address' => 'Hải Dương', 'avatar' => 'images/avatar/avatar.png', 'is_admin' => false, 'role' => 'user', 'student_id' => '2024010'],
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
         ];
         foreach ($users as $user) {
             User::create([
@@ -35,8 +48,11 @@ class UserSeeder extends Seeder
                 'address' => $user['address'],
                 'avatar' => $user['avatar'],
                 'is_admin' => $user['is_admin'],
-                'role' => $user['role'] ?? null,
-                'student_id' => $user['student_id'] ?? null,
+<<<<<<< HEAD
+=======
+                'role' => $user['role'],
+                'student_id' => $user['student_id'],
+>>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
                 'remember_token' => Str::random(10),

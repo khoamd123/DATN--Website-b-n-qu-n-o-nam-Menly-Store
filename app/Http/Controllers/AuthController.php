@@ -31,7 +31,14 @@ class AuthController extends Controller
             $credentials = $request->only('email', 'password');
 
             // Tìm user bằng email
-            $user = User::where('email', $credentials['email'])->first();
+            try {
+                $user = User::where('email', $credentials['email'])->first();
+            } catch (\Illuminate\Database\QueryException $e) {
+                \Log::error('Database connection error in login: ' . $e->getMessage());
+                return back()->withErrors([
+                    'email' => 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra MySQL server đã chạy chưa và thử lại sau.',
+                ])->onlyInput('email');
+            }
             
             if (!$user) {
                 return back()->withErrors([
@@ -48,10 +55,15 @@ class AuthController extends Controller
             
             // Lấy club roles của user
             $clubRoles = [];
-            $clubMemberships = $user->clubMembers()->where('status', 'active')->get();
-            
-            foreach ($clubMemberships as $membership) {
-                $clubRoles[$membership->club_id] = $membership->position;
+            try {
+                $clubMemberships = $user->clubMembers()->where('status', 'active')->get();
+                foreach ($clubMemberships as $membership) {
+                    $clubRoles[$membership->club_id] = $membership->position;
+                }
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Nếu không lấy được club members, để mảng rỗng
+                \Log::warning('Could not fetch club members in login: ' . $e->getMessage());
+                $clubRoles = [];
             }
 
             // Đăng nhập thành công - lưu thông tin user vào session (giống SimpleLoginController)
@@ -108,50 +120,68 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        // Kiểm tra email trường trước
-        if (!User::isUniversityEmail($request->email)) {
+        try {
+            // Kiểm tra email trường trước
+            if (!User::isUniversityEmail($request->email)) {
+                return back()->withErrors([
+                    'email' => 'Chỉ cho phép đăng ký bằng email trường (.edu.vn)',
+                ])->withInput();
+            }
+
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:6|confirmed',
+                'phone' => 'nullable|string|max:20',
+                'address' => 'nullable|string',
+            ]);
+
+            // Tự động tạo student_id và name từ email trường
+            $studentId = User::generateStudentIdFromEmail($request->email);
+            $autoName = User::extractNameFromEmail($request->email);
+
+            $user = User::create([
+                'name' => $request->name ?: $autoName, // Ưu tiên tên người dùng nhập, nếu không có thì dùng tên tự động
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'student_id' => $studentId,
+                'is_admin' => false,
+                'role' => 'user',
+            ]);
+
+            // Lấy club roles của user (mới đăng ký nên sẽ rỗng)
+            $clubRoles = [];
+
+            // Lưu thông tin đăng nhập vào session (giống như login)
+            session([
+                'logged_in' => true,
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'student_id' => $user->student_id,
+                'is_admin' => $user->is_admin,
+                'club_roles' => $clubRoles
+            ]);
+
+            return redirect()->intended(route('home', [], false))->with('success', 'Đăng ký thành công! Chào mừng bạn đến với UniClubs.');
+            
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Xử lý lỗi kết nối database
+            \Log::error('Database connection error in register: ' . $e->getMessage());
             return back()->withErrors([
-                'email' => 'Chỉ cho phép đăng ký bằng email trường (.edu.vn)',
+                'email' => 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra MySQL server đã chạy chưa và thử lại sau.',
+            ])->withInput();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Re-throw validation exceptions để Laravel xử lý
+            throw $e;
+        } catch (\Exception $e) {
+            // Xử lý các lỗi khác
+            \Log::error('Error in register: ' . $e->getMessage());
+            return back()->withErrors([
+                'email' => 'Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.',
             ])->withInput();
         }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string',
-        ]);
-
-        // Tự động tạo student_id và name từ email trường
-        $studentId = User::generateStudentIdFromEmail($request->email);
-        $autoName = User::extractNameFromEmail($request->email);
-
-        $user = User::create([
-            'name' => $request->name ?: $autoName, // Ưu tiên tên người dùng nhập, nếu không có thì dùng tên tự động
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'student_id' => $studentId,
-            'is_admin' => false,
-            'role' => 'user',
-        ]);
-
-        // Lấy club roles của user (mới đăng ký nên sẽ rỗng)
-        $clubRoles = [];
-
-        // Lưu thông tin đăng nhập vào session (giống như login)
-        session([
-            'logged_in' => true,
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'user_email' => $user->email,
-            'student_id' => $user->student_id,
-            'is_admin' => $user->is_admin,
-            'club_roles' => $clubRoles
-        ]);
-
-        return redirect()->intended(route('home', [], false))->with('success', 'Đăng ký thành công! Chào mừng bạn đến với UniClubs.');
     }
 }
