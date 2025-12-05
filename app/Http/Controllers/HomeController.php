@@ -41,19 +41,48 @@ class HomeController extends Controller
             ->limit(4)
             ->get();
 
-        // Upcoming events
+        // Upcoming events (excluding today's events)
         $upcomingEvents = Event::with('club')
-            ->where('start_time', '>=', now())
+            ->where('start_time', '>', now()->endOfDay())
             ->orderBy('start_time')
             ->limit(6)
             ->get();
 
         // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
         $recentPosts = Post::with(['club', 'user'])
+            ->withCount('comments')
             ->where('status', 'published')
             ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderByDesc('created_at')
             ->limit(6)
+            ->get();
+
+        // Latest clubs (mới nhất)
+        $newestClubs = Club::with(['field'])
+            ->withCount([
+                'clubMembers as active_members_count' => function ($query) {
+                    $query->whereIn('status', ['approved', 'active']);
+                },
+            ])
+            ->where('status', 'active')
+            ->orderByDesc('created_at')
+            ->limit(4)
+            ->get();
+
+        // Important announcements (thông báo quan trọng)
+        $importantAnnouncements = Post::with(['club', 'user'])
+            ->where('status', 'published')
+            ->where('type', 'announcement')
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get();
+
+        // Events happening today
+        $todayEvents = Event::with('club')
+            ->whereDate('start_time', today())
+            ->where('start_time', '<=', now()->endOfDay())
+            ->orderBy('start_time')
+            ->limit(3)
             ->get();
 
         $fields = Field::orderBy('name')->get();
@@ -95,17 +124,23 @@ class HomeController extends Controller
         $clubs = $clubsQuery->paginate(8)->withQueryString();
 
         $isLoggedIn = session('user_id');
-        $viewName = $isLoggedIn ? 'home.index_student' : 'home.index';
-        $user = null;
-        if ($isLoggedIn) {
-            $user = User::with('clubs')->find(session('user_id'));
+        
+        // Nếu chưa đăng nhập, redirect về trang đăng nhập
+        if (!$isLoggedIn) {
+            return redirect()->route('simple.login');
         }
+        
+        // Nếu đã đăng nhập, hiển thị trang student
+        $user = User::with('clubs')->find(session('user_id'));
 
-        return view($viewName, [
+        return view('home.index_student', [
             'stats' => $stats,
             'featuredClubs' => $featuredClubs,
+            'newestClubs' => $newestClubs,
             'upcomingEvents' => $upcomingEvents,
+            'todayEvents' => $todayEvents,
             'recentPosts' => $recentPosts,
+            'importantAnnouncements' => $importantAnnouncements,
             'fields' => $fields,
             'clubs' => $clubs,
             'search' => $search,

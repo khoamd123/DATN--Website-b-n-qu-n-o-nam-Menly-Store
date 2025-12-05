@@ -7,7 +7,7 @@
 
 @section('content')
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-12">
         <!-- Club Header/Overview -->
         <div class="content-card mb-4">
             <div class="d-flex align-items-center mb-3">
@@ -281,11 +281,6 @@
                             <h5 class="card-title mb-0">
                                 <i class="fas fa-newspaper text-teal me-2"></i> Bài viết
                             </h5>
-                            @if($isMember)
-                            <a href="{{ route('student.posts.create') }}?club_id={{ $club->id }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus me-1"></i> Tạo chủ đề mới
-                            </a>
-                            @endif
                         </div>
                         
                         @if(isset($posts) && $posts->count() > 0)
@@ -341,12 +336,7 @@
                         <div class="text-center py-5">
                             <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted mb-2">Chưa có bài viết nào</h5>
-                            <p class="text-muted mb-4">Hãy tạo bài viết đầu tiên của CLB!</p>
-                            @if($isMember)
-                            <a href="{{ route('student.posts.create') }}?club_id={{ $club->id }}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i> Tạo chủ đề mới
-                            </a>
-                            @endif
+                            <p class="text-muted">CLB này chưa có bài viết nào được đăng.</p>
                         </div>
                         @endif
                     </div>
@@ -363,63 +353,7 @@
         </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="sidebar">
-            <h5 class="sidebar-title">
-                <i class="fas fa-info-circle"></i> Thông tin CLB
-            </h5>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-crown"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Trưởng CLB</div>
-                    <small class="text-muted">{{ $club->leader->name ?? 'Chưa có' }}</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-envelope"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Email liên hệ</div>
-                    <small class="text-muted">{{ $club->contact_email ?? 'Chưa cập nhật' }}</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar-plus"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Ngày thành lập</div>
-                    <small class="text-muted">{{ $club->established_at ? $club->established_at->format('d/m/Y') : 'Chưa cập nhật' }}</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar mt-4">
-            <h5 class="sidebar-title">
-                <i class="fas fa-link"></i> Liên kết nhanh
-            </h5>
-            @if($isMember)
-                <div class="list-group list-group-flush">
-                    <a href="#events" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calendar-alt me-2 text-teal"></i> Lịch sự kiện
-                    </a>
-                    <a href="#announcements" class="list-group-item list-group-item-action">
-                        <i class="fas fa-bullhorn me-2 text-teal"></i> Thông báo
-                    </a>
-                    <a href="#forum" class="list-group-item list-group-item-action">
-                        <i class="fas fa-newspaper me-2 text-teal"></i> Bài viết
-                    </a>
-                    <a href="{{ route('student.club-management.reports') }}?club={{ $club->id }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-bar me-2 text-teal"></i> Báo cáo
-                    </a>
-                </div>
-            @endif
-        </div>
-    </div>
+    <!-- Sidebar removed -->
 </div>
 
 <!-- Leave Club Confirmation Modal -->

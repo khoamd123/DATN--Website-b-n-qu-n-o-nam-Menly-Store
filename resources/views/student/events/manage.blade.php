@@ -19,7 +19,7 @@
                     <a href="{{ route('student.club-management.index') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i> Quay lại
                     </a>
-                    <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ route('student.events.create', $clubId ? ['club' => $clubId] : []) }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i> Tạo sự kiện mới
                     </a>
                 </div>
@@ -39,184 +39,62 @@
                 </div>
             @endif
 
-            <!-- Statistics -->
-            <div class="row mb-4">
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-primary mb-0">{{ $stats['total'] }}</h3>
-                            <small class="text-muted">Tổng cộng</small>
-                        </div>
-                    </div>
+            <!-- Bộ lọc -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Bộ lọc</h6>
                 </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-warning mb-0">{{ $stats['pending'] }}</h3>
-                            <small class="text-muted">Chờ duyệt</small>
+                <div class="card-body">
+                    <form method="GET" action="{{ route('student.events.manage') }}" class="row g-3">
+                        @if(request('club'))
+                            <input type="hidden" name="club" value="{{ request('club') }}">
+                        @endif
+                        <div class="col-md-6">
+                            <label for="search" class="form-label small">Tìm kiếm</label>
+                            <input type="text" class="form-control form-control-sm" id="search" name="search" value="{{ request('search') }}" placeholder="Tìm theo tên sự kiện...">
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-success mb-0">{{ $stats['approved'] }}</h3>
-                            <small class="text-muted">Đã duyệt</small>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label small">Trạng thái</label>
+                            <select class="form-select form-select-sm" id="status" name="status">
+                                <option value="all" {{ request('status') == 'all' || !request('status') ? 'selected' : '' }}>Tất cả</option>
+                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
+                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
+                                <option value="ongoing" {{ request('status') == 'ongoing' ? 'selected' : '' }}>Đang diễn ra</option>
+                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Đã hoàn thành</option>
+                                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                            </select>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-info mb-0">{{ $stats['ongoing'] }}</h3>
-                            <small class="text-muted">Đang diễn ra</small>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                <i class="fas fa-search me-1"></i> Lọc
+                            </button>
+                            <a href="{{ route('student.events.manage', request('club') ? ['club' => request('club')] : []) }}" class="btn btn-outline-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                <i class="fas fa-redo me-1"></i> Reset
+                            </a>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-primary mb-0">{{ $stats['completed'] }}</h3>
-                            <small class="text-muted">Đã hoàn thành</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-danger mb-0">{{ $stats['cancelled'] }}</h3>
-                            <small class="text-muted">Đã hủy</small>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <ul class="nav nav-tabs mb-4" id="eventTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
-                        Tất cả ({{ $stats['total'] }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
-                        Chờ duyệt ({{ $stats['pending'] }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
-                        Đã duyệt ({{ $stats['approved'] }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="ongoing-tab" data-bs-toggle="tab" data-bs-target="#ongoing" type="button" role="tab">
-                        Đang diễn ra ({{ $stats['ongoing'] }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
-                        Đã hoàn thành ({{ $stats['completed'] }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">
-                        Đã hủy ({{ $stats['cancelled'] }})
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content -->
-            <div class="tab-content" id="eventTabsContent">
-                <!-- All Events -->
-                <div class="tab-pane fade show active" id="all" role="tabpanel">
-                    <div class="row">
-                        @forelse($allEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Chưa có sự kiện nào
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
+            <!-- Danh sách sự kiện -->
+            @if($events->count() === 0)
+                <div class="text-center py-5">
+                    <i class="far fa-calendar fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-2">CLB này chưa có sự kiện nào.</p>
+                    <a href="{{ route('student.events.create', $clubId ? ['club' => $clubId] : []) }}" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i> Tạo sự kiện</a>
                 </div>
-
-                <!-- Pending Events -->
-                <div class="tab-pane fade" id="pending" role="tabpanel">
-                    <div class="row">
-                        @forelse($pendingEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Không có sự kiện nào đang chờ duyệt
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
+            @else
+                <div class="row">
+                    @foreach($events as $event)
+                        @include('student.events._event_card', ['event' => $event])
+                    @endforeach
                 </div>
-
-                <!-- Approved Events -->
-                <div class="tab-pane fade" id="approved" role="tabpanel">
-                    <div class="row">
-                        @forelse($approvedEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Không có sự kiện nào đã được duyệt
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
+                
+                <!-- Phân trang -->
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $events->links() }}
                 </div>
-
-                <!-- Ongoing Events -->
-                <div class="tab-pane fade" id="ongoing" role="tabpanel">
-                    <div class="row">
-                        @forelse($ongoingEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Không có sự kiện nào đang diễn ra
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- Completed Events -->
-                <div class="tab-pane fade" id="completed" role="tabpanel">
-                    <div class="row">
-                        @forelse($completedEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Không có sự kiện nào đã hoàn thành
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- Cancelled Events -->
-                <div class="tab-pane fade" id="cancelled" role="tabpanel">
-                    <div class="row">
-                        @forelse($cancelledEvents as $event)
-                            @include('student.events._event_card', ['event' => $event])
-                        @empty
-                            <div class="col-12">
-                                <div class="alert alert-info text-center">
-                                    <i class="fas fa-info-circle me-2"></i>Không có sự kiện nào đã bị hủy
-                                </div>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 </div>

@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\ClubResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -431,13 +434,10 @@ Route::prefix('admin')->group(function () {
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
     Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
-<<<<<<< HEAD
     Route::post('/notifications/mark-all-read', [AdminController::class, 'markAllRead'])->name('admin.notifications.mark-all-read');
     Route::get('/notifications/test/create', [AdminController::class, 'testNotification'])->name('admin.notifications.test');
     Route::post('/notifications/{id}/mark-read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.mark-read');
     Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
-=======
->>>>>>> origin/huy
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
@@ -632,7 +632,7 @@ Route::get('/admin/events/{id}/restore-test', function($id) {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('club/{club}')->middleware('simple_auth')->group(function () {
+Route::prefix('club/{club}')->middleware(\App\Http\Middleware\SimpleAuth::class)->group(function () {
     // Quản lý thành viên (chỉ chủ CLB và ban cán sự)
     Route::middleware('club_role:owner,executive_board')->group(function () {
         

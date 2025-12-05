@@ -15,10 +15,19 @@
                     </h2>
                     <p class="text-muted mb-0">Cập nhật mới nhất từ UniClubs và câu lạc bộ</p>
                 </div>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary active">Tất cả</button>
-                    <button type="button" class="btn btn-outline-primary">Chưa đọc</button>
-                    <button type="button" class="btn btn-outline-primary">Đã đọc</button>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ route('student.notifications.index', ['filter' => 'all']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'all' ? 'active' : '' }}">
+                        Tất cả
+                    </a>
+                    <a href="{{ route('student.notifications.index', ['filter' => 'unread']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'unread' ? 'active' : '' }}">
+                        Chưa đọc
+                    </a>
+                    <a href="{{ route('student.notifications.index', ['filter' => 'read']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'read' ? 'active' : '' }}">
+                        Đã đọc
+                    </a>
                 </div>
             </div>
         </div>
@@ -60,7 +69,7 @@
                         </p>
                         <div class="notification-actions">
                             @if(!$notification->is_read)
-                                <form action="{{ route('student.notifications.mark-read', $notification->id) }}" method="POST" class="d-inline">
+                                <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
                                 </form>
@@ -94,21 +103,26 @@
                 <i class="fas fa-filter"></i> Lọc thông báo
             </h5>
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ route('student.notifications.index', ['category' => 'system']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'system' ? 'active' : '' }}">
                     <i class="fas fa-info-circle me-2 text-primary"></i> Thông báo hệ thống
-                    <span class="badge bg-primary rounded-pill ms-auto">1</span>
+                    @if(isset($stats['system']) && $stats['system'] > 0)
+                        <span class="badge bg-primary rounded-pill ms-auto">{{ $stats['system'] }}</span>
+                    @endif
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-calendar me-2 text-success"></i> Sự kiện
-                    <span class="badge bg-success rounded-pill ms-auto">2</span>
+                <a href="{{ route('student.notifications.index', ['category' => 'announcements']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'announcements' ? 'active' : '' }}">
+                    <i class="fas fa-bullhorn me-2 text-success"></i> Thông báo
+                    @if(isset($stats['announcements']) && $stats['announcements'] > 0)
+                        <span class="badge bg-success rounded-pill ms-auto">{{ $stats['announcements'] }}</span>
+                    @endif
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ route('student.notifications.index', ['category' => 'clubs']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'clubs' ? 'active' : '' }}">
                     <i class="fas fa-users me-2 text-info"></i> Câu lạc bộ
-                    <span class="badge bg-info rounded-pill ms-auto">1</span>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-trophy me-2 text-warning"></i> Giải thưởng
-                    <span class="badge bg-warning rounded-pill ms-auto">1</span>
+                    @if(isset($stats['clubs']) && $stats['clubs'] > 0)
+                        <span class="badge bg-info rounded-pill ms-auto">{{ $stats['clubs'] }}</span>
+                    @endif
                 </a>
             </div>
         </div>
@@ -150,6 +164,12 @@
 
 @push('styles')
 <style>
+    /* Filter buttons - smaller size */
+    .btn-group[role="group"] .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
     .notification-item {
         display: flex;
         padding: 1.5rem;

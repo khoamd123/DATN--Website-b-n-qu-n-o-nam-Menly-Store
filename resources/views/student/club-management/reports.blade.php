@@ -13,7 +13,7 @@
                 </h2>
                 <p class="text-muted mb-0">Phân tích hoạt động của CLB: <strong>{{ $club->name }}</strong></p>
             </div>
-            @if($isLeaderOrOfficer)
+            @if($isLeaderOrManager)
                 <a href="{{ route('student.club-management.index') }}" class="btn btn-outline-primary">
                     <i class="fas fa-arrow-left me-2"></i> Quay lại
                 </a>
@@ -216,6 +216,51 @@
                 <p class="text-muted">Chưa có khoản chi nào được ghi nhận.</p>
             </div>
         @endif
+    </div>
+    @endif
+
+    <!-- Resources Management Section -->
+    @php
+        $position = $user->getPositionInClub($club->id);
+        $canViewResources = $position !== null; // Tất cả thành viên đều có thể xem
+        $canManageResources = in_array($position, ['leader', 'vice_president']); // Chỉ leader và vice_president mới có thể quản lý
+    @endphp
+    @if($canViewResources)
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0"><i class="fas fa-folder-open text-teal me-2"></i> Tài nguyên CLB</h4>
+            <a href="{{ route('student.club-management.resources', ['club' => $club->id]) }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-arrow-right me-1"></i> Xem tài nguyên
+            </a>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="stat-card h-100">
+                    <div class="stat-icon bg-info"><i class="fas fa-folder"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ $stats['resources']['total'] ?? 0 }}</div>
+                        <div class="stat-label">Tổng tài nguyên</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="stat-card h-100">
+                    <div class="stat-icon bg-warning"><i class="fas fa-file"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ $stats['resources']['files'] ?? 0 }}</div>
+                        <div class="stat-label">Tổng file</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            @if($canManageResources)
+                Quản lý tài liệu, file và tài nguyên của CLB. Bạn có thể tạo, chỉnh sửa và xóa tài nguyên.
+            @else
+                Xem tài liệu, file và tài nguyên của CLB. Chỉ Trưởng CLB và Phó CLB mới có quyền tạo và chỉnh sửa tài nguyên.
+            @endif
+        </div>
     </div>
     @endif
 

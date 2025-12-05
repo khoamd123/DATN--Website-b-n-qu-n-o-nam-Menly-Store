@@ -26,7 +26,7 @@ use App\Http\Controllers\Admin\NotificationController;
 |
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['simple_auth', 'simple_admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware([\App\Http\Middleware\SimpleAuth::class, \App\Http\Middleware\SimpleAdmin::class])->group(function () {
     
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -115,9 +115,9 @@ Route::prefix('admin')->name('admin.')->middleware(['simple_auth', 'simple_admin
     // Club Resources
     Route::resource('club-resources', ClubResourceController::class);
     Route::get('/club-resources/trash', [ClubResourceController::class, 'trash'])->name('club-resources.trash');
-    Route::get('/club-resources/{clubResource}/download', [ClubResourceController::class, 'download'])->name('club-resources.download');
-    Route::post('/club-resources/{clubResource}/restore', [ClubResourceController::class, 'restore'])->name('club-resources.restore');
-    Route::delete('/club-resources/{clubResource}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('club-resources.force-delete');
+    Route::get('/club-resources/{id}/download', [ClubResourceController::class, 'download'])->name('club-resources.download');
+    Route::post('/club-resources/{id}/restore', [ClubResourceController::class, 'restore'])->name('club-resources.restore');
+    Route::delete('/club-resources/{id}/force-delete', [ClubResourceController::class, 'forceDelete'])->name('club-resources.force-delete');
     Route::post('/club-resources/restore-all', [ClubResourceController::class, 'restoreAll'])->name('club-resources.restore-all');
     Route::delete('/club-resources/force-delete-all', [ClubResourceController::class, 'forceDeleteAll'])->name('club-resources.force-delete-all');
     

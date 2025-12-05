@@ -19,7 +19,7 @@ Route::get('/register', [AuthController::class, 'showRegister'])->name('register
 Route::post('/register', [AuthController::class, 'register']);
 
 // Logout - requires authentication
-Route::middleware('simple_auth')->group(function () {
+Route::middleware(\App\Http\Middleware\SimpleAuth::class)->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 

@@ -111,7 +111,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is officer of a specific club (vice_president or treasurer)
+     * Check if user is officer/manager of a specific club (vice_president or treasurer)
      */
     public function isOfficerOf($clubId)
     {
@@ -188,10 +188,13 @@ class User extends Authenticatable
                 return true;
             }
             
-            // Vice President có hầu hết quyền
+            // Vice President có hầu hết quyền (trừ quan_ly_clb)
             if ($position === 'vice_president') {
                 $restrictedPermissions = ['quan_ly_clb'];
                 if (!in_array($permission, $restrictedPermissions)) {
+                    // Phó CLB có tất cả quyền trừ quan_ly_clb
+                    // Log để debug nếu cần
+                    \Log::debug("Vice President has permission: {$permission} for club {$clubId}");
                     return true;
                 }
             }

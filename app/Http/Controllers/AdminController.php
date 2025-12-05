@@ -692,7 +692,6 @@ class AdminController extends Controller
         }
 
         try {
-<<<<<<< HEAD
             $adminId = session('user_id');
             
             // Lấy thông báo dành cho admin này
@@ -742,6 +741,21 @@ class AdminController extends Controller
             }
             
             $notifications = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+            
+            // Thêm thuộc tính is_read cho mỗi notification
+            $notifications->getCollection()->transform(function($notification) use ($adminId) {
+                $read = \App\Models\NotificationRead::where('notification_id', $notification->id)
+                    ->where('user_id', $adminId)
+                    ->where('is_read', true)
+                    ->first();
+                $notification->is_read = $read ? true : false;
+                return $notification;
+            });
+            
+            // Clear session error "Không tìm thấy thông báo" nếu có thông báo
+            if ($notifications->count() > 0 && session('error') && str_contains(session('error'), 'Không tìm thấy thông báo')) {
+                session()->forget('error');
+            }
             
             // Lấy danh sách người gửi để filter
             $senderIds = \App\Models\Notification::whereHas('targets', function($q) use ($adminId) {
@@ -861,11 +875,23 @@ class AdminController extends Controller
         }
 
         try {
+            $adminId = session('user_id');
             $notification = \App\Models\Notification::with(['sender', 'related'])->findOrFail($id);
             
-            // Đánh dấu thông báo là đã đọc
+            // Đánh dấu thông báo là đã đọc trong NotificationRead
+            $notificationRead = \App\Models\NotificationRead::firstOrNew([
+                'notification_id' => $notification->id,
+                'user_id' => $adminId,
+            ]);
+            
+            if (!$notificationRead->is_read) {
+                $notificationRead->is_read = true;
+                $notificationRead->save();
+            }
+            
+            // Cũng cập nhật read_at trong notification nếu chưa có
             if (!$notification->read_at) {
-                $notification->markAsRead();
+                $notification->update(['read_at' => now()]);
             }
         } catch (\Exception $e) {
             return redirect()->route('admin.notifications')->with('error', 'Không tìm thấy thông báo.');
@@ -931,47 +957,6 @@ class AdminController extends Controller
             return redirect()->route('admin.notifications')->with('success', 'Đã đánh dấu tất cả thông báo là đã đọc.');
         } catch (\Exception $e) {
             return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra khi đánh dấu thông báo.');
-        }
-    }
-
-    /**
-     * Xem chi tiết thông báo
-     */
-    public function showNotification($id)
-    {
-        // Kiểm tra đăng nhập admin
-        if (!session('logged_in') || !session('is_admin')) {
-            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
-        }
-
-        try {
-            $currentUserId = session('user_id');
-            
-            $notification = \App\Models\Notification::whereHas('targets', function($query) use ($currentUserId) {
-                    $query->where('target_type', 'user')
-                          ->where('target_id', $currentUserId);
-                })
-                ->with(['sender', 'targets', 'reads' => function($query) use ($currentUserId) {
-                    $query->where('user_id', $currentUserId);
-                }])
-                ->findOrFail($id);
-
-            // Đánh dấu là đã đọc
-            $notificationRead = \App\Models\NotificationRead::firstOrNew([
-                'notification_id' => $notification->id,
-                'user_id' => $currentUserId,
-            ]);
-            
-            if (!$notificationRead->is_read) {
-                $notificationRead->is_read = true;
-                $notificationRead->save();
-            }
-
-            $notification->is_read = true;
-
-            return view('admin.notifications.show', compact('notification'));
-        } catch (\Exception $e) {
-            return redirect()->route('admin.notifications')->with('error', 'Không tìm thấy thông báo.');
         }
     }
 

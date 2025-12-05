@@ -15,9 +15,9 @@ class ClubResourceController extends Controller
         $this->oldController = new OldController();
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->oldController->index();
+        return $this->oldController->index($request);
     }
 
     public function create()
@@ -50,9 +50,9 @@ class ClubResourceController extends Controller
         return $this->oldController->destroy($id);
     }
 
-    public function trash()
+    public function trash(Request $request)
     {
-        return $this->oldController->trash();
+        return $this->oldController->trash($request);
     }
 
     public function download($id)
@@ -60,9 +60,9 @@ class ClubResourceController extends Controller
         return $this->oldController->download($id);
     }
 
-    public function restore(Request $request, $id)
+    public function restore($id)
     {
-        return $this->oldController->restore($request, $id);
+        return $this->oldController->restore($id);
     }
 
     public function forceDelete($id)
@@ -70,14 +70,14 @@ class ClubResourceController extends Controller
         return $this->oldController->forceDelete($id);
     }
 
-    public function restoreAll(Request $request)
+    public function restoreAll()
     {
-        return $this->oldController->restoreAll($request);
+        return $this->oldController->restoreAll();
     }
 
-    public function forceDeleteAll(Request $request)
+    public function forceDeleteAll()
     {
-        return $this->oldController->forceDeleteAll($request);
+        return $this->oldController->forceDeleteAll();
     }
 }
 

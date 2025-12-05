@@ -42,3 +42,4 @@ class EventRegistrationConfirmation extends Mailable
 
 
 
+

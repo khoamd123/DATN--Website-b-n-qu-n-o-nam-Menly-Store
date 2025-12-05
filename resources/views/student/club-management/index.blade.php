@@ -241,14 +241,9 @@
                                 <small>Sắp tới</small>
                             </span>
                         </div>
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i> Tạo mới
+                        <a href="{{ route('student.events.manage') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-arrow-right me-1"></i> Quản lý
                         </a>
-                            <a href="{{ route('student.events.manage') }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-list me-1"></i> Quản lý
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -307,7 +302,7 @@
             @endif
             @php
                 $position = $user->getPositionInClub($clubId);
-                $canViewFund = in_array($position, ['leader', 'vice_president', 'treasurer']);
+                $canViewFund = in_array($position, ['leader', 'treasurer']);
             @endphp
             @if($userClub && $clubId && $canViewFund && data_get($clubStats, 'fund.exists', false))
             <div class="col-md-6 mb-4">
@@ -321,36 +316,6 @@
                         <a href="{{ route('student.club-management.fund-transactions', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-wallet me-1"></i> Quản lý quỹ
                             </a>
-                    </div>
-                </div>
-            </div>
-            @endif
-            @php
-                $position = $user->getPositionInClub($clubId);
-                $canManageResources = in_array($position, ['leader', 'vice_president', 'treasurer']);
-            @endphp
-            @if($userClub && $clubId && $canManageResources)
-            <div class="col-md-6 mb-4">
-                <div class="management-card">
-                    <div class="management-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="management-content">
-                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
-                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
-                        <div class="management-stats">
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
-                                <small>Tài nguyên</small>
-                            </span>
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
-                                <small>File</small>
-                            </span>
-                        </div>
-                        <a href="{{ route('student.club-management.resources', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-arrow-right me-1"></i> Quản lý
-                        </a>
                     </div>
                 </div>
             </div>

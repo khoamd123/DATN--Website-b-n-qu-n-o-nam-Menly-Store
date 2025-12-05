@@ -17,7 +17,7 @@
                     <div class="d-flex gap-2">
                         @php
                             $position = $user->getPositionInClub($clubId);
-                            $canEdit = in_array($position, ['leader', 'vice_president', 'treasurer']);
+                            $canEdit = in_array($position, ['leader', 'vice_president']);
                         @endphp
                         @if($canEdit)
                             <a href="{{ route('student.club-management.resources.edit', ['club' => $clubId, 'resource' => $resource->id]) }}" class="btn btn-warning btn-sm">

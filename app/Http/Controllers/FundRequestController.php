@@ -117,7 +117,27 @@ class FundRequestController extends Controller
         }
 
         try {
-            FundRequest::create($data);
+            $fundRequest = FundRequest::create($data);
+            
+            // Tạo thông báo cho admin
+            $admins = \App\Models\User::where('is_admin', true)->get();
+            foreach ($admins as $admin) {
+                $notification = \App\Models\Notification::create([
+                    'sender_id' => $userId,
+                    'type' => 'fund_request',
+                    'title' => 'Yêu cầu cấp kinh phí mới',
+                    'message' => "Có yêu cầu cấp kinh phí mới: \"{$fundRequest->title}\" từ CLB " . ($fundRequest->club->name ?? '') . ". Số tiền: " . number_format($fundRequest->requested_amount, 0, ',', '.') . " VNĐ.",
+                    'related_id' => $fundRequest->id,
+                    'related_type' => 'FundRequest',
+                ]);
+                
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $admin->id,
+                ]);
+            }
+            
             return redirect()->route('admin.fund-requests')
                 ->with('success', 'Yêu cầu cấp kinh phí đã được tạo thành công!');
         } catch (\Exception $e) {
@@ -215,6 +235,26 @@ class FundRequestController extends Controller
             $request->approval_notes
         );
 
+        // Tạo thông báo cho người tạo yêu cầu
+        try {
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $userId,
+                'type' => 'fund_request',
+                'title' => 'Yêu cầu cấp kinh phí đã được duyệt',
+                'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" của bạn đã được duyệt. Số tiền được duyệt: " . number_format($request->approved_amount, 0, ',', '.') . " VNĐ." . ($request->approval_notes ? " Ghi chú: {$request->approval_notes}" : ''),
+                'related_id' => $fundRequest->id,
+                'related_type' => 'FundRequest',
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $fundRequest->created_by,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error creating notification for approved fund request: ' . $e->getMessage());
+        }
+
         // Tự động tạo giao dịch thu tiền vào quỹ của CLB
         if ($fundRequest->club_id && $request->approved_amount > 0) {
             try {
@@ -284,6 +324,26 @@ class FundRequestController extends Controller
         }
         
         $fundRequest->reject($userId, $request->rejection_reason);
+
+        // Tạo thông báo cho người tạo yêu cầu
+        try {
+            $notification = \App\Models\Notification::create([
+                'sender_id' => $userId,
+                'type' => 'fund_request',
+                'title' => 'Yêu cầu cấp kinh phí đã bị từ chối',
+                'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" của bạn đã bị từ chối. Lý do: {$request->rejection_reason}",
+                'related_id' => $fundRequest->id,
+                'related_type' => 'FundRequest',
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $fundRequest->created_by,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error creating notification for rejected fund request: ' . $e->getMessage());
+        }
 
         return redirect()->route('admin.fund-requests.show', $fundRequest->id)
             ->with('success', 'Yêu cầu cấp kinh phí đã bị từ chối!');
@@ -421,6 +481,27 @@ class FundRequestController extends Controller
                     }
                 }
                 
+                // Tạo thông báo cho người tạo yêu cầu
+                try {
+                    $statusText = $status === 'approved' ? 'đã được duyệt' : 'đã được duyệt một phần';
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $userId,
+                        'type' => 'fund_request',
+                        'title' => "Yêu cầu cấp kinh phí {$statusText}",
+                        'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" của bạn {$statusText}. Số tiền được duyệt: " . number_format($approvedAmount, 0, ',', '.') . " VNĐ." . ($request->approval_notes ? " Ghi chú: {$request->approval_notes}" : ''),
+                        'related_id' => $fundRequest->id,
+                        'related_type' => 'FundRequest',
+                    ]);
+                    
+                    \App\Models\NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $fundRequest->created_by,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error creating notification for batch approved fund request: ' . $e->getMessage());
+                }
+                
                 $approvedCount++;
             } else {
                 // Từ chối
@@ -439,6 +520,27 @@ class FundRequestController extends Controller
                     'approved_by' => $userId,
                     'approved_at' => now()
                 ]);
+                
+                // Tạo thông báo cho người tạo yêu cầu
+                try {
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $userId,
+                        'type' => 'fund_request',
+                        'title' => 'Yêu cầu cấp kinh phí đã bị từ chối',
+                        'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" của bạn đã bị từ chối trong đợt duyệt hàng loạt. Lý do: Không được duyệt trong đợt duyệt hàng loạt này.",
+                        'related_id' => $fundRequest->id,
+                        'related_type' => 'FundRequest',
+                    ]);
+                    
+                    \App\Models\NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $fundRequest->created_by,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error creating notification for batch rejected fund request: ' . $e->getMessage());
+                }
+                
                 $rejectedCount++;
             }
         }

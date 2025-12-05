@@ -1,0 +1,68 @@
+app/Http/Controllers/FundRequestController.php:121: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundRequestController.php:132: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundRequestController.php:139: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundRequestController.php:246: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundRequestController.php:335: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundRequestController.php:491: trailing whitespace.
+[32m+[m[41m                    [m
+app/Http/Controllers/FundRequestController.php:500: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundRequestController.php:519: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundRequestController.php:529: trailing whitespace.
+[32m+[m[41m                    [m
+app/Http/Controllers/FundRequestController.php:538: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundSettlementController.php:159: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundTransactionController.php:175: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundTransactionController.php:184: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/FundTransactionController.php:191: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundTransactionController.php:201: trailing whitespace.
+[32m+[m[41m                    [m
+app/Http/Controllers/FundTransactionController.php:211: trailing whitespace.
+[32m+[m[41m                            [m
+app/Http/Controllers/FundTransactionController.php:371: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundTransactionController.php:475: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundTransactionController.php:483: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/FundTransactionController.php:527: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/StudentController.php:1742: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/StudentController.php:1753: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/StudentController.php:1760: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/StudentController.php:2335: trailing whitespace.
+[32m+[m[41m                [m
+app/Http/Controllers/StudentController.php:2344: trailing whitespace.
+[32m+[m[41m                    [m
+app/Http/Controllers/StudentController.php:2391: trailing whitespace.
+[32m+[m[41m        [m
+app/Http/Controllers/StudentController.php:2402: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/StudentController.php:2411: trailing whitespace.
+[32m+[m[41m        [m
+app/Http/Controllers/StudentController.php:2444: trailing whitespace.
+[32m+[m[41m        [m
+app/Http/Controllers/StudentController.php:2456: trailing whitespace.
+[32m+[m[41m            [m
+app/Http/Controllers/StudentController.php:2465: trailing whitespace.
+[32m+[m[41m        [m
+app/Mail/ClubJoinRequestRejected.php:40: new blank line at EOF.
+app/Mail/EventRegistrationConfirmation.php:40: new blank line at EOF.
+database/migrations/2025_12_15_000001_add_quan_ly_quy_permission_to_permissions_table.php:40: new blank line at EOF.
+database/migrations/2025_12_15_000002_change_officer_to_treasurer_in_club_members_table.php:38: new blank line at EOF.
+resources/views/emails/club-join-request-rejected.blade.php:106: new blank line at EOF.
+resources/views/emails/event-registration-confirmation.blade.php:110: new blank line at EOF.

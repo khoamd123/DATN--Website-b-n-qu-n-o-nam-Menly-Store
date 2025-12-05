@@ -15,21 +15,21 @@
                         <p class="text-muted mb-0">Khám phá các bài viết và thông báo mới nhất từ các câu lạc bộ</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="btn-group" role="group">
+                        <div class="btn-group btn-group-sm" role="group">
                             @php
                                 $currentFilter = request('filter', 'all');
                                 $queryParams = request()->except('filter', 'page');
                             @endphp
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'all'])) }}" 
-                               class="btn {{ $currentFilter == 'all' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'all' ? 'active' : '' }}">
                                 Tất cả
                             </a>
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'latest'])) }}" 
-                               class="btn {{ $currentFilter == 'latest' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'latest' ? 'active' : '' }}">
                                 Mới nhất
                             </a>
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'popular'])) }}" 
-                               class="btn {{ $currentFilter == 'popular' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'popular' ? 'active' : '' }}">
                                 Phổ biến
                             </a>
                 </div>
@@ -323,6 +323,12 @@
 
 @push('styles')
 <style>
+    /* Filter buttons - smaller size */
+    .btn-group[role="group"] .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
     .pagination {
         gap: 0.25rem;
     }

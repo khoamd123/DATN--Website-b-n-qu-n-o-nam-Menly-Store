@@ -636,9 +636,9 @@
                     <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
                         <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
                         @if($notificationCount > 0)
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.notifications', ['filter' => 'unread']) }}"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
                         @else
-                            <li><a class="dropdown-item text-muted" href="#"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
+                            <li><a class="dropdown-item text-muted" href="{{ route('admin.notifications') }}"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
                         @endif
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">Xem tất cả thông báo</a></li>
@@ -847,10 +847,23 @@
         @endif
 
         @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+            @php
+                $errorMessage = session('error');
+                $currentRoute = request()->route()->getName() ?? '';
+                $isNotificationsPage = str_contains($currentRoute, 'notifications');
+                $shouldShow = true;
+                // Không hiển thị alert "Không tìm thấy thông báo" trên trang notifications
+                // (sẽ được xử lý trong view notifications.blade.php)
+                if ($isNotificationsPage && str_contains($errorMessage, 'Không tìm thấy thông báo')) {
+                    $shouldShow = false;
+                }
+            @endphp
+            @if($shouldShow)
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ $errorMessage }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
         @endif
 
         @yield('content')

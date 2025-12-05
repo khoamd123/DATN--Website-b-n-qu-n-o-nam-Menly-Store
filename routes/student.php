@@ -19,7 +19,7 @@ use App\Http\Controllers\Student\ClubManagementController;
 |
 */
 
-Route::prefix('student')->name('student.')->middleware(['simple_auth'])->group(function () {
+Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\SimpleAuth::class])->group(function () {
     
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

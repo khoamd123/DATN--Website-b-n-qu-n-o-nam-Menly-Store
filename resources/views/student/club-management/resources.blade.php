@@ -49,9 +49,15 @@
                     <h4 class="mb-0"><i class="fas fa-folder-open me-2"></i>Quản lý tài nguyên - {{ $club->name }}</h4>
                 </div>
                 <div class="d-flex gap-2">
+                    @php
+                        $position = $user->getPositionInClub($clubId);
+                        $canManageResources = in_array($position, ['leader', 'vice_president']);
+                    @endphp
+                    @if($canManageResources)
                     <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-plus me-1"></i> Tạo tài nguyên
                     </a>
+                    @endif
                 </div>
             </div>
 
@@ -149,15 +155,21 @@
                                     <small class="text-muted">{{ $resource->created_at->format('d/m/Y H:i') }}</small>
                                 </td>
                                 <td class="text-center">
+                                    @php
+                                        $position = $user->getPositionInClub($clubId);
+                                        $canManageResources = in_array($position, ['leader', 'vice_president']);
+                                    @endphp
                                     <div class="btn-group btn-group-sm" role="group">
                                         <a href="{{ route('student.club-management.resources.show', ['club' => $clubId, 'resource' => $resource->id]) }}" 
                                            class="btn btn-outline-primary action-btn" title="Xem chi tiết">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        @if($canManageResources)
                                         <a href="{{ route('student.club-management.resources.edit', ['club' => $clubId, 'resource' => $resource->id]) }}" 
                                            class="btn btn-outline-warning action-btn" title="Chỉnh sửa">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -167,9 +179,15 @@
                                     <div class="text-muted">
                                         <i class="fas fa-folder-open fa-3x mb-3 d-block"></i>
                                         <p class="mb-0">Chưa có tài nguyên nào.</p>
+                                        @php
+                                            $position = $user->getPositionInClub($clubId);
+                                            $canManageResources = in_array($position, ['leader', 'vice_president']);
+                                        @endphp
+                                        @if($canManageResources)
                                         <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary btn-sm mt-2">
                                             <i class="fas fa-plus me-1"></i> Tạo tài nguyên đầu tiên
                                         </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

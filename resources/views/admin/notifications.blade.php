@@ -19,22 +19,70 @@
     </div>
 @endif
 
-@if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
+            <!-- Bộ lọc và tìm kiếm -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.notifications') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control" 
+                                   placeholder="Tìm kiếm thông báo..."
+                                   value="{{ request('search') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="filter" class="form-select">
+                                <option value="all" {{ request('filter') == 'all' ? 'selected' : '' }}>Tất cả</option>
+                                <option value="unread" {{ request('filter') == 'unread' ? 'selected' : '' }}>Chưa đọc</option>
+                                <option value="read" {{ request('filter') == 'read' ? 'selected' : '' }}>Đã đọc</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="sender_id" class="form-select">
+                                <option value="">Tất cả người gửi</option>
+                                @foreach($senders ?? [] as $sender)
+                                    <option value="{{ $sender->id }}" {{ request('sender_id') == $sender->id ? 'selected' : '' }}>
+                                        {{ $sender->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i>Tìm kiếm
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-list me-2"></i>Danh sách thông báo</h5>
                 </div>
                 <div class="card-body">
-                    @forelse($notifications as $notification)
+                    @if(session('error'))
+                        @php
+                            $errorMessage = session('error');
+                            $shouldShowError = true;
+                            // Không hiển thị alert "Không tìm thấy thông báo" nếu có thông báo
+                            if (str_contains($errorMessage, 'Không tìm thấy thông báo') && $notifications->count() > 0) {
+                                $shouldShowError = false;
+                            }
+                        @endphp
+                        @if($shouldShowError)
+                            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>{{ $errorMessage }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+                    @endif
+                    
+                    @if($notifications->count() > 0)
+                        @foreach($notifications as $notification)
                         <div class="notification-item mb-3 p-3 border rounded {{ !$notification->is_read ? 'bg-light border-primary' : '' }}" style="cursor: pointer;" onclick="window.location.href='{{ route('admin.notifications.show', $notification->id) }}'">
                             <div class="d-flex align-items-start">
                                 @php
@@ -83,13 +131,14 @@
                                 </div>
                             </div>
                         </div>
-                    @empty
+                        @endforeach
+                    @else
                         <div class="text-center py-5">
                             <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">Chưa có thông báo nào</h5>
                             <p class="text-muted">Thông báo mới sẽ xuất hiện ở đây khi có cập nhật.</p>
                         </div>
-                    @endforelse
+                    @endif
 
                     <!-- Pagination -->
                     @if($notifications->hasPages())

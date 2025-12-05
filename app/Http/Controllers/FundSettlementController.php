@@ -147,6 +147,26 @@ class FundSettlementController extends Controller
             // Tính toán tiền thừa/thiếu và cập nhật quỹ
             $this->updateFundAfterSettlement($fundRequest);
 
+            // Tạo thông báo cho người tạo yêu cầu
+            try {
+                $notification = \App\Models\Notification::create([
+                    'sender_id' => $userId,
+                    'type' => 'fund_request',
+                    'title' => 'Yêu cầu cấp kinh phí đã được quyết toán',
+                    'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" của bạn đã được quyết toán. Số tiền thực tế: " . number_format($request->actual_amount, 0, ',', '.') . " VNĐ." . ($request->settlement_notes ? " Ghi chú: {$request->settlement_notes}" : ''),
+                    'related_id' => $fundRequest->id,
+                    'related_type' => 'FundRequest',
+                ]);
+                
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $fundRequest->created_by,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error creating notification for settled fund request: ' . $e->getMessage());
+            }
+
             return redirect()->route('admin.fund-settlements')
                 ->with('success', 'Quyết toán thành công!');
 

@@ -20,21 +20,43 @@ class ClubRoleMiddleware
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
         }
 
-        // Lấy club_id từ route
-        $clubId = $request->route('club');
-        
-        if (!$clubId) {
-            return redirect()->back()->with('error', 'Không tìm thấy thông tin câu lạc bộ.');
-        }
-
         // Kiểm tra quyền admin (admin có quyền truy cập mọi CLB)
         if (session('is_admin')) {
             return $next($request);
         }
 
-        // Lấy vai trò của user trong CLB này
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
+        // Lấy user_id từ session
+        $userId = session('user_id');
+        if (!$userId) {
+            return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
+        }
+
+        // Lấy club_id từ route hoặc từ CLB đầu tiên của user
+        $clubId = $request->route('club');
+        
+        // Lấy position từ database thay vì session để đảm bảo luôn có dữ liệu mới nhất
+        try {
+            $user = \App\Models\User::find($userId);
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+            
+            // Nếu không có club_id trong route, lấy CLB đầu tiên của user
+            if (!$clubId && $user->clubs->count() > 0) {
+                $clubId = $user->clubs->first()->id;
+            }
+            
+            if (!$clubId) {
+                return redirect()->back()->with('error', 'Không tìm thấy thông tin câu lạc bộ.');
+            }
+            
+            $userRole = $user->getPositionInClub($clubId);
+        } catch (\Exception $e) {
+            \Log::error('Error in ClubRoleMiddleware: ' . $e->getMessage());
+            // Fallback: lấy từ session nếu có lỗi
+            $clubRoles = session('club_roles', []);
+            $userRole = $clubRoles[$clubId] ?? null;
+        }
 
         // Kiểm tra xem user có vai trò được phép không
         if (!$userRole || !in_array($userRole, $roles)) {

@@ -89,11 +89,22 @@ class ClubManagementController extends Controller
     public function manageMembers($clubId)
     {
         // Kiểm tra quyền truy cập CLB
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
-
-        if (!session('is_admin') && !in_array($userRole, ['owner', 'executive_board'])) {
-            return redirect()->back()->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
+        if (!session('is_admin')) {
+            $userId = session('user_id');
+            if (!$userId) {
+                return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
+            }
+            
+            $user = User::find($userId);
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+            
+            $userRole = $user->getPositionInClub($clubId);
+            
+            if (!in_array($userRole, ['leader', 'vice_president', 'owner'])) {
+                return redirect()->back()->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
+            }
         }
 
         $club = Club::with(['owner', 'members.user'])->findOrFail($clubId);
@@ -222,11 +233,22 @@ class ClubManagementController extends Controller
     public function removeMember(Request $request, $clubId, $userId)
     {
         // Kiểm tra quyền
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
-
-        if (!session('is_admin') && !in_array($userRole, ['owner', 'executive_board'])) {
-            return redirect()->back()->with('error', 'Bạn không có quyền xóa thành viên.');
+        if (!session('is_admin')) {
+            $currentUserId = session('user_id');
+            if (!$currentUserId) {
+                return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
+            }
+            
+            $user = User::find($currentUserId);
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+            
+            $userRole = $user->getPositionInClub($clubId);
+            
+            if (!in_array($userRole, ['leader', 'vice_president', 'owner'])) {
+                return redirect()->back()->with('error', 'Bạn không có quyền xóa thành viên.');
+            }
         }
 
         $member = ClubMember::where('user_id', $userId)
