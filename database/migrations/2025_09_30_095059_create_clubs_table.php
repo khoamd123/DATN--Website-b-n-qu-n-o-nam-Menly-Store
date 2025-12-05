@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('clubs', function (Blueprint $table) {
             $table->id();
             $table->string('name',255);
-            $table->string('slug',255)->uniqid();
+            $table->string('slug',255)->unique();
             $table->text('description');
             $table->string('logo',255);
             $table->unsignedBigInteger('field_id');

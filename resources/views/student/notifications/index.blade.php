@@ -131,33 +131,36 @@
             <h5 class="sidebar-title">
                 <i class="fas fa-cog"></i> Cài đặt thông báo
             </h5>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
-                <label class="form-check-label" for="emailNotifications">
-                    Thông báo qua email
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="pushNotifications" checked>
-                <label class="form-check-label" for="pushNotifications">
-                    Thông báo đẩy
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="eventNotifications" checked>
-                <label class="form-check-label" for="eventNotifications">
-                    Thông báo sự kiện
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="clubNotifications" checked>
-                <label class="form-check-label" for="clubNotifications">
-                    Thông báo từ CLB
-                </label>
-            </div>
-            <button class="btn btn-primary btn-sm w-100">
-                <i class="fas fa-save me-2"></i> Lưu cài đặt
-            </button>
+            <form id="notificationSettingsForm">
+                @csrf
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email" {{ ($notificationSettings['email'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="emailNotifications">
+                        Thông báo qua email
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="pushNotifications" name="push" {{ ($notificationSettings['push'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="pushNotifications">
+                        Thông báo đẩy
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="eventNotifications" name="event" {{ ($notificationSettings['event'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="eventNotifications">
+                        Thông báo sự kiện
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="clubNotifications" name="club" {{ ($notificationSettings['club'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="clubNotifications">
+                        Thông báo từ CLB
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-teal btn-sm w-100" style="background-color: #14b8a6; color: white;">
+                    <i class="fas fa-save me-2"></i> Lưu cài đặt
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -230,5 +233,51 @@
         color: #14b8a6 !important;
     }
 </style>
+@endpush
+
+@push('scripts')
+    // Xử lý form lưu cài đặt thông báo
+    document.getElementById('notificationSettingsForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const data = {
+            email: document.getElementById('emailNotifications').checked,
+            push: document.getElementById('pushNotifications').checked,
+            event: document.getElementById('eventNotifications').checked,
+            club: document.getElementById('clubNotifications').checked,
+        };
+        
+        fetch('{{ route("student.notifications.settings") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Hiển thị thông báo thành công
+                const btn = this.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i> Đã lưu!';
+                btn.classList.remove('btn-teal');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-teal');
+                }, 2000);
+            } else {
+                alert('Có lỗi xảy ra khi lưu cài đặt');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi lưu cài đặt');
+        });
+    });
 @endpush
 @endsection

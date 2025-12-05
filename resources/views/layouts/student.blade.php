@@ -92,12 +92,12 @@
         
         .notification-badge {
             position: absolute;
-            top: 0;
-            right: 0;
+            top: -5px;
+            right: -5px;
             background: #ef4444;
             color: white;
             border-radius: 50%;
-            width: 20px;
+            min-width: 20px;
             height: 20px;
             font-size: 0.7rem;
             font-weight: bold;
@@ -105,6 +105,8 @@
             align-items: center;
             justify-content: center;
             border: 2px solid #14b8a6;
+            padding: 0 4px;
+            z-index: 10;
         }
         
         /* Navigation */
@@ -410,7 +412,7 @@
                         <a href="{{ route('student.notifications.index') }}" class="notification-icon me-3 position-relative text-white text-decoration-none">
                             <i class="fas fa-bell fa-lg"></i>
                             @php
-                                $unreadCount = 0;
+                                $unreadAnnouncementCount = 0;
                                 try {
                                     // Lấy thông báo có target là user hiện tại và chưa được đọc
                                     $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user) {
@@ -420,12 +422,13 @@
                                         $query->where('user_id', $user->id)
                                               ->where('is_read', true);
                                     })->count();
+                                    $unreadAnnouncementCount = $unreadCount;
                                 } catch (\Exception $e) {
-                                    $unreadCount = 0;
+                                    $unreadAnnouncementCount = 0;
                                 }
                             @endphp
-                            @if($unreadCount > 0)
-                                <span class="notification-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+                            @if($unreadAnnouncementCount > 0)
+                                <span class="notification-badge">{{ $unreadAnnouncementCount > 99 ? '99+' : $unreadAnnouncementCount }}</span>
                             @endif
                         </a>
                         

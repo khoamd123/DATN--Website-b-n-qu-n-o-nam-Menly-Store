@@ -66,98 +66,109 @@
 
 <div class="container-fluid">
     <!-- Resource Information -->
-    <div class="row">
-        <div class="col-lg-6">
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin cơ bản</h5>
+        <div class="card-body">
+            <!-- Title Section -->
+            <div class="mb-4">
+                <h2 class="mb-2" style="font-weight: 700; color: #333;">{{ $resource->title }}</h2>
+            </div>
+
+            <!-- Description Section -->
+            @if($resource->description)
+            <div class="mb-4">
+                <div style="color: #555; font-size: 1rem; line-height: 1.6;">
+                    {!! $resource->description !!}
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>Tiêu đề:</strong>
-                        <h6 class="mb-0 mt-1">{{ $resource->title }}</h6>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Mô tả:</strong>
-                        <div class="mt-1">{!! $resource->description ?: '<span class="text-muted">Không có mô tả</span>' !!}</div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>CLB:</strong>
-                        <div class="mt-1">
-                            <span class="badge bg-info">{{ $resource->club->name }}</span>
+            </div>
+            @endif
+
+            <!-- Metadata Section - 2 Columns -->
+            <div class="row mt-4">
+                <!-- Left Column -->
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-users me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">CLB</span>
+                        </div>
+                        <div>
+                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e3f2fd; color: #1976d2; font-size: 0.9rem;">
+                                {{ $resource->club->name }}
+                            </span>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <strong>Người tạo:</strong>
-                        <div class="mt-1">{{ $resource->user->name }}</div>
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-eye me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">Lượt xem</span>
+                        </div>
+                        <div style="color: #333; font-size: 1rem;">
+                            {{ number_format($resource->view_count ?? 0) }}
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <strong>Trạng thái:</strong>
-                        <div class="mt-1">
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-calendar me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">Ngày tạo</span>
+                        </div>
+                        <div style="color: #333; font-size: 1rem;">
+                            {{ $resource->created_at->format('d/m/Y H:i:s') }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-user me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">Người tạo</span>
+                        </div>
+                        <div style="color: #333; font-size: 1rem; font-weight: 600;">
+                            {{ $resource->user->name }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-info-circle me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">Trạng thái</span>
+                        </div>
+                        <div>
                             @if($resource->trashed())
-                                <span class="badge bg-danger">Đã xóa</span>
+                                <span class="badge rounded-pill px-3 py-2 bg-danger" style="font-size: 0.9rem;">Đã xóa</span>
                             @elseif($resource->status == 'active')
-                                <span class="badge bg-success">Hoạt động</span>
+                                <span class="badge rounded-pill px-3 py-2 bg-success" style="font-size: 0.9rem;">Hoạt động</span>
                             @elseif($resource->status == 'inactive')
-                                <span class="badge bg-warning">Không hoạt động</span>
+                                <span class="badge rounded-pill px-3 py-2 bg-warning" style="font-size: 0.9rem;">Không hoạt động</span>
                             @elseif($resource->status == 'archived')
-                                <span class="badge bg-secondary">Lưu trữ</span>
+                                <span class="badge rounded-pill px-3 py-2 bg-secondary" style="font-size: 0.9rem;">Lưu trữ</span>
                             @else
-                                <span class="badge bg-light text-dark">{{ $resource->status ?? 'Không xác định' }}</span>
+                                <span class="badge rounded-pill px-3 py-2 bg-light text-dark" style="font-size: 0.9rem;">{{ $resource->status ?? 'Không xác định' }}</span>
                             @endif
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thông tin bổ sung</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>ID:</strong>
-                        <div class="mt-1"><span class="badge bg-secondary">#{{ $resource->id }}</span></div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Lượt xem:</strong>
-                        <div class="mt-1">
-                            <span class="badge bg-primary fs-6">{{ number_format($resource->view_count ?? 0) }}</span>
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clock me-2" style="color: #6c757d; font-size: 1.1rem;"></i>
+                            <span style="color: #6c757d; font-weight: 500;">Cập nhật lần cuối</span>
+                        </div>
+                        <div style="color: #333; font-size: 1rem;">
+                            {{ $resource->updated_at->format('d/m/Y H:i:s') }}
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <strong>Ngày tạo:</strong>
-                        <div class="mt-1">
-                            <i class="fas fa-calendar text-muted me-1"></i>{{ $resource->created_at->format('d/m/Y H:i:s') }}
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Cập nhật lần cuối:</strong>
-                        <div class="mt-1">
-                            <i class="fas fa-clock text-muted me-1"></i>{{ $resource->updated_at->format('d/m/Y H:i:s') }}
-                        </div>
-                    </div>
-                    @if($resource->trashed())
-                    <div class="mb-3">
-                        <strong>Ngày xóa:</strong>
-                        <div class="mt-1">
-                            <i class="fas fa-trash text-danger me-1"></i>{{ $resource->deleted_at->format('d/m/Y H:i:s') }}
-                        </div>
-                    </div>
-                    @endif
-                    @if($resource->thumbnail_path)
-                    <div class="mb-3">
-                        <strong>Xem trước:</strong>
-                        <div class="mt-2 text-center">
-                            <img src="{{ asset('storage/' . $resource->thumbnail_path) }}" 
-                                 class="img-fluid rounded shadow-sm" alt="Preview" style="max-height: 200px; object-fit: contain;">
-                        </div>
-                    </div>
-                    @endif
                 </div>
             </div>
+
+            @if($resource->trashed())
+            <div class="alert alert-warning mt-3 mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Tài nguyên này đã bị xóa vào {{ $resource->deleted_at->format('d/m/Y H:i:s') }}.
+            </div>
+            @endif
         </div>
     </div>
 

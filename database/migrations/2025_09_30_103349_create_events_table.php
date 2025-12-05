@@ -18,13 +18,13 @@ return new class extends Migration
             $table->foreign('club_id')->references('id')->on('clubs');
             $table->foreign('created_by')->references('id')->on('users');            
             $table->string('title',255)->nullable(false);
-            $table->string('slug',255)->uniqid();
+            $table->string('slug',255)->unique();
             $table->text('description');
             $table->dateTime('start_time')->nullable(false);
             $table->dateTime('end_time')->nullable(false);
             $table->enum('mode',['public','private'])->default('private');
             $table->integer('max_participants')->nullable();
-            $table->enum('status',['pending','approved','rejected','active','canceled','compated']);
+            $table->enum('status',['pending','approved','rejected','active','canceled','completed']);
             $table->softDeletes();
             $table->timestamps();
         });

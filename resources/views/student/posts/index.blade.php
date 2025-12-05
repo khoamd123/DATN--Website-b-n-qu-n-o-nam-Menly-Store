@@ -250,7 +250,14 @@
                 @endforelse
 
                         @if($posts->hasPages())
-                            <div class="mt-4 d-flex justify-content-center">
+                            <div class="pagination-wrapper mt-4" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap; gap: 1rem;">
+                                <div class="pagination-info" style="display: flex; align-items: center; gap: 0.5rem; color: #495057; font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle" style="color: #6c757d;"></i>
+                                    <span>
+                                        Hiển thị <strong>{{ $posts->firstItem() }}</strong> - <strong>{{ $posts->lastItem() }}</strong> 
+                                        trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                                    </span>
+                                </div>
                                 <nav aria-label="Page navigation">
                                     <ul class="pagination pagination-sm mb-0">
                                         @php
@@ -274,17 +281,14 @@
                                         @endif
 
                                         {{-- Pagination Elements --}}
-                                        @foreach ($posts->getUrlRange(1, $posts->lastPage()) as $page => $url)
-                                            @php
-                                                $pageUrl = $page == $posts->currentPage() ? '#' : $posts->appends($queryParams)->url($page);
-                                            @endphp
+                                        @foreach ($posts->appends($queryParams)->getUrlRange(1, $posts->lastPage()) as $page => $url)
                                             @if ($page == $posts->currentPage())
                                                 <li class="page-item active">
                                                     <span class="page-link">{{ $page }}</span>
                                                 </li>
                                             @else
                                                 <li class="page-item">
-                                                    <a class="page-link" href="{{ $pageUrl }}">{{ $page }}</a>
+                                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
                                                 </li>
                                             @endif
                                         @endforeach
@@ -306,10 +310,13 @@
                                     </ul>
                                 </nav>
                             </div>
-                            <div class="text-center mt-2">
-                                <small class="text-muted">
-                                    Hiển thị {{ $posts->firstItem() }} đến {{ $posts->lastItem() }} trong tổng số {{ $posts->total() }} kết quả
-                                </small>
+                        @else
+                            <div class="pagination-info mt-3" style="display: flex; align-items: center; gap: 0.5rem; color: #495057; font-size: 0.9rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                <i class="fas fa-info-circle" style="color: #6c757d;"></i>
+                                <span>
+                                    Hiển thị <strong>{{ $posts->firstItem() ?? 0 }}</strong> - <strong>{{ $posts->lastItem() ?? 0 }}</strong> 
+                                    trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                                </span>
                             </div>
                         @endif
                     </div>
@@ -318,7 +325,6 @@
         </div>
     </div>
 
-    {{-- Modal thông báo đã được ẩn --}}
 @endsection
 
 @push('styles')
@@ -380,5 +386,4 @@
 @endpush
 
 @push('scripts')
-{{-- Script modal thông báo đã được ẩn --}}
 @endpush

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreign('club_id')->references('id')->on('clubs');
             $table->foreign('user_id')->references('id')->on('users');
             $table->string('title',255)->nullable(false);
-            $table->string('slug',255)->uniqid();
+            $table->string('slug',255)->unique();
             $table->text('content');
             $table->enum('type',['post','announcement','document'])->nullable();
             $table->enum('status',['published','hidden','deleted'])->default('published');

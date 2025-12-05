@@ -175,8 +175,37 @@
 
             <!-- Phân trang -->
             @if($posts->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $posts->appends(request()->query())->links() }}
+                <div class="pagination-wrapper">
+                    <div class="pagination-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>
+                            Hiển thị <strong>{{ $posts->firstItem() }}</strong> - <strong>{{ $posts->lastItem() }}</strong> 
+                            trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                        </span>
+                    </div>
+                    <nav>
+                        <ul class="pagination">
+                            @foreach ($posts->appends(request()->query())->getUrlRange(1, $posts->lastPage()) as $page => $url)
+                                @if ($page == $posts->currentPage())
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link">{{ $page }}</span>
+                                    </li>
+                                @else
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
+                        </ul>
+                    </nav>
+                </div>
+            @else
+                <div class="pagination-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        Hiển thị <strong>{{ $posts->firstItem() ?? 0 }}</strong> - <strong>{{ $posts->lastItem() ?? 0 }}</strong> 
+                        trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                    </span>
                 </div>
             @endif
         </div>
