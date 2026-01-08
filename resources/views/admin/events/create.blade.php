@@ -292,19 +292,36 @@
 
                         <hr class="my-4">
 
-                        <div class="mb-3">
-                            <label class="form-label">Trạng thái</label>
-                            <select class="form-select @error('status') is-invalid @enderror" name="status">
-                                <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
-                                <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                                <option value="approved" {{ old('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
-                                <option value="ongoing" {{ old('status') == 'ongoing' ? 'selected' : '' }}>Đang diễn ra</option>
-                                <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
-                                <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-                            </select>
-                            @error('status')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Trạng thái</label>
+                                    <select class="form-select @error('status') is-invalid @enderror" name="status">
+                                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
+                                        <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
+                                        <option value="approved" {{ old('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
+                                        <option value="ongoing" {{ old('status') == 'ongoing' ? 'selected' : '' }}>Đang diễn ra</option>
+                                        <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+                                        <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                                    </select>
+                                    @error('status')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Chế độ hiển thị <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('visibility') is-invalid @enderror" name="visibility" required>
+                                        <option value="public" {{ old('visibility', 'public') == 'public' ? 'selected' : '' }}>Công khai</option>
+                                        <option value="internal" {{ old('visibility') == 'internal' ? 'selected' : '' }}>Chỉ nội bộ CLB</option>
+                                    </select>
+                                    @error('visibility')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Công khai: Tất cả mọi người có thể xem. Chỉ nội bộ CLB: Chỉ thành viên CLB mới xem được.</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -321,6 +338,7 @@
         </div>
     </div>
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('admin.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script>
 // Sử dụng CKEditor từ CDN đã được load trong layout
 document.addEventListener('DOMContentLoaded', function() {
@@ -345,15 +363,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Creating CKEditor instance...');
     
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("admin.posts.upload-image") }}', '{{ csrf_token() }}');
+    
     ClassicEditor
         .create(textarea, {
+            extraPlugins: [SimpleUploadAdapterPlugin],
             toolbar: {
                 items: [
                     'heading', '|',
                     'bold', 'italic', 'underline', '|',
                     'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
+                    'link', 'blockQuote', 'uploadImage', '|',
                     'undo', 'redo'
+                ]
+            },
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    'toggleImageCaption',
+                    'imageStyle:inline',
+                    'imageStyle:block',
+                    'imageStyle:side'
                 ]
             }
         })

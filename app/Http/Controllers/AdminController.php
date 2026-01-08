@@ -1578,6 +1578,7 @@ class AdminController extends Controller
                 'location' => 'nullable|string|max:255',
                 'max_participants' => 'nullable|integer|min:1',
                 'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+                'visibility' => 'required|in:public,internal',
                 'registration_deadline' => 'nullable|date|before_or_equal:start_time',
                 'main_organizer' => 'nullable|string|max:255',
                 'organizing_team' => 'nullable|string|max:5000',
@@ -1701,6 +1702,13 @@ class AdminController extends Controller
                 'columns_exists' => $columnNames,
             ]);
             
+            // Admin tạo sự kiện sẽ tự động được duyệt (approved)
+            // Trừ khi admin chọn draft hoặc cancelled
+            $status = $request->status;
+            if (!in_array($status, ['draft', 'cancelled'])) {
+                $status = 'approved';
+            }
+            
             $eventData = [
                 'title' => $request->title,
                 'slug' => $slug,
@@ -1712,7 +1720,8 @@ class AdminController extends Controller
                 'mode' => $request->mode,
                 'location' => $request->location,
                 'max_participants' => $request->max_participants,
-                'status' => $request->status,
+                'status' => $status,
+                'visibility' => $request->visibility,
                 'created_by' => session('user_id'),
             ];
             
@@ -1863,6 +1872,7 @@ class AdminController extends Controller
                 'location' => 'nullable|string|max:255',
                 'max_participants' => 'nullable|integer|min:1',
                 'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
+                'visibility' => 'required|in:public,internal',
                 'registration_deadline' => 'nullable|date|before_or_equal:start_time',
                 'main_organizer' => 'nullable|string|max:255',
                 'organizing_team' => 'nullable|string|max:5000',
@@ -2010,6 +2020,7 @@ class AdminController extends Controller
                 'location' => $request->location,
                 'max_participants' => $request->max_participants,
                 'status' => $request->status,
+                'visibility' => $request->visibility,
             ];
             
             // Thêm tất cả các field mới vào data

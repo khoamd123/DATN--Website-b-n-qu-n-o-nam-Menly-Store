@@ -137,7 +137,14 @@
                                 <td>
                                     <strong>{{ $transaction->title }}</strong>
                                     @if($transaction->description)
-                                        <br><small class="text-muted">{{ Str::limit(strip_tags($transaction->description), 50) }}</small>
+                                        @php
+                                            $descriptionText = strip_tags($transaction->description);
+                                            $maxLength = 50;
+                                            $truncated = mb_strlen($descriptionText) > $maxLength 
+                                                ? mb_substr($descriptionText, 0, $maxLength) . '...' 
+                                                : $descriptionText;
+                                        @endphp
+                                        <br><small class="text-muted">{{ $truncated }}</small>
                                     @endif
                                 </td>
                                 <td>

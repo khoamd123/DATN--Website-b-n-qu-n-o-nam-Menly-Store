@@ -37,22 +37,25 @@
         </div>
         <div class="col-md-3">
             <label class="form-label">Số tiền (VNĐ) <span class="text-danger">*</span></label>
-            <input type="number" min="1" class="form-control @error('amount') is-invalid @enderror" name="amount" value="{{ old('amount') }}" required>
+            <input type="number" min="1" max="999999999999" step="1" class="form-control @error('amount') is-invalid @enderror" name="amount" value="{{ old('amount') }}" required placeholder="Nhập số tiền">
+            <small class="form-text text-muted">Tối đa: 999,999,999,999 VNĐ</small>
             @error('amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-3">
             <label class="form-label">Danh mục</label>
-            <input type="text" class="form-control @error('category') is-invalid @enderror" name="category" value="{{ old('category') }}" placeholder="VD: tài trợ, phí thành viên...">
+            <input type="text" class="form-control @error('category') is-invalid @enderror" name="category" value="{{ old('category') }}" placeholder="VD: tài trợ, phí thành viên..." maxlength="255">
+            <small class="form-text text-muted">Tối đa 255 ký tự</small>
             @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-3">
-            <label class="form-label">Ngày giao dịch</label>
-            <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" name="transaction_date" value="{{ old('transaction_date') }}">
+            <label class="form-label">Ngày giao dịch <span class="text-danger">*</span></label>
+            <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}" required>
             @error('transaction_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-12">
             <label class="form-label">Mô tả</label>
-            <textarea name="description" rows="3" class="form-control @error('description') is-invalid @enderror" placeholder="Ghi chú, nội dung giao dịch...">{{ old('description') }}</textarea>
+            <textarea name="description" rows="3" class="form-control @error('description') is-invalid @enderror" placeholder="Ghi chú, nội dung giao dịch..." maxlength="5000">{{ old('description') }}</textarea>
+            <small class="form-text text-muted">Tối đa 5000 ký tự</small>
             @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-6">

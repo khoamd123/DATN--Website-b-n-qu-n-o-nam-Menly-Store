@@ -87,6 +87,11 @@
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
                                     <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    @if($event->visibility === 'internal' && $event->club)
+                                        <span class="badge bg-warning text-dark ms-2">
+                                            <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
+                                        </span>
+                                    @endif
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
@@ -197,6 +202,11 @@
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
                                     <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    @if($event->visibility === 'internal' && $event->club)
+                                        <span class="badge bg-warning text-dark ms-2">
+                                            <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
+                                        </span>
+                                    @endif
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
@@ -296,6 +306,11 @@
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
                                     <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    @if($event->visibility === 'internal' && $event->club)
+                                        <span class="badge bg-warning text-dark ms-2">
+                                            <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
+                                        </span>
+                                    @endif
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}

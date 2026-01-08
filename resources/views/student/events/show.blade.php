@@ -59,6 +59,11 @@
                 <div class="d-flex flex-wrap align-items-center text-muted mb-3">
                     <small class="me-3">
                         <i class="fas fa-users me-1"></i>{{ $event->club->name ?? 'UniClubs' }}
+                        @if($event->visibility === 'internal' && $event->club)
+                            <span class="badge bg-warning text-dark ms-2">
+                                <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
+                            </span>
+                        @endif
                     </small>
                     <small class="me-3">
                         <i class="fas fa-user me-1"></i>{{ $event->creator->name ?? 'Hệ thống' }}

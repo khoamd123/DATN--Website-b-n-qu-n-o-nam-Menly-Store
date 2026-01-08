@@ -297,6 +297,16 @@
                                     @endif
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Chế độ hiển thị <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="visibility" required>
+                                        <option value="public" {{ old('visibility', $event->visibility ?? 'public') === 'public' ? 'selected' : '' }}>Công khai</option>
+                                        <option value="internal" {{ old('visibility', $event->visibility ?? 'public') === 'internal' ? 'selected' : '' }}>Chỉ nội bộ CLB</option>
+                                    </select>
+                                    <small class="text-muted">Công khai: Tất cả mọi người có thể xem. Chỉ nội bộ CLB: Chỉ thành viên CLB mới xem được.</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -315,6 +325,7 @@
 </div>
 
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('admin.posts.upload-image'), 'csrfToken' => csrf_token()])
 <script>
 // Sử dụng CKEditor từ CDN đã được load trong layout
 document.addEventListener('DOMContentLoaded', function() {
@@ -339,15 +350,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Creating CKEditor instance...');
     
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("admin.posts.upload-image") }}', '{{ csrf_token() }}');
+    
     ClassicEditor
         .create(textarea, {
+            extraPlugins: [SimpleUploadAdapterPlugin],
             toolbar: {
                 items: [
                     'heading', '|',
                     'bold', 'italic', 'underline', '|',
                     'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
+                    'link', 'blockQuote', 'uploadImage', '|',
                     'undo', 'redo'
+                ]
+            },
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    'toggleImageCaption',
+                    'imageStyle:inline',
+                    'imageStyle:block',
+                    'imageStyle:side'
                 ]
             }
         })

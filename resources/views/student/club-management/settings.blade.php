@@ -184,8 +184,19 @@
                                     </li>
                                     <li>
                                         <strong>Trạng thái:</strong><br>
-                                        <span class="badge bg-{{ $club->status === 'active' ? 'success' : 'secondary' }}">
-                                            {{ ucfirst($club->status) }}
+                                        @php
+                                            $clubStatusLabels = [
+                                                'pending' => 'Chờ duyệt',
+                                                'approved' => 'Đã duyệt',
+                                                'rejected' => 'Từ chối',
+                                                'active' => 'Đang hoạt động',
+                                                'inactive' => 'Không hoạt động',
+                                            ];
+                                            $clubStatusLabel = $clubStatusLabels[$club->status] ?? ucfirst($club->status);
+                                            $clubStatusColor = $club->status === 'active' ? 'success' : ($club->status === 'pending' ? 'warning' : ($club->status === 'rejected' ? 'danger' : 'secondary'));
+                                        @endphp
+                                        <span class="badge bg-{{ $clubStatusColor }}">
+                                            {{ $clubStatusLabel }}
                                         </span>
                                     </li>
                                 </ul>
@@ -329,6 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var editor = CKEDITOR.replace('description', {
         height: 300,
         language: 'vi',
+        filebrowserImageBrowseUrl: '{{ route("student.posts.upload-image") }}',
+        filebrowserImageUploadUrl: '{{ route("student.posts.upload-image") }}?_token={{ csrf_token() }}',
         toolbar: [
             { name: 'document', items: ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates'] },
             { name: 'clipboard', items: ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'] },

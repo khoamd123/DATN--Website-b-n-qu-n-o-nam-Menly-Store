@@ -15,35 +15,31 @@
                     </h2>
                     <p class="text-muted mb-0">Khám phá, tìm kiếm và tham gia các câu lạc bộ thú vị.</p>
                 </div>
+                <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i> Tạo CLB mới
+                </a>
             </div>
-            <!-- Search Form -->
-            <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form">
-                <div class="input-group input-group-lg" id="search-input-group">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="fas fa-search text-muted"></i>
-                    </span>
-                    <input type="text" name="search" class="form-control border-start-0" placeholder="Nhập tên câu lạc bộ..." value="{{ $search ?? '' }}">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="fas fa-search me-1"></i> Tìm kiếm
-                    </button>
-                </div>
-            </form>
         </div>
 
-        <!-- Other Clubs / Search Results -->
-        <div class="content-card" id="search-results-section">
-            <h4 class="mb-3" id="search-results-title">
-                @if(isset($search) && !empty($search))
-                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
-                @else
-                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
-                @endif
-            </h4>
-            
-            <div id="search-results-container">
-                @include('student.clubs._other_clubs_list', ['otherClubs' => $otherClubs, 'search' => $search])
+        @if(session('error'))
+            <div class="content-card">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             </div>
-        </div>
+        @endif
+
+        @if(session('success'))
+            <div class="content-card">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
 
         <!-- My Clubs -->
         <div class="content-card">
@@ -69,6 +65,7 @@
                                     </div>
                                 </div>
                                 <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags($club->description ?? ''), 100) }}</p>
+
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge bg-teal rounded-pill">
                                         <i class="fas fa-check-circle me-1"></i> Đã tham gia
@@ -87,13 +84,37 @@
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Bạn chưa tham gia câu lạc bộ nào</h5>
                     <p class="text-muted">Hãy khám phá và tham gia các câu lạc bộ thú vị ở bên dưới!</p>
-                    <a href="#" class="btn btn-primary">
-                        <i class="fas fa-search me-2"></i> Tìm kiếm CLB
-                    </a>
                 </div>
             @endif
         </div>
 
+        <!-- Other Clubs / Search Results -->
+        <div class="content-card" id="search-results-section">
+            <h4 class="mb-3" id="search-results-title">
+                @if(isset($search) && !empty($search))
+                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
+                @else
+                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                @endif
+            </h4>
+            
+            <!-- Search Form -->
+            <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form" class="mb-4">
+                <div class="input-group input-group-lg" id="search-input-group">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" name="search" class="form-control border-start-0" placeholder="Nhập tên câu lạc bộ để tìm kiếm..." value="{{ $search ?? '' }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search me-1"></i> Tìm kiếm
+                    </button>
+                </div>
+            </form>
+
+            <div id="search-results-container">
+                @include('student.clubs._other_clubs_list', ['otherClubs' => $otherClubs, 'search' => $search])
+            </div>
+        </div>
     </div>
 
     <!-- Sidebar -->

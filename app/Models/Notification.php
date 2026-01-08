@@ -40,6 +40,14 @@ class Notification extends Model
     }
 
     /**
+     * Get the notification targets
+     */
+    public function targets()
+    {
+        return $this->hasMany(NotificationTarget::class);
+    }
+
+    /**
      * Check if notification is read
      */
     public function isRead()

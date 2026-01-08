@@ -477,10 +477,13 @@
                 </li>
                 @php
                     $hasManagementRole = false;
-                    if (isset($user) && $user && $user->clubs && $user->clubs->count() > 0) {
-                        $clubId = $user->clubs->first()->id;
-                        $position = $user->getPositionInClub($clubId);
-                        $hasManagementRole = in_array($position, ['leader', 'vice_president', 'officer']);
+                    if (isset($user) && $user) {
+                        // Kiểm tra tất cả clubs mà user là thành viên (với status approved hoặc active)
+                        $clubMemberships = \App\Models\ClubMember::where('user_id', $user->id)
+                            ->whereIn('status', ['approved', 'active'])
+                            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+                            ->exists();
+                        $hasManagementRole = $clubMemberships;
                     }
                 @endphp
                 @if($hasManagementRole)

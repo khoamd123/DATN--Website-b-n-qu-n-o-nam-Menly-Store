@@ -3,58 +3,48 @@
 @section('title', 'Chi tiết bình luận')
 
 @section('content')
-<div class="container-fluid">
-    <div class="content-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1><i class="fas fa-comment"></i> Chi tiết bình luận</h1>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="{{ route('admin.comments') }}">Quản lý bình luận</a></li>
-                        <li class="breadcrumb-item active">Chi tiết bình luận</li>
-                    </ol>
-                </nav>
-            </div>
-            <div class="d-flex gap-2">
-                @if($commentable)
-                    <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-primary">
-                        <i class="fas fa-eye me-1"></i> Xem {{ $commentableType }}
-                    </a>
-                @endif
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
-                    <i class="fas fa-trash me-1"></i> Xóa
-                </button>
-                <a href="{{ route('admin.comments') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+<div class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1><i class="fas fa-comment"></i> Chi tiết bình luận</h1>
+        <div class="d-flex gap-2">
+            @if($commentable)
+                <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-primary">
+                    <i class="fas fa-eye me-1"></i> Xem {{ $commentableType }}
                 </a>
-            </div>
+            @endif
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
+                <i class="fas fa-trash me-1"></i> Xóa
+            </button>
+            <a href="{{ route('admin.comments') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
+            </a>
         </div>
     </div>
+</div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-check-circle"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
-    <div class="row">
-        <!-- Nội dung bình luận chính -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-gradient-primary text-white">
-                    <h4 class="mb-0"><i class="fas fa-comment me-2"></i>Nội dung bình luận</h4>
-                </div>
-                <div class="card-body">
-                    <!-- Thông tin người bình luận -->
+<div class="row">
+    <div class="col-md-8">
+        <!-- Nội dung bình luận -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-comment"></i> Nội dung bình luận</h5>
+            </div>
+            <div class="card-body">
+                <!-- Thông tin người bình luận -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-3">
                             @if($comment->user && $comment->user->avatar && file_exists(public_path($comment->user->avatar)))
@@ -84,29 +74,21 @@
                     </div>
 
                     <!-- Thời gian bình luận -->
-                    <div class="mb-4 p-3 bg-light rounded">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-clock text-primary me-2 fs-5"></i>
-                            <div>
-                                <strong class="text-dark">Thời gian bình luận:</strong>
-                                <div class="mt-1">
-                                    <span class="text-dark">
-                                        Ngày {{ $comment->created_at->format('d') }} tháng {{ $comment->created_at->format('m') }} năm {{ $comment->created_at->format('Y') }}, 
-                                        lúc {{ $comment->created_at->format('H') }} giờ {{ $comment->created_at->format('i') }} phút {{ $comment->created_at->format('s') }} giây
-                                    </span>
-                                    <span class="badge bg-info ms-2">
-                                        <i class="fas fa-history"></i> {{ $comment->created_at->diffForHumans() }}
-                                    </span>
-                                </div>
-                            </div>
+                    <div class="mb-3">
+                        <strong>Thời gian bình luận:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-calendar text-muted me-1"></i>{{ $comment->created_at->format('d/m/Y H:i:s') }}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-history"></i> {{ $comment->created_at->diffForHumans() }}
+                            </small>
                         </div>
                     </div>
 
                     <!-- Nội dung bình luận -->
-                    <div class="comment-content mb-4">
-                        <div class="border-start border-primary border-4 ps-3">
-                            <p class="mb-0" style="font-size: 16px; line-height: 1.8; white-space: pre-wrap;">{{ $comment->content }}</p>
-                        </div>
+                    <div class="mb-3">
+                        <strong>Nội dung:</strong>
+                        <div class="mt-2" style="line-height: 1.8; white-space: pre-wrap;">{{ $comment->content }}</div>
                     </div>
 
                     <!-- Bình luận cha (nếu có) -->
@@ -186,20 +168,19 @@
                             </div>
                         </div>
                     @endif
-                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Thông tin bổ sung -->
-        <div class="col-lg-4">
-            <!-- Thông tin bình luận -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin bình luận</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>ID:</strong>
+    <div class="col-md-4">
+        <!-- Thông tin bình luận -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin bình luận</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>ID:</strong>
                         <div class="mt-1"><span class="badge bg-secondary">#{{ $comment->id }}</span></div>
                     </div>
                     <div class="mb-3">
@@ -286,12 +267,12 @@
                 </div>
             </div>
 
-            <!-- Thông tin bài viết/sự kiện -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-link me-2"></i>Liên kết</h5>
-                </div>
-                <div class="card-body">
+        <!-- Thông tin bài viết/sự kiện -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-link"></i> Liên kết</h5>
+            </div>
+            <div class="card-body">
                     @if($commentable)
                         <div class="mb-3">
                             <strong>{{ $commentableType }}:</strong>
@@ -310,7 +291,6 @@
                     @else
                         <p class="text-muted">Không tìm thấy {{ strtolower($commentableType) }}</p>
                     @endif
-                </div>
             </div>
         </div>
     </div>
@@ -364,18 +344,5 @@
     </div>
 </div>
 
-<style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .comment-content {
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-radius: 8px;
-    }
-    .replies-list .card {
-        border-left: 3px solid #007bff;
-    }
-</style>
 @endsection
 

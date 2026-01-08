@@ -42,7 +42,7 @@ class Fund extends Model
     }
 
     /**
-     * Giao dịch của quỹ
+     * Các giao dịch của quỹ
      */
     public function transactions()
     {
@@ -50,64 +50,60 @@ class Fund extends Model
     }
 
     /**
-     * Yêu cầu từ quỹ
+     * Các mục quỹ
      */
-    public function requests()
+    public function items()
     {
-        return $this->hasMany(FundRequest::class);
+        return $this->hasMany(FundItem::class);
     }
 
     /**
-     * Tính tổng thu nhập (income)
+     * Cập nhật số tiền hiện tại
+     */
+    public function updateCurrentAmount()
+    {
+        $totalIncome = $this->transactions()
+            ->where('type', 'income')
+            ->where('status', 'approved')
+            ->sum('amount');
+
+        $totalExpense = $this->transactions()
+            ->where('type', 'expense')
+            ->where('status', 'approved')
+            ->sum('amount');
+
+        $this->current_amount = $this->initial_amount + $totalIncome - $totalExpense;
+        $this->save();
+    }
+
+    /**
+     * Kiểm tra quỹ có đang hoạt động không
+     */
+    public function isActive()
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Lấy tổng thu của quỹ
      */
     public function getTotalIncome()
     {
         return $this->transactions()
             ->where('type', 'income')
             ->where('status', 'approved')
-            ->sum('amount');
+            ->sum('amount') ?? 0;
     }
 
     /**
-     * Tính tổng chi tiêu (expense)
+     * Lấy tổng chi của quỹ
      */
     public function getTotalExpense()
     {
         return $this->transactions()
             ->where('type', 'expense')
             ->where('status', 'approved')
-            ->sum('amount');
-    }
-
-    /**
-     * Cập nhật số tiền hiện tại dựa trên các giao dịch
-     */
-    public function updateCurrentAmount()
-    {
-        // Tính số dư = Số tiền ban đầu + Tổng thu - Tổng chi
-        $currentAmount = $this->initial_amount + $this->getTotalIncome() - $this->getTotalExpense();
-        
-        $this->current_amount = $currentAmount;
-        $this->save();
-        
-        return $this->current_amount;
-    }
-
-    /**
-     * Tính số giao dịch chờ duyệt
-     */
-    public function getPendingTransactionsCount()
-    {
-        return $this->transactions()
-            ->where('status', 'pending')
-            ->count();
-    }
-
-    /**
-     * Tính tổng số giao dịch
-     */
-    public function getTotalTransactionsCount()
-    {
-        return $this->transactions()->count();
+            ->sum('amount') ?? 0;
     }
 }
+

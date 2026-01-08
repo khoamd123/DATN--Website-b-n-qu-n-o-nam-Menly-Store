@@ -41,6 +41,20 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         @if(!$hasManagementRole)
         <!-- Access Denied Message -->
         <div class="content-card">
@@ -62,9 +76,9 @@
                         <a href="{{ route('student.clubs.index') }}" class="btn btn-primary">
                             <i class="fas fa-search me-2"></i> Tìm CLB để tham gia
                         </a>
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                        <a href="{{ route('student.clubs.create') }}" class="btn btn-outline-primary">
                             <i class="fas fa-plus me-2"></i> Tạo CLB mới
-                        </button>
+                        </a>
                     </div>
                 @else
                     <p class="text-muted mb-4">
@@ -75,9 +89,9 @@
                         <a href="{{ route('student.clubs.index') }}" class="btn btn-outline-primary">
                             <i class="fas fa-users me-2"></i> Xem CLB của tôi
                         </a>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClubModal">
+                        <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i> Tạo CLB mới
-                        </button>
+                        </a>
                     </div>
                 @endif
             </div>
@@ -154,16 +168,16 @@
                         <p class="management-description">Tạo và quản lý bài viết, thông báo của CLB</p>
                         <div class="management-stats">
                             <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'announcements.total', 0) }}</strong>
-                                <small>Đã gửi</small>
+                                <strong>{{ data_get($clubStats, 'posts', 0) }}</strong>
+                                <small>Bài viết</small>
                             </span>
                             <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'announcements.today', 0) }}</strong>
-                                <small>Hôm nay</small>
+                                <strong>{{ data_get($clubStats, 'announcements.total', 0) }}</strong>
+                                <small>Thông báo</small>
                             </span>
                         </div>
-                        <a href="{{ route('student.posts.manage') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-list me-1"></i> Quản lý bài viết
+                        <a href="{{ route('student.club-management.posts', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-arrow-right me-1"></i> Quản lý
                         </a>
                     </div>
                 </div>
@@ -211,6 +225,36 @@
                         <a href="{{ route('student.club-management.fund-transactions') }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-list me-1"></i> Xem giao dịch
                             </a>
+                    </div>
+                </div>
+            </div>
+            @endif
+            @php
+                $position = $user->getPositionInClub($clubId);
+                $canManageResources = in_array($position, ['leader', 'vice_president', 'officer']);
+            @endphp
+            @if($userClub && $clubId && $canManageResources)
+            <div class="col-md-6 mb-4">
+                <div class="management-card">
+                    <div class="management-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <div class="management-content">
+                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
+                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
+                        <div class="management-stats">
+                            <span class="stat-item">
+                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
+                                <small>Tài nguyên</small>
+                            </span>
+                            <span class="stat-item">
+                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
+                                <small>File</small>
+                            </span>
+                        </div>
+                        <a href="{{ route('student.club-management.resources', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-arrow-right me-1"></i> Quản lý
+                        </a>
                     </div>
                 </div>
             </div>
