@@ -22,6 +22,7 @@ class Event extends Model
         'location',
         'max_participants',
         'status',
+        'visibility',
         'cancellation_reason',
         'cancelled_at',
         'registration_deadline',

@@ -12,7 +12,6 @@ use App\Models\Event;
 use App\Models\Field;
 use App\Models\Permission;
 use Illuminate\Support\Facades\DB;
-use App\Models\ClubJoinRequest as JoinReq;
 use App\Models\Fund;
 use App\Models\FundTransaction;
 use App\Models\FundRequest;
@@ -123,19 +122,38 @@ class StudentController extends Controller
             return $user;
         }
 
+        // Lấy danh sách CLB mà user là thành viên
+        $userClubIds = $user->clubs->pluck('id')->toArray();
+
         // Lấy events đang diễn ra (đã bắt đầu nhưng chưa kết thúc) - chỉ lấy events đã được duyệt hoặc ongoing
+        // Lọc theo visibility: public (tất cả) hoặc internal (chỉ thành viên CLB)
         $ongoingEvents = Event::with(['club', 'creator', 'images'])
             ->whereIn('status', ['approved', 'ongoing'])
             ->where('start_time', '<=', now())
             ->where('end_time', '>=', now())
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->orderBy('start_time', 'asc')
             ->get();
 
         // Lấy events sắp tới (chưa bắt đầu) - chỉ lấy events đã được duyệt
+        // Lọc theo visibility: public (tất cả) hoặc internal (chỉ thành viên CLB)
         $upcomingEvents = Event::with(['club', 'creator', 'images'])
             ->where('status', 'approved')
             ->where('start_time', '>', now())
             ->where('end_time', '>=', now())
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->orderBy('start_time', 'asc')
             ->get();
 
@@ -162,24 +180,52 @@ class StudentController extends Controller
             ->pluck('count', 'event_id')
             ->toArray();
 
-        // Thống kê sidebar - đếm events đã được duyệt hoặc đang diễn ra
+        // Thống kê sidebar - đếm events đã được duyệt hoặc đang diễn ra (lọc theo visibility)
         $todayEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereDate('start_time', now()->toDateString())
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->count();
 
         $thisWeekEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereBetween('start_time', [now()->startOfWeek(), now()->endOfWeek()])
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->count();
 
         $thisMonthEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereMonth('start_time', now()->month)
             ->whereYear('start_time', now()->year)
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->count();
 
-        // Sự kiện hot (có nhiều đăng ký nhất) - lấy events đã được duyệt hoặc đang diễn ra
+        // Sự kiện hot (có nhiều đăng ký nhất) - lấy events đã được duyệt hoặc đang diễn ra (lọc theo visibility)
         $hotEvents = Event::with(['club'])
             ->whereIn('status', ['approved', 'ongoing'])
             ->where('end_time', '>=', now())
+            ->where(function($query) use ($userClubIds) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function($q) use ($userClubIds) {
+                          $q->where('visibility', 'internal')
+                            ->whereIn('club_id', $userClubIds);
+                      });
+            })
             ->get()
             ->map(function($event) {
                 $registrationCount = \App\Models\EventRegistration::where('event_id', $event->id)
@@ -222,6 +268,19 @@ class StudentController extends Controller
 
         try {
             $event = Event::findOrFail($eventId);
+
+            // Kiểm tra visibility: nếu là internal và user không phải thành viên CLB thì không cho đăng ký
+            $isClubMember = false;
+            if ($event->club_id && $user->clubs->contains('id', $event->club_id)) {
+                $isClubMember = true;
+            }
+            
+            if ($event->visibility === 'internal' && !$isClubMember) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sự kiện này chỉ dành cho thành viên CLB.'
+                ], 403);
+            }
 
             // Kiểm tra sự kiện có bị hủy không
             if ($event->status === 'cancelled') {
@@ -399,6 +458,12 @@ class StudentController extends Controller
                 $isClubMember = true;
             }
 
+            // Kiểm tra visibility: nếu là internal và user không phải thành viên CLB thì không cho xem
+            if ($event->visibility === 'internal' && !$isClubMember) {
+                return redirect()->route('student.events.index')
+                    ->with('error', 'Sự kiện này chỉ dành cho thành viên CLB.');
+            }
+
             // Nếu sự kiện chưa được duyệt, chỉ cho phép xem nếu user là thành viên của CLB tổ chức
             if ($event->status !== 'approved' && !$isClubMember) {
                 return redirect()->route('student.events.index')
@@ -453,17 +518,24 @@ class StudentController extends Controller
                 ->with('error', 'Bạn cần tham gia CLB để tạo sự kiện.');
         }
 
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
-        $userPosition = $user->getPositionInClub($clubId);
+        // Lấy tất cả các CLB mà user đang tham gia
+        $allUserClubs = $user->clubs;
         
-        // Kiểm tra quyền tạo sự kiện
-        if (!$user->hasPermission('tao_su_kien', $clubId)) {
+        // Lọc chỉ các CLB mà user có quyền tạo sự kiện (trưởng CLB hoặc có permission)
+        $userClubs = $allUserClubs->filter(function($club) use ($user) {
+            return $user->hasPermission('tao_su_kien', $club->id);
+        });
+        
+        if ($userClubs->isEmpty()) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB này.');
+                ->with('error', 'Bạn không có quyền tạo sự kiện cho bất kỳ CLB nào.');
         }
+        
+        // CLB đầu tiên làm mặc định
+        $userClub = $userClubs->first();
+        $clubId = $userClub->id;
 
-        return view('student.events.create', compact('user', 'userClub', 'clubId'));
+        return view('student.events.create', compact('user', 'userClub', 'clubId', 'userClubs'));
     }
 
     /**
@@ -482,18 +554,27 @@ class StudentController extends Controller
                 ->with('error', 'Bạn cần tham gia CLB để tạo sự kiện.');
         }
 
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
+        // Lấy tất cả các CLB mà user đang tham gia
+        $userClubs = $user->clubs;
         
-        // Kiểm tra quyền tạo sự kiện
-        if (!$user->hasPermission('tao_su_kien', $clubId)) {
+        // Kiểm tra quyền tạo sự kiện cho ít nhất một CLB
+        $hasPermission = false;
+        foreach ($userClubs as $club) {
+            if ($user->hasPermission('tao_su_kien', $club->id)) {
+                $hasPermission = true;
+                break;
+            }
+        }
+        
+        if (!$hasPermission) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB này.');
+                ->with('error', 'Bạn không có quyền tạo sự kiện cho bất kỳ CLB nào.');
         }
 
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
+                'club_id' => 'required|exists:clubs,id',
                 'description' => 'nullable|string|max:10000',
                 'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
                 'start_time' => 'required|date|after_or_equal:now',
@@ -501,6 +582,7 @@ class StudentController extends Controller
                 'mode' => 'required|in:offline,online,hybrid',
                 'location' => 'nullable|string|max:255',
                 'max_participants' => 'nullable|integer|min:1',
+                'visibility' => 'required|in:public,internal',
                 'registration_deadline' => 'nullable|date|before_or_equal:start_time',
                 'main_organizer' => 'nullable|string|max:255',
                 'organizing_team' => 'nullable|string|max:5000',
@@ -534,6 +616,21 @@ class StudentController extends Controller
                 if (empty(trim($request->guest_other_info ?? ''))) {
                     return back()->withErrors(['guest_other_info' => 'Vui lòng nhập thông tin khách mời khi chọn "Khác..."'])->withInput();
                 }
+            }
+            
+            // Validate quyền tạo sự kiện cho CLB được chọn
+            $selectedClubId = $request->club_id;
+            if (!$user->hasPermission('tao_su_kien', $selectedClubId)) {
+                return back()->withErrors(['club_id' => 'Bạn không có quyền tạo sự kiện cho CLB này.'])->withInput();
+            }
+            
+            // Kiểm tra CLB được chọn phải nằm trong danh sách CLB mà user có quyền
+            $userClubs = $user->clubs->filter(function($club) use ($user) {
+                return $user->hasPermission('tao_su_kien', $club->id);
+            });
+            
+            if (!$userClubs->contains('id', $selectedClubId)) {
+                return back()->withErrors(['club_id' => 'Bạn không có quyền tạo sự kiện cho CLB này.'])->withInput();
             }
 
             // Tạo slug từ title
@@ -621,12 +718,13 @@ class StudentController extends Controller
                 'slug' => $slug,
                 'description' => $request->description,
                 'image' => null,
-                'club_id' => $clubId, // Tự động gán CLB của user
+                'club_id' => $request->club_id, // CLB tổ chức sự kiện
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
                 'mode' => $request->mode,
                 'location' => $request->location,
                 'max_participants' => $request->max_participants,
+                'visibility' => $request->visibility,
                 'status' => 'pending', // User tạo sự kiện sẽ ở trạng thái chờ duyệt
                 'created_by' => $user->id,
             ];
@@ -1587,7 +1685,7 @@ class StudentController extends Controller
                 ->with('error', 'Bạn không có quyền xem đơn tham gia CLB này.');
         }
 
-        $requests = JoinReq::with('user')
+        $requests = ClubJoinRequest::with('user')
             ->where('club_id', $clubId)
             ->orderByDesc('created_at')
             ->paginate(20);
@@ -1611,7 +1709,7 @@ class StudentController extends Controller
         if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền duyệt đơn.');
         }
-        $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
+        $req = ClubJoinRequest::where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
             $req->status = 'approved';
             $req->approved_by = $user->id;
@@ -1633,7 +1731,7 @@ class StudentController extends Controller
         if (!in_array($position, ['leader', 'vice_president', 'officer'])) {
             return redirect()->back()->with('error', 'Bạn không có quyền từ chối đơn.');
         }
-        $req = JoinReq::where('club_id', $clubId)->findOrFail($requestId);
+        $req = ClubJoinRequest::where('club_id', $clubId)->findOrFail($requestId);
         if ($req->status === 'pending') {
             $req->status = 'rejected';
             $req->approved_by = $user->id;
@@ -3086,7 +3184,16 @@ class StudentController extends Controller
             $data['clubMember'] = $club->members->first();
             
             // Tải các dữ liệu khác chỉ khi người dùng là thành viên
-            $data['events'] = $club->events()->where('status', 'approved')->where('start_time', '>=', now())->orderBy('start_time', 'asc')->get();
+            // Lọc events theo visibility: public hoặc internal (vì user là thành viên nên có thể xem internal)
+            $data['events'] = $club->events()
+                ->where('status', 'approved')
+                ->where('start_time', '>=', now())
+                ->where(function($query) {
+                    $query->where('visibility', 'public')
+                          ->orWhere('visibility', 'internal');
+                })
+                ->orderBy('start_time', 'asc')
+                ->get();
             $data['announcements'] = $club->posts()->where('type', 'announcement')->where('status', 'published')->orderBy('created_at', 'desc')->limit(5)->get();
             
             // Tải ảnh cho thư viện

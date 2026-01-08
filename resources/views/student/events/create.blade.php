@@ -61,10 +61,16 @@
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
-                            <label class="form-label">Câu lạc bộ</label>
-                            <input type="text" class="form-control" value="{{ $userClub->name }}" disabled>
-                            <input type="hidden" name="club_id" value="{{ $clubId }}">
-                            <small class="text-muted">Sự kiện sẽ được tạo cho CLB này</small>
+                            <label class="form-label">Câu lạc bộ <span class="text-danger">*</span></label>
+                            <select class="form-select @error('club_id') is-invalid @enderror" name="club_id" id="clubSelect" required>
+                                @foreach($userClubs as $club)
+                                    <option value="{{ $club->id }}" {{ old('club_id', $clubId) == $club->id ? 'selected' : '' }}>{{ $club->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('club_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">Chọn CLB để tạo sự kiện</small>
                         </div>
                     </div>
                 </div>
@@ -286,6 +292,25 @@
 
                 <hr class="my-4">
 
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Chế độ hiển thị <span class="text-danger">*</span></label>
+                            <select class="form-select @error('visibility') is-invalid @enderror" name="visibility" id="visibilitySelect" required>
+                                <option value="public" {{ old('visibility', 'public') == 'public' ? 'selected' : '' }}>Công khai</option>
+                                <option value="internal" {{ old('visibility') == 'internal' ? 'selected' : '' }}>Chỉ nội bộ CLB</option>
+                            </select>
+                            @error('visibility')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">
+                                <strong>Công khai:</strong> Tất cả mọi người có thể xem.<br>
+                                <strong>Chỉ nội bộ CLB:</strong> Chỉ thành viên của CLB được chọn ở trên mới xem được.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>Lưu ý:</strong> Sự kiện sau khi tạo sẽ ở trạng thái <strong>"Chờ duyệt"</strong> và cần được quản trị viên duyệt trước khi hiển thị công khai.
@@ -478,4 +503,5 @@ function removeImage(button) {
 </script>
 @endpush
 @endsection
+
 
