@@ -1,29 +1,27 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Admin\ClubResourceController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClubManagerController;
+use App\Http\Controllers\ClubResourceController;
+use App\Http\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Main web routes file - loads all route groups
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
 |
 */
 
-// Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Load route groups
-require __DIR__.'/auth.php';
-require __DIR__.'/admin.php';
-require __DIR__.'/student.php';
-
-// Routes for notifications (from Dũng's commit)
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
 
@@ -130,8 +128,6 @@ Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileControl
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
-Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
-Route::post('/student/notifications/{id}/mark-read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.mark-read');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
@@ -433,20 +429,9 @@ Route::prefix('admin')->group(function () {
     
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
-    Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
-    Route::post('/notifications/mark-all-read', [AdminController::class, 'markAllRead'])->name('admin.notifications.mark-all-read');
-    Route::get('/notifications/test/create', [AdminController::class, 'testNotification'])->name('admin.notifications.test');
-    Route::post('/notifications/{id}/mark-read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.mark-read');
-    Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
-    
-    // Quản lý yêu cầu tham gia CLB
-    Route::get('/join-requests', [AdminController::class, 'joinRequestsIndex'])->name('admin.join-requests.index');
-    Route::post('/join-requests/{id}/approve', [AdminController::class, 'approveJoinRequest'])->name('admin.join-requests.approve');
-    Route::post('/join-requests/{id}/reject', [AdminController::class, 'rejectJoinRequest'])->name('admin.join-requests.reject');
-    Route::post('/join-requests/bulk', [AdminController::class, 'bulkJoinRequests'])->name('admin.join-requests.bulk');
     
     // Hồ sơ và cài đặt
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
@@ -632,7 +617,7 @@ Route::get('/admin/events/{id}/restore-test', function($id) {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('club/{club}')->middleware(\App\Http\Middleware\SimpleAuth::class)->group(function () {
+Route::prefix('club/{club}')->middleware('simple_auth')->group(function () {
     // Quản lý thành viên (chỉ chủ CLB và ban cán sự)
     Route::middleware('club_role:owner,executive_board')->group(function () {
         

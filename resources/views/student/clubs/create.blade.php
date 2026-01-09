@@ -41,7 +41,7 @@
                         <!-- Mô tả ngắn -->
                         <div class="mb-3">
                             <label for="description" class="form-label fw-bold">Mô tả ngắn <span class="text-danger">*</span></label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="5" required>{{ old('description') }}</textarea>
+                            <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="5">{{ old('description') }}</textarea>
                             <small class="form-text text-muted">Mô tả ngắn gọn về CLB của bạn (tối đa 255 ký tự).</small>
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -236,6 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(editor => {
                 introductionEditor = editor;
+                // Xóa required attribute nếu có
+                const textarea = document.getElementById('introduction');
+                if (textarea) {
+                    textarea.removeAttribute('required');
+                }
                 console.log('CKEditor initialized for introduction');
             })
             .catch(error => {
@@ -247,9 +252,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const createClubForm = document.getElementById('createClubForm');
     if (createClubForm) {
         createClubForm.addEventListener('submit', function(e) {
+            console.log('Form submit triggered');
+            
             // Sync description editor
             if (descriptionEditor) {
+                try {
+                    // Sync trước để đảm bảo data có trong textarea
+                    descriptionEditor.updateSourceElement();
                 const descriptionData = descriptionEditor.getData();
+                    
+                    // Kiểm tra xem có nội dung không
+                    if (!descriptionData || descriptionData.trim() === '' || descriptionData === '<p></p>') {
+                        e.preventDefault();
+                        alert('Vui lòng nhập mô tả ngắn cho CLB.');
+                        return false;
+                    }
+                    
                 // Lấy text thuần (không có HTML) để kiểm tra độ dài
                 const descriptionText = descriptionData.replace(/<[^>]*>/g, '').trim();
                 if (descriptionText.length > 255) {
@@ -257,12 +275,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' + descriptionText.length + ' ký tự.');
                     return false;
                 }
-                descriptionEditor.updateSourceElement();
+                    
+                    // Đảm bảo textarea có giá trị
+                    const textarea = document.getElementById('description');
+                    if (textarea) {
+                        textarea.value = descriptionData;
+                    }
+                    
+                    console.log('Description synced:', descriptionText.length, 'characters');
+                } catch (err) {
+                    console.error('Error syncing description editor:', err);
+                    e.preventDefault();
+                    alert('Có lỗi xảy ra khi xử lý mô tả. Vui lòng thử lại.');
+                    return false;
+                }
+            } else {
+                // Nếu không có editor, kiểm tra textarea trực tiếp
+                const textarea = document.getElementById('description');
+                if (textarea && (!textarea.value || textarea.value.trim() === '')) {
+                    e.preventDefault();
+                    alert('Vui lòng nhập mô tả ngắn cho CLB.');
+                    return false;
+                }
             }
             
             // Sync introduction editor
             if (introductionEditor) {
+                try {
                 introductionEditor.updateSourceElement();
+                    console.log('Introduction synced');
+                } catch (err) {
+                    console.error('Error syncing introduction editor:', err);
+                }
             }
             
             // Xử lý field_id: nếu có new_field_name, xóa field_id hoặc set về rỗng
@@ -270,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fieldSelect = document.getElementById('field_id');
             
             if (hiddenInput && hiddenInput.value) {
+                console.log('New field name found:', hiddenInput.value);
                 // Có lĩnh vực mới, xóa field_id hoặc set về rỗng
                 if (fieldSelect) {
                     // Tìm và xóa option tạm thời
@@ -279,12 +324,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     fieldSelect.value = '';
                     fieldSelect.removeAttribute('required');
                 }
-            } else if (fieldSelect && fieldSelect.value && fieldSelect.value.startsWith('new_')) {
+            } else if (fieldSelect && fieldSelect.value) {
+                if (fieldSelect.value.startsWith('new_')) {
                 // Nếu field_id là giá trị tạm thời nhưng không có new_field_name, báo lỗi
                 e.preventDefault();
                 alert('Vui lòng chọn lĩnh vực từ danh sách hoặc tạo lĩnh vực mới.');
                 return false;
             }
+                console.log('Field ID selected:', fieldSelect.value);
+            } else {
+                console.log('No field selected or new field name');
+            }
+            
+            console.log('Form submitting...');
+            
+            // Disable button để tránh double submit
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...';
+            }
+            
+            // Không prevent default, để form submit bình thường
+            return true;
         });
     }
     
