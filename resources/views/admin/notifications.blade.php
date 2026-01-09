@@ -11,7 +11,7 @@
 <!-- Bộ lọc -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ route('admin.notifications') }}" class="row g-3">
+        <form method="GET" action="{{ route('admin.notifications') }}" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <select name="type" class="form-select">
                     <option value="">Tất cả loại</option>
@@ -38,12 +38,10 @@
                 </a>
             </div>
             <div class="col-md-2">
-                <form method="POST" action="{{ route('admin.notifications.mark-all-read') }}" class="d-inline">
+                <button type="submit" formaction="{{ route('admin.notifications.mark-all-read') }}" formmethod="POST" class="btn btn-success w-100">
                     @csrf
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="fas fa-check-double"></i> Đánh dấu tất cả đã đọc
-                    </button>
-                </form>
+                    <i class="fas fa-check-double"></i> Đánh dấu tất cả đã đọc
+                </button>
             </div>
         </form>
     </div>
@@ -55,9 +53,12 @@
         @if($notifications->count() > 0)
             <div class="list-group">
                 @foreach($notifications as $notification)
+                    @php
+                        $isRead = $notification->is_read ?? false;
+                    @endphp
                     <a href="{{ route('admin.notifications.show', $notification->id) }}" 
-                       class="list-group-item list-group-item-action {{ $notification->read_at ? '' : 'list-group-item-primary' }}"
-                       style="border-left: {{ $notification->read_at ? 'none' : '4px solid #007bff' }};">
+                       class="list-group-item list-group-item-action {{ $isRead ? '' : 'list-group-item-primary' }}"
+                       style="border-left: {{ $isRead ? 'none' : '4px solid #007bff' }}; background: {{ $isRead ? '#fff' : '#e9f2ff' }};">
                         <div class="d-flex w-100 justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center mb-2">
@@ -68,10 +69,10 @@
                                     @else
                                         <i class="fas fa-bell text-info me-2"></i>
                                     @endif
-                                    <h6 class="mb-0 {{ $notification->read_at ? '' : 'fw-bold' }}">
+                                    <h6 class="mb-0 {{ $isRead ? '' : 'fw-bold' }}">
                                         {{ $notification->title }}
                                     </h6>
-                                    @if(!$notification->read_at)
+                                    @if(!$isRead)
                                         <span class="badge bg-danger ms-2">Mới</span>
                                     @endif
                                 </div>
@@ -83,10 +84,10 @@
                                         <i class="fas fa-clock me-1"></i>
                                         {{ $notification->created_at->diffForHumans() }}
                                     </span>
-                                    @if($notification->read_at)
+                                    @if($isRead)
                                         <span class="ms-2 text-success">
                                             <i class="fas fa-check me-1"></i>
-                                            Đã đọc: {{ $notification->read_at->diffForHumans() }}
+                                            Đã đọc
                                         </span>
                                     @endif
                                 </small>

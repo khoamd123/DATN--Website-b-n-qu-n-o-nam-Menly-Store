@@ -211,7 +211,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Người phụ trách chính <span class="text-muted">(Chủ nhiệm / Trưởng ban tổ chức)</span></label>
-                    <input type="text" class="form-control @error('main_organizer') is-invalid @enderror" name="main_organizer" value="{{ old('main_organizer', $event->main_organizer) }}" placeholder="Nhập tên người phụ trách chính">
+                    <input type="text" class="form-control @error('main_organizer') is-invalid @enderror" name="main_organizer" value="{{ old('main_organizer', $event->main_organizer ?? ($user->name ?? '')) }}" placeholder="Người phụ trách chính" readonly>
                     @error('main_organizer')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

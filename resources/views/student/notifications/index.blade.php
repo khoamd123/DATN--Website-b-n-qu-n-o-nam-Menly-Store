@@ -20,59 +20,32 @@
                     <button type="button" class="btn btn-outline-primary">Chưa đọc</button>
                     <button type="button" class="btn btn-outline-primary">Đã đọc</button>
                 </div>
+                <div>
+                    <form method="POST" action="{{ route('student.notifications.mark-all-read') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="fas fa-check-double"></i> Đánh dấu tất cả đã đọc
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <!-- Notifications -->
         <div class="content-card">
-            @if(isset($announcements) && $announcements->count() > 0)
-                @foreach($announcements as $announcement)
-                    <div class="notification-item {{ $announcement->created_at->isToday() ? 'unread' : '' }}">
-                        <div class="notification-icon bg-warning">
-                            <i class="fas fa-bullhorn"></i>
-                        </div>
-                        <div class="notification-content">
-                            <div class="notification-header">
-                                <h6 class="mb-1">{{ $announcement->title }}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i> {{ $announcement->created_at->format('d/m/Y H:i') }}
-                                </small>
-                            </div>
-                            <p class="notification-text mb-2">
-                                {{ \Illuminate\Support\Str::limit(strip_tags($announcement->content), 150) }}
-                            </p>
-                            <div class="notification-meta mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i> {{ $announcement->club->name ?? 'UniClubs' }}
-                                    @if($announcement->user)
-                                        <span class="mx-2">•</span>
-                                        <i class="fas fa-user me-1"></i> {{ $announcement->user->name }}
-                                    @endif
-                                </small>
-                            </div>
-                            <div class="notification-actions">
-                                <a href="{{ route('student.posts.show', $announcement->id) }}" class="btn btn-sm btn-warning">Xem chi tiết</a>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-
-                <!-- Pagination -->
-                <div class="mt-4">
-                    {{ $announcements->links() }}
-                </div>
-            @else
-                <div class="text-center py-5">
-                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Bạn chưa có thông báo nào từ các CLB.</p>
-                </div>
-            @endif
-
-            @if(isset($systemNotifications) && $systemNotifications->count() > 0)
-                @foreach($systemNotifications as $notification)
-                    <div class="notification-item">
-                        <div class="notification-icon bg-primary">
-                            <i class="fas fa-info-circle"></i>
+            @if(isset($notifications) && $notifications->count() > 0)
+                @foreach($notifications as $notification)
+                    @php
+                        $type = strtolower($notification->type ?? ($notification->related_type ?? ''));
+                        $isEvent = $type === 'event' || $type === 'app\\models\\event' || $type === 'eventnotification';
+                        $isAnnouncement = $type === 'announcement' || $type === 'post';
+                        $isSystem = $type === 'system';
+                        $iconClass = $isEvent ? 'fa-calendar-check bg-info' : ($isSystem ? 'fa-info-circle bg-primary' : 'fa-bullhorn bg-warning');
+                        $message = $notification->message ?? $notification->content ?? '';
+                    @endphp
+                    <div class="notification-item {{ $notification->is_read ? '' : 'unread' }}" role="button" onclick="window.location.href='{{ route('student.notifications.view', $notification->id) }}'">
+                        <div class="notification-icon {{ explode(' ', $iconClass)[1] }}">
+                            <i class="fas {{ explode(' ', $iconClass)[0] }}"></i>
                         </div>
                         <div class="notification-content">
                             <div class="notification-header">
@@ -82,14 +55,28 @@
                                 </small>
                             </div>
                             <p class="notification-text mb-2">
-                                {{ $notification->message }}
+                                {{ \Illuminate\Support\Str::limit(strip_tags($message), 200) }}
                             </p>
                             <div class="notification-actions">
-                                <button class="btn btn-sm btn-outline-primary">Xem chi tiết</button>
+                                @if($isEvent && $notification->related_id)
+                                    <button type="button" class="btn btn-sm btn-warning" onclick="event.stopPropagation(); window.location.href='{{ route('student.events.show', $notification->related_id) }}'">Xem sự kiện</button>
+                                @elseif($isAnnouncement && $notification->related_id)
+                                    <button type="button" class="btn btn-sm btn-warning" onclick="event.stopPropagation(); window.location.href='{{ route('student.posts.show', $notification->related_id) }}'">Xem chi tiết</button>
+                                @endif
                             </div>
                         </div>
                     </div>
                 @endforeach
+
+                <!-- Pagination -->
+                <div class="mt-4 d-flex justify-content-center">
+                    {{ $notifications->links('pagination::bootstrap-5') }}
+                </div>
+            @else
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Bạn chưa có thông báo nào.</p>
+                </div>
             @endif
         </div>
 

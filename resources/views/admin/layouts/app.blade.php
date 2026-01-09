@@ -611,14 +611,54 @@
                             aria-expanded="false">
                         <i class="fas fa-bell"></i>
                         @php
+                            $notificationCount = 0;
+                            $recentNotifications = collect();
                             try {
-                                $notificationCount = \App\Models\Notification::whereNull('read_at')->count();
-                                $recentNotifications = \App\Models\Notification::whereNull('read_at')
-                                    ->with('sender')
-                                    ->orderBy('created_at', 'desc')
-                                    ->limit(5)
-                                    ->get();
-                            } catch (Exception $e) {
+                                $adminUser = \App\Models\User::find(session('user_id'));
+                                if ($adminUser) {
+                                    $userClubIds = $adminUser->clubs->pluck('id')->toArray();
+                                    $baseQuery = \App\Models\Notification::whereHas('targets', function($query) use ($adminUser, $userClubIds) {
+                                            $query->where(function($q) use ($adminUser, $userClubIds) {
+                                                $q->where(function($subQ) use ($adminUser) {
+                                                    $subQ->where('target_type', 'user')
+                                                         ->where('target_id', $adminUser->id);
+                                                });
+                                                $q->orWhere(function($subQ) {
+                                                    $subQ->where('target_type', 'all');
+                                                });
+                                                if (!empty($userClubIds)) {
+                                                    $q->orWhere(function($subQ) use ($userClubIds) {
+                                                        $subQ->where('target_type', 'club')
+                                                             ->whereIn('target_id', $userClubIds);
+                                                    });
+                                                }
+                                            });
+                                        })
+                                        ->whereNull('deleted_at');
+
+                                    $notificationCount = (clone $baseQuery)
+                                        ->whereDoesntHave('reads', function($query) use ($adminUser) {
+                                            $query->where('user_id', $adminUser->id)
+                                                  ->where('is_read', 1);
+                                        })
+                                        ->count();
+
+                                    $recentNotifications = $baseQuery
+                                        ->with(['sender', 'reads' => function($query) use ($adminUser) {
+                                            $query->where('user_id', $adminUser->id);
+                                        }])
+                                        ->orderBy('created_at', 'desc')
+                                        ->limit(5)
+                                        ->get();
+
+                                    $recentNotifications->transform(function($noti) use ($adminUser) {
+                                        $read = $noti->reads->first();
+                                        $noti->is_read = $read ? (bool)$read->is_read : false;
+                                        return $noti;
+                                    });
+                                }
+                            } catch (\Exception $e) {
+                                \Log::error('Admin notification badge error: ' . $e->getMessage());
                                 $notificationCount = 0;
                                 $recentNotifications = collect();
                             }
@@ -636,7 +676,7 @@
                         @if($notificationCount > 0)
                             @foreach($recentNotifications as $notification)
                                 <li>
-                                    <a class="dropdown-item notification-item-dropdown {{ $notification->read_at ? '' : 'fw-bold' }}" 
+                                    <a class="dropdown-item notification-item-dropdown {{ $notification->is_read ? '' : 'fw-bold' }}" 
                                        href="{{ route('admin.notifications.show', $notification->id) }}">
                                         <div class="d-flex align-items-start">
                                             <div class="me-2">

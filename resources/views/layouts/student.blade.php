@@ -373,8 +373,27 @@
                             @php
                                 $unreadCount = 0;
                                 try {
-                                    $unreadCount = \App\Models\Notification::where('user_id', $user->id)
-                                        ->whereNull('read_at')
+                                    $userClubIds = $user->clubs->pluck('id')->toArray();
+                                    $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user, $userClubIds) {
+                                            $query->where(function($q) use ($user, $userClubIds) {
+                                                $q->where(function($subQ) use ($user) {
+                                                    $subQ->where('target_type', 'user')
+                                                         ->where('target_id', $user->id);
+                                                });
+                                                $q->orWhere(function($subQ) {
+                                                    $subQ->where('target_type', 'all');
+                                                });
+                                                if (!empty($userClubIds)) {
+                                                    $q->orWhere(function($subQ) use ($userClubIds) {
+                                                        $subQ->where('target_type', 'club')
+                                                             ->whereIn('target_id', $userClubIds);
+                                                    });
+                                                }
+                                            });
+                                        })
+                                        ->whereDoesntHave('reads', function($query) use ($user) {
+                                            $query->where('user_id', $user->id)->where('is_read', 1);
+                                        })
                                         ->count();
                                 } catch (\Exception $e) {
                                     $unreadCount = 0;

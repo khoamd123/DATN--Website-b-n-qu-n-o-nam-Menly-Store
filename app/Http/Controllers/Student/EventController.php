@@ -35,9 +35,9 @@ class EventController extends Controller
         return $this->oldController->showEvent($event);
     }
 
-    public function manage()
+    public function manage(Request $request)
     {
-        return $this->oldController->manageEvents();
+        return $this->oldController->manageEvents($request);
     }
 
     public function register(Request $request, $event)
@@ -52,7 +52,7 @@ class EventController extends Controller
 
     public function restore(Request $request, $event)
     {
-        return $this->oldController->restoreEvent($request, $event);
+        return $this->oldController->restoreEvent($event);
     }
 
     public function delete($event)

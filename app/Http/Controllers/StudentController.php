@@ -18,6 +18,7 @@ use App\Models\FundTransaction;
 use App\Models\FundRequest;
 use App\Models\Notification;
 use App\Models\NotificationTarget;
+use App\Models\NotificationRead;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -25,8 +26,9 @@ class StudentController extends Controller
 {
     /**
      * Check if user is logged in as student
+     * Made public so nested controllers (NotificationController, etc.) can reuse.
      */
-    private function checkStudentAuth()
+    public function checkStudentAuth()
     {
         if (!session('user_id') || session('is_admin')) {
             if (session('is_admin')) {
@@ -482,11 +484,11 @@ class StudentController extends Controller
             // Tạo đăng ký mới
             try {
                 $registration = \App\Models\EventRegistration::create([
-                    'user_id' => $user->id,
-                    'event_id' => $eventId,
-                    'status' => 'registered',
-                    'joined_at' => now(),
-                ]);
+                'user_id' => $user->id,
+                'event_id' => $eventId,
+                'status' => 'registered',
+                'joined_at' => now(),
+            ]);
 
                 // Kiểm tra xem registration đã được tạo thành công chưa
                 if (!$registration || !$registration->id) {
@@ -503,8 +505,8 @@ class StudentController extends Controller
                     // Không throw exception, chỉ log lỗi để không ảnh hưởng đến việc đăng ký
                 }
 
-                return response()->json([
-                    'success' => true,
+            return response()->json([
+                'success' => true,
                     'message' => 'Đăng ký tham gia sự kiện thành công!'
                 ], 200);
             } catch (\Illuminate\Database\QueryException $e) {
@@ -1005,7 +1007,8 @@ class StudentController extends Controller
                 $eventData['registration_deadline'] = $request->registration_deadline;
             }
             if (in_array('main_organizer', $columnNames)) {
-                $eventData['main_organizer'] = $request->main_organizer;
+                // Luôn lưu người phụ trách chính là người tạo sự kiện
+                $eventData['main_organizer'] = $user->name;
             }
             if (in_array('organizing_team', $columnNames)) {
                 $eventData['organizing_team'] = $request->organizing_team;
@@ -1044,6 +1047,24 @@ class StudentController extends Controller
                 }
             }
 
+            $this->notifyAdmins([
+                'sender_id' => $user->id,
+                'title' => 'Sự kiện mới cần duyệt',
+                'message' => "Sự kiện \"{$event->title}\" của CLB \"{$event->club->name}\" đã được tạo và đang chờ quản trị viên duyệt.",
+                'related_id' => $event->id,
+                'related_type' => 'Event',
+                'type' => 'event',
+            ]);
+
+            $this->notifyAdmins([
+                'sender_id' => $user->id,
+                'title' => 'Sự kiện đã được tạo',
+                'message' => "Sự kiện \"{$event->title}\" của CLB \"{$event->club->name}\" vừa được tạo và đang chờ duyệt.",
+                'related_id' => $event->id,
+                'related_type' => 'Event',
+                'type' => 'event',
+            ]);
+
             return redirect()->route('student.club-management.index')
                 ->with('success', 'Tạo sự kiện thành công! Sự kiện của bạn đang chờ quản trị viên duyệt.');
 
@@ -1052,6 +1073,58 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             \Log::error('StoreEvent Error: ' . $e->getMessage());
             return back()->with('error', 'Có lỗi xảy ra khi tạo sự kiện: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Send notification to admins with safe column handling
+     */
+    protected function notifyAdmins(array $payload)
+    {
+        if (!Schema::hasTable('notifications')) {
+            return null;
+        }
+
+        $notificationData = [
+            'sender_id' => $payload['sender_id'],
+            'title' => $payload['title'],
+            'message' => $payload['message'],
+        ];
+
+        if (Schema::hasColumn('notifications', 'type')) {
+            $notificationData['type'] = $payload['type'] ?? 'system';
+        }
+        if (Schema::hasColumn('notifications', 'related_id')) {
+            $notificationData['related_id'] = $payload['related_id'] ?? null;
+        }
+        if (Schema::hasColumn('notifications', 'related_type')) {
+            $notificationData['related_type'] = $payload['related_type'] ?? null;
+        }
+
+        try {
+            $notification = Notification::create(array_filter($notificationData, fn($value) => $value !== null));
+            if (!$notification) {
+                return null;
+            }
+
+            $admins = User::where('is_admin', true)->get();
+            foreach ($admins as $admin) {
+                NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $admin->id,
+                ]);
+                NotificationRead::create([
+                    'notification_id' => $notification->id,
+                    'user_id' => $admin->id,
+                    'is_read' => false,
+                ]);
+            }
+
+            return $notification;
+        } catch (\Exception $e) {
+            \Log::error('Failed to create admin notification: ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -1264,7 +1337,8 @@ class StudentController extends Controller
                 'location' => $request->location,
                 'max_participants' => $request->max_participants,
                 'registration_deadline' => $request->registration_deadline,
-                'main_organizer' => $request->main_organizer,
+                // Người phụ trách luôn là người đang chỉnh sửa (người tạo)
+                'main_organizer' => $user->name,
                 'organizing_team' => $request->organizing_team,
                 'co_organizers' => $request->co_organizers,
                 'contact_info' => $contactInfo,
@@ -1296,6 +1370,15 @@ class StudentController extends Controller
                     ]);
                 }
             }
+
+            $this->notifyAdmins([
+                'sender_id' => $user->id,
+                'title' => 'Sự kiện cần duyệt lại',
+                'message' => "Sự kiện \"{$event->title}\" vừa được chỉnh sửa và đang chờ admin duyệt lại.",
+                'related_id' => $event->id,
+                'related_type' => 'Event',
+                'type' => 'event',
+            ]);
 
             return redirect()->route('student.events.show', $event->id)
                 ->with('success', 'Cập nhật sự kiện thành công! Sự kiện đã được chuyển về trạng thái chờ duyệt.');
@@ -1348,7 +1431,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$userClub) {
-                $userClub = $user->clubs->first();
+        $userClub = $user->clubs->first();
             }
         }
         
@@ -1381,7 +1464,41 @@ class StudentController extends Controller
         // Sắp xếp và phân trang
         $events = $query->orderBy('created_at', 'desc')->paginate(12)->withQueryString();
 
-        return view('student.events.manage', compact('user', 'userClub', 'clubId', 'events'));
+        // Tính toán thống kê
+        $stats = [
+            'total' => Event::where('club_id', $clubId)->count(),
+            'pending' => Event::where('club_id', $clubId)->where('status', 'pending')->count(),
+            'approved' => Event::where('club_id', $clubId)->where('status', 'approved')->count(),
+            'ongoing' => Event::where('club_id', $clubId)->where('status', 'ongoing')->count(),
+            'completed' => Event::where('club_id', $clubId)->where('status', 'completed')->count(),
+            'cancelled' => Event::where('club_id', $clubId)->where('status', 'cancelled')->count(),
+        ];
+
+        // Lấy tất cả events theo từng trạng thái (không phân trang) cho tabs
+        $allEvents = Event::with(['club', 'creator', 'images'])
+            ->where('club_id', $clubId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        $pendingEvents = $allEvents->where('status', 'pending');
+        $approvedEvents = $allEvents->where('status', 'approved');
+        $ongoingEvents = $allEvents->where('status', 'ongoing');
+        $completedEvents = $allEvents->where('status', 'completed');
+        $cancelledEvents = $allEvents->where('status', 'cancelled');
+
+        return view('student.events.manage', compact(
+            'user', 
+            'userClub', 
+            'clubId', 
+            'events', 
+            'stats',
+            'allEvents',
+            'pendingEvents',
+            'approvedEvents',
+            'ongoingEvents',
+            'completedEvents',
+            'cancelledEvents'
+        ));
     }
 
     /**
@@ -1588,12 +1705,25 @@ class StudentController extends Controller
         
         // Phân trang notifications
         $notifications = $notificationsQuery->paginate(10)->withQueryString();
-        
+
         // Thêm thuộc tính is_read cho mỗi notification
         $notifications->getCollection()->transform(function($notification) use ($user) {
             $read = $notification->reads->firstWhere('user_id', $user->id);
             $notification->is_read = $read ? (bool)$read->is_read : false;
             return $notification;
+        });
+
+        $notificationsCollection = $notifications->getCollection();
+        $announcementNotifications = $notificationsCollection->filter(function($notification) {
+            return $notification->type === 'announcement' || $notification->related_type === Event::class;
+        });
+        $systemNotifications = $notificationsCollection->filter(function($notification) {
+            return $notification->type === 'system';
+        });
+        $eventNotifications = $notificationsCollection->filter(function($notification) {
+            return $notification->type === 'event'
+                || strtolower($notification->related_type ?? '') === 'app\\models\\event'
+                || strtolower($notification->related_type ?? '') === 'event';
         });
         
         // Tính stats
@@ -1616,25 +1746,33 @@ class StudentController extends Controller
             })
             ->whereNull('deleted_at');
         
+        $hasTypeColumn = Schema::hasColumn('notifications', 'type');
+
         $stats = [
-            'system' => (clone $allNotificationsQuery)
-                ->where('type', 'system')
-                ->whereDoesntHave('reads', function($query) use ($user) {
-                    $query->where('user_id', $user->id)->where('is_read', 1);
-                })
-                ->count(),
-            'announcements' => (clone $allNotificationsQuery)
-                ->where('type', 'announcement')
-                ->whereDoesntHave('reads', function($query) use ($user) {
-                    $query->where('user_id', $user->id)->where('is_read', 1);
-                })
-                ->count(),
-            'clubs' => (clone $allNotificationsQuery)
-                ->where('type', 'club')
-                ->whereDoesntHave('reads', function($query) use ($user) {
-                    $query->where('user_id', $user->id)->where('is_read', 1);
-                })
-                ->count(),
+            'system' => $hasTypeColumn
+                ? (clone $allNotificationsQuery)
+                    ->where('type', 'system')
+                    ->whereDoesntHave('reads', function($query) use ($user) {
+                        $query->where('user_id', $user->id)->where('is_read', 1);
+                    })
+                    ->count()
+                : 0,
+            'announcements' => $hasTypeColumn
+                ? (clone $allNotificationsQuery)
+                    ->where('type', 'announcement')
+                    ->whereDoesntHave('reads', function($query) use ($user) {
+                        $query->where('user_id', $user->id)->where('is_read', 1);
+                    })
+                    ->count()
+                : 0,
+            'clubs' => $hasTypeColumn
+                ? (clone $allNotificationsQuery)
+                    ->where('type', 'club')
+                    ->whereDoesntHave('reads', function($query) use ($user) {
+                        $query->where('user_id', $user->id)->where('is_read', 1);
+                    })
+                    ->count()
+                : 0,
             'awards' => 0,
         ];
         
@@ -1646,7 +1784,17 @@ class StudentController extends Controller
             'club' => session('notification_settings.club', true),
         ];
         
-        return view('student.notifications.index', compact('user', 'notifications', 'stats', 'filter', 'category', 'notificationSettings'));
+        return view('student.notifications.index', compact(
+            'user',
+            'notifications',
+            'announcementNotifications',
+            'systemNotifications',
+            'eventNotifications',
+            'stats',
+            'filter',
+            'category',
+            'notificationSettings'
+        ));
     }
     
     /**
@@ -1744,7 +1892,7 @@ class StudentController extends Controller
         $clubMembers = collect();
         $allPermissions = collect();
 
-            if ($user->clubs->count() > 0) {
+        if ($user->clubs->count() > 0) {
             // Tìm CLB mà user có quyền quản lý (leader, vice_president, treasurer)
             $userClub = null;
             $clubId = null;
@@ -1766,13 +1914,13 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy CLB có quyền quản lý, lấy CLB đầu tiên để hiển thị thông báo
             if (!$userClub && $user->clubs->count() > 0) {
-                $userClub = $user->clubs->first();
-                $clubId = $userClub->id;
+            $userClub = $user->clubs->first();
+            $clubId = $userClub->id;
                 $clubMember = ClubMember::where('user_id', $user->id)
                     ->where('club_id', $clubId)
                     ->whereIn('status', ['approved', 'active'])
                     ->first();
-                $userPosition = $clubMember ? $clubMember->position : null;
+            $userPosition = $clubMember ? $clubMember->position : null;
             }
             
             // Leader, Vice President và Treasurer có quyền quản lý CLB
@@ -2218,7 +2366,7 @@ class StudentController extends Controller
                 // Kiểm tra giới hạn số lượng vice_president (chỉ 1)
                 if ($calculatedPosition === 'vice_president') {
                     $vicePresidentCount = ClubMember::where('club_id', $clubId)
-                ->whereIn('status', ['approved', 'active'])
+                        ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'vice_president')
                         ->where('id', '!=', $clubMember->id)
                         ->count();
@@ -2274,10 +2422,10 @@ class StudentController extends Controller
                 }
                 
                 // Cập nhật position
-                ClubMember::where('id', $clubMember->id)
+                    ClubMember::where('id', $clubMember->id)
                     ->update(['position' => $finalPosition]);
                 
-                // Log để debug
+                    // Log để debug
                 \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$finalPosition} (requested: {$requestedPosition}, calculated: {$calculatedPosition}, permission count: {$permissionCount})");
             });
 
@@ -2325,7 +2473,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$club) {
-                $club = $user->clubs->first();
+        $club = $user->clubs->first();
             }
         }
         
@@ -2387,7 +2535,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$club) {
-                $club = $user->clubs->first();
+        $club = $user->clubs->first();
             }
         }
         
@@ -2522,7 +2670,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$club) {
-                $club = $user->clubs->first();
+        $club = $user->clubs->first();
             }
         }
         
@@ -2859,14 +3007,14 @@ class StudentController extends Controller
                     ->sum('amount');
                 // Số dư = Số tiền ban đầu + Tổng thu - Tổng chi (giống logic admin)
                 $balance = (int) ($fund->initial_amount ?? 0) + (int) $totalIncome - (int) $totalExpense;
-            // breakdown by category (if field exists)
-            $expenseByCategory = FundTransaction::where('fund_id', $fundId)
+                // breakdown by category (if field exists)
+                $expenseByCategory = FundTransaction::where('fund_id', $fundId)
                     ->where('type', 'expense')
                     ->where('status', 'approved')
-                ->select('category', DB::raw('SUM(amount) as total'))
-                ->groupBy('category')
-                ->pluck('total', 'category')
-                ->toArray();
+                    ->select('category', DB::raw('SUM(amount) as total'))
+                    ->groupBy('category')
+                    ->pluck('total', 'category')
+                    ->toArray();
         }
 
         // Member structure (leader/vice_president/treasurer/member) simple distribution
@@ -2967,12 +3115,12 @@ class StudentController extends Controller
 
         // Kiểm tra xem user có phải là leader, vice_president hoặc treasurer không
         $position = $user->getPositionInClub($clubId);
-        $isLeaderOrManager = in_array($position, ['leader', 'vice_president', 'treasurer']);
+        $isLeaderOrOfficer = in_array($position, ['leader', 'vice_president', 'treasurer']);
         
         // Kiểm tra quyền xem báo cáo (có thể xem nếu có quyền xem_bao_cao hoặc là leader/vice_president/treasurer)
-        $canViewReports = $user->hasPermission('xem_bao_cao', $clubId) || $isLeaderOrManager;
+        $canViewReports = $user->hasPermission('xem_bao_cao', $clubId) || $isLeaderOrOfficer;
 
-        return view('student.club-management.reports', compact('user', 'club', 'stats', 'isLeaderOrManager', 'canViewReports'));
+        return view('student.club-management.reports', compact('user', 'club', 'stats', 'isLeaderOrOfficer', 'canViewReports'));
     }
     
     /**
@@ -3006,7 +3154,7 @@ class StudentController extends Controller
                 $position = $user->getPositionInClub($c->id);
                 if (in_array($position, ['treasurer', 'leader'])) {
                     $club = $c;
-                    break;
+                break;
                 }
             }
             
@@ -3105,7 +3253,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$club) {
-                $club = $user->clubs->first();
+        $club = $user->clubs->first();
             }
         }
         
@@ -3157,7 +3305,7 @@ class StudentController extends Controller
             
             // Nếu không tìm thấy, lấy CLB đầu tiên
             if (!$club) {
-                $club = $user->clubs->first();
+        $club = $user->clubs->first();
             }
         }
         
@@ -3714,20 +3862,18 @@ class StudentController extends Controller
                 'message' => "{$user->name} đã đăng một {$postType} mới: \"{$post->title}\" trong CLB {$club->name}",
             ]);
             
-            // Gửi thông báo cho tất cả admin
-            $adminUsers = User::where('is_admin', true)->get();
-            foreach ($adminUsers as $admin) {
-                NotificationTarget::create([
-                    'notification_id' => $notification->id,
-                    'target_type' => 'user',
-                    'target_id' => $admin->id,
-                ]);
-            }
+            $this->notifyAdmins([
+                'sender_id' => $user->id,
+                'title' => 'Bài viết mới cần duyệt',
+                'message' => "Bài viết \"{$post->title}\" của CLB \"{$post->club->name}\" đang chờ quản trị viên duyệt.",
+                'related_id' => $post->id,
+                'related_type' => 'Post',
+                'type' => 'announcement',
+            ]);
         } catch (\Exception $e) {
-            // Log lỗi nhưng không làm gián đoạn quá trình tạo bài viết
             \Log::error('Lỗi khi tạo thông báo cho admin: ' . $e->getMessage());
         }
-        
+
         return redirect()->route('student.posts.show', $post->id)->with('success', 'Tạo bài viết thành công!');
     }
 

@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Notification;
+use App\Models\NotificationTarget;
+use App\Models\NotificationRead;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\EventImage;
 use App\Models\Post;
 use App\Models\Field;
-use App\Models\Notification;
-use App\Models\NotificationTarget;
-use App\Models\NotificationRead;
 use App\Models\ClubMember;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
@@ -893,11 +893,28 @@ class AdminController extends Controller
             if (!$notification->read_at) {
                 $notification->update(['read_at' => now()]);
             }
+
+            // Điều hướng đến nội dung liên quan (ưu tiên sự kiện)
+            $route = route('admin.notifications');
+            $relatedType = strtolower($notification->related_type ?? '');
+            $type = strtolower($notification->type ?? '');
+
+            if (
+                ($relatedType === 'app\\models\\event' || $relatedType === 'event' || $type === 'event')
+                && $notification->related_id
+            ) {
+                $route = route('admin.events.show', $notification->related_id);
+            } elseif (
+                ($relatedType === 'app\\models\\post' || $relatedType === 'post' || $type === 'post')
+                && $notification->related_id
+            ) {
+                $route = route('admin.posts.show', $notification->related_id);
+            }
+
+            return redirect($route);
         } catch (\Exception $e) {
             return redirect()->route('admin.notifications')->with('error', 'Không tìm thấy thông báo.');
         }
-
-        return view('admin.notifications.show', compact('notification'));
     }
 
     /**
@@ -951,11 +968,47 @@ class AdminController extends Controller
         }
 
         try {
-            \App\Models\Notification::whereNull('read_at')
-                ->update(['read_at' => now()]);
+            $admin = User::with('clubs')->find(session('user_id'));
+            if (!$admin) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy tài khoản admin.');
+            }
+
+            $userClubIds = $admin->clubs->pluck('id')->toArray();
+
+            // Lấy tất cả thông báo mà admin được target (user, all, club)
+            $notifications = \App\Models\Notification::whereHas('targets', function($query) use ($admin, $userClubIds) {
+                    $query->where(function($q) use ($admin, $userClubIds) {
+                        $q->where(function($subQ) use ($admin) {
+                            $subQ->where('target_type', 'user')
+                                 ->where('target_id', $admin->id);
+                        });
+                        $q->orWhere(function($subQ) {
+                            $subQ->where('target_type', 'all');
+                        });
+                        if (!empty($userClubIds)) {
+                            $q->orWhere(function($subQ) use ($userClubIds) {
+                                $subQ->where('target_type', 'club')
+                                     ->whereIn('target_id', $userClubIds);
+                            });
+                        }
+                    });
+                })
+                ->whereNull('deleted_at')
+                ->get();
+
+            foreach ($notifications as $notification) {
+                NotificationRead::updateOrCreate(
+                    [
+                        'notification_id' => $notification->id,
+                        'user_id' => $admin->id,
+                    ],
+                    ['is_read' => true]
+                );
+            }
             
             return redirect()->route('admin.notifications')->with('success', 'Đã đánh dấu tất cả thông báo là đã đọc.');
         } catch (\Exception $e) {
+            \Log::error('Admin markAllRead error: ' . $e->getMessage());
             return redirect()->route('admin.notifications')->with('error', 'Có lỗi xảy ra khi đánh dấu thông báo.');
         }
     }
@@ -2343,6 +2396,10 @@ class AdminController extends Controller
             
             $event->status = 'approved';
             $event->save();
+
+            $this->notifyEventCreator($event, 'Sự kiện đã được duyệt', "Sự kiện \"{$event->title}\" đã được duyệt bởi ban quản trị.");
+
+            $this->notifyEventCreator($event, 'Sự kiện đã được duyệt', "Sự kiện \"{$event->title}\" đã được duyệt bởi ban quản trị.");
             
             return redirect()->route('admin.events.show', $id)->with('success', 'Đã duyệt sự kiện thành công!');
         } catch (\Exception $e) {
@@ -2418,7 +2475,9 @@ class AdminController extends Controller
             
             DB::table('events')->where('id', $id)->update($updateData);
 
-            // Log để debug
+            $event->refresh();
+            $this->notifyEventCreator($event, 'Sự kiện bị hủy', "Sự kiện \"{$event->title}\" đã bị hủy. Lý do: {$cancellationReason}");
+
             \Log::info('Event cancelled', [
                 'event_id' => $id,
                 'cancellation_reason' => $cancellationReason,
@@ -2429,6 +2488,56 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             \Log::error('Cancel event error:', ['message' => $e->getMessage()]);
             return back()->with('error', 'Có lỗi xảy ra khi hủy sự kiện: ' . $e->getMessage());
+        }
+    }
+
+    private function notifyEventCreator($event, $title, $message)
+    {
+        if (!$event || !$event->created_by) {
+            return;
+        }
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            return;
+        }
+
+        $notificationData = [
+            'sender_id' => session('user_id') ?? 0,
+            'title' => $title,
+            'message' => $message,
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type')) {
+            $notificationData['type'] = 'event';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id')) {
+            $notificationData['related_id'] = $event->id;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type')) {
+            $notificationData['related_type'] = Event::class;
+        }
+
+        try {
+            $notification = Notification::create(array_filter($notificationData, function ($value) {
+                return $value !== null;
+            }));
+            if (!$notification) {
+                return;
+            }
+
+            NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $event->created_by,
+            ]);
+
+            NotificationRead::create([
+                'notification_id' => $notification->id,
+                'user_id' => $event->created_by,
+                'is_read' => 0,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to notify event creator: ' . $e->getMessage());
         }
     }
 
