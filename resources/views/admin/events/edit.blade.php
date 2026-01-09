@@ -297,16 +297,6 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Chế độ hiển thị <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="visibility" required>
-                                        <option value="public" {{ old('visibility', $event->visibility ?? 'public') === 'public' ? 'selected' : '' }}>Công khai</option>
-                                        <option value="internal" {{ old('visibility', $event->visibility ?? 'public') === 'internal' ? 'selected' : '' }}>Chỉ nội bộ CLB</option>
-                                    </select>
-                                    <small class="text-muted">Công khai: Tất cả mọi người có thể xem. Chỉ nội bộ CLB: Chỉ thành viên CLB mới xem được.</small>
-                                </div>
-                            </div>
                         </div>
 
                         <div class="d-flex gap-2">

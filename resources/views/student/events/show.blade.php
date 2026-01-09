@@ -59,11 +59,6 @@
                 <div class="d-flex flex-wrap align-items-center text-muted mb-3">
                     <small class="me-3">
                         <i class="fas fa-users me-1"></i>{{ $event->club->name ?? 'UniClubs' }}
-                        @if($event->visibility === 'internal' && $event->club)
-                            <span class="badge bg-warning text-dark ms-2">
-                                <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
-                            </span>
-                        @endif
                     </small>
                     <small class="me-3">
                         <i class="fas fa-user me-1"></i>{{ $event->creator->name ?? 'Hệ thống' }}
@@ -101,7 +96,41 @@
                             <span class="badge bg-success me-2">Đang diễn ra</span>
                         @endif
                     @endif
+                    @if(isset($activeViewersCount) && $activeViewersCount > 0)
+                        <small class="me-3">
+                            <i class="fas fa-eye me-1 text-primary"></i>
+                            <span id="viewersCount">{{ $activeViewersCount }}</span> người đang xem
+                        </small>
+                    @endif
                 </div>
+
+                <!-- Viewers Status Card -->
+                @if(isset($activeViewersCount) && $activeViewersCount > 0)
+                    <div class="mb-3">
+                        <div class="card border-0 shadow-sm" id="viewersCard">
+                            <div class="card-body py-2">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-users me-1"></i>
+                                            <strong id="viewersCountText">{{ $activeViewersCount }}</strong> người đang xem sự kiện này
+                                        </small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#viewersList" aria-expanded="false">
+                                        <i class="fas fa-chevron-down"></i> Xem danh sách
+                                    </button>
+                                </div>
+                                <div class="collapse mt-2" id="viewersList">
+                                    <div id="viewersListContent" class="small">
+                                        <div class="text-center text-muted py-2">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>Đang tải...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <!-- Event Images Gallery -->
                 @php
@@ -316,6 +345,102 @@
                 </div>
             </div>
 
+            <!-- Danh sách người đăng ký (chỉ cán bộ CLB và admin mới xem được) -->
+            @if(isset($canViewRegistrations) && $canViewRegistrations && isset($registrations))
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title text-teal mb-0">
+                                <i class="fas fa-list me-2"></i>Danh sách người đăng ký
+                                <span class="badge bg-primary ms-2">{{ $registrations->count() }}</span>
+                            </h6>
+                            @if($registrations->count() > 0)
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#registrationsList" aria-expanded="true">
+                                    <i class="fas fa-chevron-down"></i> Xem danh sách
+                                </button>
+                            @endif
+                        </div>
+                        
+                        @if($registrations->count() > 0)
+                            <div class="collapse show" id="registrationsList">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">STT</th>
+                                                <th>Họ và tên</th>
+                                                <th>Email</th>
+                                                <th>Mã sinh viên</th>
+                                                <th>Thời gian đăng ký</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($registrations as $index => $registration)
+                                                <tr>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            @if($registration->user->avatar)
+                                                                <img src="{{ asset('storage/' . $registration->user->avatar) }}" 
+                                                                     alt="{{ $registration->user->name }}" 
+                                                                     class="rounded-circle me-2" 
+                                                                     style="width: 32px; height: 32px; object-fit: cover;">
+                                                            @else
+                                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" 
+                                                                     style="width: 32px; height: 32px; font-size: 0.875rem;">
+                                                                    {{ strtoupper(substr($registration->user->name, 0, 1)) }}
+                                                                </div>
+                                                            @endif
+                                                            <strong>{{ $registration->user->name }}</strong>
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ $registration->user->email ?? 'N/A' }}</td>
+                                                    <td>{{ $registration->user->student_id ?? 'N/A' }}</td>
+                                                    <td>
+                                                        @if($registration->joined_at)
+                                                            {{ $registration->joined_at->format('d/m/Y H:i') }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @php
+                                                            $statusColors = [
+                                                                'registered' => 'success',
+                                                                'pending' => 'warning',
+                                                                'approved' => 'info',
+                                                                'rejected' => 'danger',
+                                                                'canceled' => 'secondary'
+                                                            ];
+                                                            $statusLabels = [
+                                                                'registered' => 'Đã đăng ký',
+                                                                'pending' => 'Chờ duyệt',
+                                                                'approved' => 'Đã duyệt',
+                                                                'rejected' => 'Từ chối',
+                                                                'canceled' => 'Đã hủy'
+                                                            ];
+                                                        @endphp
+                                                        <span class="badge bg-{{ $statusColors[$registration->status] ?? 'secondary' }}">
+                                                            {{ $statusLabels[$registration->status] ?? ucfirst($registration->status) }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <p class="mb-0">Chưa có người đăng ký</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             <!-- Event Description -->
             @if($event->description)
                 <div class="mb-4">
@@ -427,9 +552,13 @@
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2 mb-4">
-                @if($isRegistered)
+                @if($canCancelRegistration)
                     <button class="btn btn-outline-danger" onclick="cancelRegistration({{ $event->id }}, this)">
                         <i class="fas fa-times me-1"></i> Hủy đăng ký
+                    </button>
+                @elseif($isRegistered)
+                    <button class="btn btn-success" disabled>
+                        <i class="fas fa-check me-1"></i> Đã đăng ký
                     </button>
                 @elseif(!$isFull && !$isDeadlinePassed && $event->status !== 'cancelled')
                     <button class="btn btn-primary" onclick="registerEvent({{ $event->id }}, this)">
@@ -585,20 +714,61 @@
     
     // Register event function
     function registerEvent(eventId, buttonElement) {
+        // Log để debug
+        console.log('Register event called with eventId:', eventId, 'Type:', typeof eventId);
+        
+        // Đảm bảo eventId là số
+        eventId = parseInt(eventId);
+        if (isNaN(eventId) || eventId <= 0) {
+            console.error('Invalid eventId:', eventId);
+            showToast('ID sự kiện không hợp lệ', 'error');
+            return;
+        }
+        
         // Disable button to prevent multiple clicks
         const button = buttonElement;
         const originalText = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
         
-        fetch(`/student/events/${eventId}/register`, {
+        // Sử dụng route helper từ Laravel để tạo URL đúng
+        const registerUrl = '{{ route("student.events.register", ":id") }}'.replace(':id', eventId);
+        console.log('Register URL:', registerUrl);
+        
+        fetch(registerUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            // Kiểm tra response status
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Có lỗi xảy ra khi đăng ký');
+                    } catch (e) {
+                        if (e instanceof Error && e.message) {
+                            throw e;
+                        }
+                        throw new Error('Có lỗi xảy ra khi đăng ký. Mã lỗi: ' + response.status);
+                    }
+                });
+            }
+            // Kiểm tra content-type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Server trả về dữ liệu không hợp lệ');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showToast('Đăng ký tham gia sự kiện thành công', 'success');
@@ -614,7 +784,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Có lỗi xảy ra khi đăng ký', 'error');
+            showToast(error.message || 'Có lỗi xảy ra khi đăng ký', 'error');
             button.disabled = false;
             button.innerHTML = originalText;
         });
@@ -633,7 +803,7 @@
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xử lý...';
         
         fetch(`/student/events/${eventId}/cancel-registration`, {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -680,6 +850,111 @@
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
     }
+
+    // Viewers tracking functionality
+    @if(isset($activeViewersCount) && $activeViewersCount > 0)
+    const eventId = {{ $event->id }};
+    let viewersUpdateInterval;
+    let activityPingInterval;
+
+    // Update viewer activity (ping server)
+    function pingViewerActivity() {
+        fetch(`/student/events/${eventId}/viewer-activity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        }).catch(err => console.log('Ping failed:', err));
+    }
+
+    // Fetch and update viewers list
+    function updateViewersList() {
+        fetch(`/student/events/${eventId}/viewers`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update count
+                    const countElements = document.querySelectorAll('#viewersCount, #viewersCountText');
+                    countElements.forEach(el => {
+                        if (el) el.textContent = data.count;
+                    });
+
+                    // Update list
+                    const listContent = document.getElementById('viewersListContent');
+                    if (listContent) {
+                        if (data.viewers.length === 0) {
+                            listContent.innerHTML = '<div class="text-center text-muted py-2">Không có ai đang xem</div>';
+                        } else {
+                            let html = '<div class="d-flex flex-wrap gap-2">';
+                            data.viewers.forEach(viewer => {
+                                const onlineBadge = viewer.is_online 
+                                    ? '<span class="badge bg-success ms-1"><i class="fas fa-circle" style="font-size: 0.5rem;"></i></span>' 
+                                    : '';
+                                html += `
+                                    <div class="d-flex align-items-center p-2 border rounded" style="background: #f8f9fa;">
+                                        <img src="${viewer.avatar}" alt="${viewer.name}" 
+                                             class="rounded-circle me-2" 
+                                             style="width: 32px; height: 32px; object-fit: cover;">
+                                        <div>
+                                            <div class="fw-bold small">${viewer.name}${onlineBadge}</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">${viewer.last_activity}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                            listContent.innerHTML = html;
+                        }
+                    }
+
+                    // Show/hide viewers card
+                    const viewersCard = document.getElementById('viewersCard');
+                    if (viewersCard) {
+                        if (data.count === 0) {
+                            viewersCard.style.display = 'none';
+                        } else {
+                            viewersCard.style.display = 'block';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.log('Update viewers failed:', err));
+    }
+
+    // Initialize viewers tracking
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ping immediately
+        pingViewerActivity();
+
+        // Ping every 30 seconds
+        activityPingInterval = setInterval(pingViewerActivity, 30000);
+
+        // Update viewers list immediately
+        updateViewersList();
+
+        // Update viewers list every 10 seconds
+        viewersUpdateInterval = setInterval(updateViewersList, 10000);
+
+        // Ping when user becomes active (visibility change)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                pingViewerActivity();
+                updateViewersList();
+            }
+        });
+
+        // Ping before page unload
+        window.addEventListener('beforeunload', function() {
+            // Send a final ping (navigator.sendBeacon if available)
+            if (navigator.sendBeacon) {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+                navigator.sendBeacon(`/student/events/${eventId}/viewer-activity`, formData);
+            }
+        });
+    });
+    @endif
     
     // Close modal when clicking outside the image
     window.onclick = function(event) {

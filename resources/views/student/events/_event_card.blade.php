@@ -52,11 +52,6 @@
             
             <p class="card-text text-muted small mb-2">
                 <i class="fas fa-users me-1"></i>{{ $event->club->name ?? 'N/A' }}
-                @if($event->visibility === 'internal' && $event->club)
-                    <span class="badge bg-warning text-dark ms-2">
-                        <i class="fas fa-lock me-1"></i>Nội bộ {{ $event->club->name }}
-                    </span>
-                @endif
             </p>
             
             <p class="card-text small mb-3">
@@ -84,7 +79,7 @@
                     <i class="fas fa-eye me-1"></i>Xem chi tiết
                 </a>
                 @if(in_array($event->status, ['pending', 'approved', 'draft']))
-                    <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-sm btn-outline-warning">
+                    <a href="{{ route('student.events.edit', $event->id) }}" class="btn btn-sm btn-outline-warning">
                         <i class="fas fa-edit me-1"></i>Chỉnh sửa
                     </a>
                 @endif

@@ -205,7 +205,107 @@
                                         </div>
                                     </div>
                                 </div>
-                                        </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách người đăng ký -->
+            @if(isset($registrations))
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title text-teal mb-0">
+                                <i class="fas fa-list me-2"></i>Danh sách người đăng ký
+                                <span class="badge bg-primary ms-2">{{ $registrations->count() }}</span>
+                            </h6>
+                            @if($registrations->count() > 0)
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#registrationsList" aria-expanded="true">
+                                    <i class="fas fa-chevron-down"></i> Xem danh sách
+                                </button>
+                            @endif
+                        </div>
+                        
+                        @if($registrations->count() > 0)
+                            <div class="collapse show" id="registrationsList">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">STT</th>
+                                                <th>Họ và tên</th>
+                                                <th>Email</th>
+                                                <th>Mã sinh viên</th>
+                                                <th>Thời gian đăng ký</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($registrations as $index => $registration)
+                                                <tr>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            @if($registration->user->avatar)
+                                                                <img src="{{ asset('storage/' . $registration->user->avatar) }}" 
+                                                                     alt="{{ $registration->user->name }}" 
+                                                                     class="rounded-circle me-2" 
+                                                                     style="width: 32px; height: 32px; object-fit: cover;">
+                                                            @else
+                                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" 
+                                                                     style="width: 32px; height: 32px; font-size: 0.875rem;">
+                                                                    {{ strtoupper(substr($registration->user->name, 0, 1)) }}
+                                                                </div>
+                                                            @endif
+                                                            <strong>{{ $registration->user->name }}</strong>
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ $registration->user->email ?? 'N/A' }}</td>
+                                                    <td>{{ $registration->user->student_id ?? 'N/A' }}</td>
+                                                    <td>
+                                                        @if($registration->joined_at)
+                                                            {{ $registration->joined_at->format('d/m/Y H:i') }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @php
+                                                            $statusColors = [
+                                                                'registered' => 'success',
+                                                                'pending' => 'warning',
+                                                                'approved' => 'info',
+                                                                'rejected' => 'danger',
+                                                                'canceled' => 'secondary'
+                                                            ];
+                                                            $statusLabels = [
+                                                                'registered' => 'Đã đăng ký',
+                                                                'pending' => 'Chờ duyệt',
+                                                                'approved' => 'Đã duyệt',
+                                                                'rejected' => 'Từ chối',
+                                                                'canceled' => 'Đã hủy'
+                                                            ];
+                                                        @endphp
+                                                        <span class="badge bg-{{ $statusColors[$registration->status] ?? 'secondary' }}">
+                                                            {{ $statusLabels[$registration->status] ?? ucfirst($registration->status) }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <p class="mb-0">Chưa có người đăng ký</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             <!-- Event Images Gallery -->
             @php

@@ -24,6 +24,14 @@ class Notification extends Model
     ];
 
     /**
+     * Get the notification targets
+     */
+    public function targets()
+    {
+        return $this->hasMany(NotificationTarget::class);
+    }
+
+    /**
      * Get the sender of the notification
      */
     public function sender()
@@ -37,14 +45,6 @@ class Notification extends Model
     public function related()
     {
         return $this->morphTo('related', 'related_type', 'related_id');
-    }
-
-    /**
-     * Get the notification targets
-     */
-    public function targets()
-    {
-        return $this->hasMany(NotificationTarget::class);
     }
 
     /**
@@ -63,5 +63,13 @@ class Notification extends Model
         if (!$this->isRead()) {
             $this->update(['read_at' => now()]);
         }
+    }
+
+    /**
+     * Get the notification reads
+     */
+    public function reads()
+    {
+        return $this->hasMany(NotificationRead::class);
     }
 }

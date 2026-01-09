@@ -1,27 +1,29 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\PostController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ClubManagerController;
-use App\Http\Controllers\ClubResourceController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\ClubResourceController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| Main web routes file - loads all route groups
 |
 */
 
+// Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Load route groups
+require __DIR__.'/auth.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/student.php';
+
+// Routes for notifications (from Dũng's commit)
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
 
@@ -106,8 +108,6 @@ Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
 Route::get('/student/clubs/ajax-search', [\App\Http\Controllers\StudentController::class, 'ajaxSearchClubs'])->name('student.clubs.ajax_search');
-Route::get('/student/clubs/create', [\App\Http\Controllers\StudentController::class, 'createClub'])->name('student.clubs.create');
-Route::post('/student/clubs', [\App\Http\Controllers\StudentController::class, 'storeClub'])->name('student.clubs.store');
 Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
 Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
@@ -116,6 +116,8 @@ Route::delete('/student/clubs/{club}/cancel-join-request', [\App\Http\Controller
 // Student Events Routes - Specific routes must come BEFORE parameterized routes
 Route::get('/student/events/create', [\App\Http\Controllers\StudentController::class, 'createEvent'])->name('student.events.create');
 Route::get('/student/events/manage', [\App\Http\Controllers\StudentController::class, 'manageEvents'])->name('student.events.manage');
+Route::get('/student/events/{eventId}/edit', [\App\Http\Controllers\StudentController::class, 'editEvent'])->name('student.events.edit');
+Route::put('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'updateEvent'])->name('student.events.update');
 Route::post('/student/events/{eventId}/restore', [\App\Http\Controllers\StudentController::class, 'restoreEvent'])->name('student.events.restore');
 Route::delete('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'deleteEvent'])->name('student.events.delete');
 Route::get('/student/events', [\App\Http\Controllers\StudentController::class, 'events'])->name('student.events.index');
@@ -123,6 +125,8 @@ Route::post('/student/events', [\App\Http\Controllers\StudentController::class, 
 Route::get('/student/events/{eventId}', [\App\Http\Controllers\StudentController::class, 'showEvent'])->name('student.events.show');
 Route::post('/student/events/{eventId}/register', [\App\Http\Controllers\StudentController::class, 'registerEvent'])->name('student.events.register');
 Route::delete('/student/events/{eventId}/cancel-registration', [\App\Http\Controllers\StudentController::class, 'cancelRegistration'])->name('student.events.cancel_registration');
+Route::post('/student/events/{eventId}/viewer-activity', [\App\Http\Controllers\StudentController::class, 'updateViewerActivity'])->name('student.events.viewer_activity');
+Route::get('/student/events/{eventId}/viewers', [\App\Http\Controllers\StudentController::class, 'getEventViewers'])->name('student.events.viewers');
 
 // Student Profile Routes
 Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'index'])->name('student.profile.index');
@@ -130,6 +134,8 @@ Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileControl
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
+Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
+Route::post('/student/notifications/{id}/mark-read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.mark-read');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
@@ -149,13 +155,14 @@ Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::c
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
 Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
 Route::post('/student/posts/mark-announcement-viewed', [\App\Http\Controllers\StudentController::class, 'markAnnouncementViewed'])->name('student.posts.mark-announcement-viewed');
-Route::post('/student/posts/upload-image', [\App\Http\Controllers\StudentController::class, 'uploadEditorImage'])->name('student.posts.upload-image');
 
 // Student Announcements Routes
 Route::get('/student/announcements/create', [\App\Http\Controllers\StudentController::class, 'createAnnouncement'])->name('student.announcements.create');
 Route::post('/student/announcements', [\App\Http\Controllers\StudentController::class, 'storeAnnouncement'])->name('student.announcements.store');
 Route::get('/student/announcements/{id}/edit', [\App\Http\Controllers\StudentController::class, 'editAnnouncement'])->whereNumber('id')->name('student.announcements.edit');
 Route::put('/student/announcements/{id}', [\App\Http\Controllers\StudentController::class, 'updateAnnouncement'])->whereNumber('id')->name('student.announcements.update');
+// Student Posts Upload Image Route
+Route::post('/student/posts/upload-image', [\App\Http\Controllers\PostController::class, 'uploadEditorImage'])->name('student.posts.upload-image');
 
 // Club Management Routes
 Route::get('/student/club-management/reports', [\App\Http\Controllers\StudentController::class, 'clubReports'])->name('student.club-management.reports');
@@ -238,37 +245,35 @@ Route::get(
     [\App\Http\Controllers\StudentController::class, 'fundRequestShow']
 )->name('student.club-management.fund-requests.show');
 
-// Posts management (club management)
 Route::get(
     '/student/club-management/{club}/posts',
     [\App\Http\Controllers\StudentController::class, 'clubManagementPosts']
-)->name('student.club-management.posts');
+)->whereNumber('club')->name('student.club-management.posts');
 
-// Resources management (club management)
 Route::get(
     '/student/club-management/{club}/resources',
     [\App\Http\Controllers\StudentController::class, 'clubManagementResources']
-)->name('student.club-management.resources');
+)->whereNumber('club')->name('student.club-management.resources');
 Route::get(
     '/student/club-management/{club}/resources/create',
-    [\App\Http\Controllers\StudentController::class, 'createResource']
-)->name('student.club-management.resources.create');
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesCreate']
+)->whereNumber('club')->name('student.club-management.resources.create');
 Route::post(
     '/student/club-management/{club}/resources',
-    [\App\Http\Controllers\StudentController::class, 'storeResource']
-)->name('student.club-management.resources.store');
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesStore']
+)->whereNumber('club')->name('student.club-management.resources.store');
+Route::get(
+    '/student/club-management/{club}/resources/{resource}',
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesShow']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.show');
 Route::get(
     '/student/club-management/{club}/resources/{resource}/edit',
-    [\App\Http\Controllers\StudentController::class, 'editResource']
-)->name('student.club-management.resources.edit');
-Route::get(
-    '/student/club-management/{club}/resources/{resource}',
-    [\App\Http\Controllers\StudentController::class, 'showResource']
-)->name('student.club-management.resources.show');
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesEdit']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.edit');
 Route::put(
     '/student/club-management/{club}/resources/{resource}',
-    [\App\Http\Controllers\StudentController::class, 'updateResource']
-)->name('student.club-management.resources.update');
+    [\App\Http\Controllers\StudentController::class, 'clubManagementResourcesUpdate']
+)->whereNumber(['club', 'resource'])->name('student.club-management.resources.update');
 
 Route::get('/student/club-management', [\App\Http\Controllers\StudentController::class, 'clubManagement'])->name('student.club-management.index');
 
@@ -435,9 +440,17 @@ Route::prefix('admin')->group(function () {
     Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
     Route::post('/notifications/mark-all-read', [AdminController::class, 'markAllRead'])->name('admin.notifications.mark-all-read');
     Route::get('/notifications/test/create', [AdminController::class, 'testNotification'])->name('admin.notifications.test');
+    Route::post('/notifications/{id}/mark-read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.mark-read');
+    Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
+    
+    // Quản lý yêu cầu tham gia CLB
+    Route::get('/join-requests', [AdminController::class, 'joinRequestsIndex'])->name('admin.join-requests.index');
+    Route::post('/join-requests/{id}/approve', [AdminController::class, 'approveJoinRequest'])->name('admin.join-requests.approve');
+    Route::post('/join-requests/{id}/reject', [AdminController::class, 'rejectJoinRequest'])->name('admin.join-requests.reject');
+    Route::post('/join-requests/bulk', [AdminController::class, 'bulkJoinRequests'])->name('admin.join-requests.bulk');
     
     // Hồ sơ và cài đặt
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
@@ -623,7 +636,7 @@ Route::get('/admin/events/{id}/restore-test', function($id) {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('club/{club}')->middleware('simple_auth')->group(function () {
+Route::prefix('club/{club}')->middleware(\App\Http\Middleware\SimpleAuth::class)->group(function () {
     // Quản lý thành viên (chỉ chủ CLB và ban cán sự)
     Route::middleware('club_role:owner,executive_board')->group(function () {
         
