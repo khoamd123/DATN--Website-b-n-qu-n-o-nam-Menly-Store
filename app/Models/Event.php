@@ -22,6 +22,7 @@ class Event extends Model
         'location',
         'max_participants',
         'status',
+        'visibility',
         'cancellation_reason',
         'cancelled_at',
         'registration_deadline',
@@ -84,6 +85,14 @@ class Event extends Model
         }
         
         return null;
+    }
+
+    /**
+     * Get visibility with default 'public' if NULL
+     */
+    public function getVisibilityAttribute($value)
+    {
+        return $value ?? 'public';
     }
 
     /**

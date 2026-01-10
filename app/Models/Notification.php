@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Notification extends Model
 {
@@ -11,13 +12,33 @@ class Notification extends Model
     
     protected $fillable = [
         'sender_id',
-        'type',
         'title',
         'message',
         'read_at',
+        'type',
         'related_id',
         'related_type',
     ];
+    
+    /**
+     * Override để chỉ fill các cột tồn tại trong database
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            // Loại bỏ các cột không tồn tại khỏi attributes trước khi save
+            $columnsToCheck = ['type', 'related_id', 'related_type', 'read_at'];
+            foreach ($columnsToCheck as $column) {
+                if (array_key_exists($column, $model->attributes)) {
+                    if (!Schema::hasColumn('notifications', $column)) {
+                        unset($model->attributes[$column]);
+                    }
+                }
+            }
+        });
+    }
 
     protected $casts = [
         'read_at' => 'datetime',

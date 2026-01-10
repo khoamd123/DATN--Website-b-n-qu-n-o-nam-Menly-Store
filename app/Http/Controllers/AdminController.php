@@ -427,27 +427,12 @@ class AdminController extends Controller
         }
 
         try {
-            // Load user với clubMembers chỉ có club tồn tại
-            $user = User::with([
-                'clubMembers' => function($query) {
-                    $query->whereIn('status', ['approved', 'active'])
-                          ->whereHas('club', function($q) {
-                              // Chỉ lấy clubMembers có club tồn tại (chưa bị soft delete)
-                              $q->withoutTrashed();
-                          });
-                },
-                'clubMembers.club' => function($query) {
-                    // Chỉ load club nếu chưa bị soft delete
-                    $query->withoutTrashed();
-                }
-            ])->findOrFail($id);
-            
+            $user = User::with(['clubMembers.club'])->findOrFail($id);
             $analytics = new UserAnalyticsService($user);
             $userStats = $analytics->getAllAnalytics();
             
             return view('admin.users.show', compact('user', 'userStats'));
         } catch (\Exception $e) {
-            \Log::error('Error showing user: ' . $e->getMessage());
             return redirect()->route('admin.users')->with('error', 'Không tìm thấy người dùng.');
         }
     }
@@ -948,15 +933,27 @@ class AdminController extends Controller
                 return response()->json(['error' => 'User not found'], 404);
             }
 
-            $notification = \App\Models\Notification::create([
+            $notificationData = [
                 'sender_id' => $user->id,
-                'type' => 'event_created',
                 'title' => 'Test thông báo',
                 'message' => 'Đây là thông báo test để kiểm tra hệ thống.',
-                'related_id' => null,
-                'related_type' => null,
-                'read_at' => null,
-            ]);
+            ];
+            
+            // Chỉ thêm các field nếu cột tồn tại
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type')) {
+                $notificationData['type'] = 'event_created';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id')) {
+                $notificationData['related_id'] = null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type')) {
+                $notificationData['related_type'] = null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'read_at')) {
+                $notificationData['read_at'] = null;
+            }
+            
+            $notification = \App\Models\Notification::create($notificationData);
 
             return response()->json([
                 'success' => true,
@@ -1524,75 +1521,6 @@ class AdminController extends Controller
         
         $club->update($updateData);
         
-        // Khi CLB được duyệt (từ pending sang active), đảm bảo owner vẫn là leader
-        if ($newStatus === 'active' && $oldStatus === 'pending' && $club->owner_id) {
-            try {
-                // Kiểm tra xem đã có ClubMember chưa
-                $clubMember = \App\Models\ClubMember::where('club_id', $club->id)
-                    ->where('user_id', $club->owner_id)
-                    ->first();
-                
-                if ($clubMember) {
-                    // Chỉ update nếu chưa phải leader hoặc status chưa đúng
-                    $needUpdate = false;
-                    $updateData = [];
-                    
-                    if ($clubMember->position !== 'leader') {
-                        $updateData['position'] = 'leader';
-                        $needUpdate = true;
-                    }
-                    
-                    // Đảm bảo status là approved hoặc active
-                    if (!in_array($clubMember->status, ['approved', 'active'])) {
-                        $updateData['status'] = 'approved';
-                        $needUpdate = true;
-                    }
-                    
-                    if ($needUpdate) {
-                        $clubMember->update($updateData);
-                    }
-                } else {
-                    // Nếu chưa có ClubMember (trường hợp hiếm), tạo mới với position = leader
-                    \App\Models\ClubMember::create([
-                        'club_id' => $club->id,
-                        'user_id' => $club->owner_id,
-                        'position' => 'leader',
-                        'status' => 'approved',
-                        'joined_at' => now(),
-                    ]);
-                }
-                
-                // Cấp tất cả quyền cho leader nếu chưa có
-                $allPermissions = \App\Models\Permission::all();
-                foreach ($allPermissions as $permission) {
-                    $existingPermission = DB::table('user_permissions_club')
-                        ->where('user_id', $club->owner_id)
-                        ->where('club_id', $club->id)
-                        ->where('permission_id', $permission->id)
-                        ->first();
-                    
-                    if (!$existingPermission) {
-                        DB::table('user_permissions_club')->insert([
-                            'user_id' => $club->owner_id,
-                            'club_id' => $club->id,
-                            'permission_id' => $permission->id,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
-                }
-                
-                // Đảm bảo leader_id trong clubs table cũng được cập nhật
-                if ($club->leader_id !== $club->owner_id) {
-                    $club->update(['leader_id' => $club->owner_id]);
-                }
-                
-            } catch (\Exception $e) {
-                \Log::error('Lỗi khi đảm bảo owner là leader khi duyệt CLB: ' . $e->getMessage());
-                // Không fail toàn bộ request nhưng log lỗi
-            }
-        }
-        
         // Gửi thông báo cho người tạo CLB (owner hoặc leader)
         $adminId = session('user_id') ?? 1;
         $userId = $club->owner_id ?? $club->leader_id;
@@ -1606,7 +1534,7 @@ class AdminController extends Controller
                 if ($newStatus === 'active' && $oldStatus === 'pending') {
                     // CLB được duyệt
                     $notificationData['title'] = 'Yêu cầu tạo CLB đã được duyệt';
-                    $notificationData['message'] = "Chúc mừng! Yêu cầu tạo CLB \"{$club->name}\" của bạn đã được duyệt. Bạn đã được tự động cấp quyền Trưởng CLB. Bạn có thể truy cập trang Quản lý CLB để quản lý CLB của mình.";
+                    $notificationData['message'] = "Chúc mừng! Yêu cầu tạo CLB \"{$club->name}\" của bạn đã được duyệt. CLB của bạn giờ đã có thể hoạt động chính thức.";
                 } elseif ($newStatus === 'rejected' && $oldStatus === 'pending') {
                     // CLB bị từ chối
                     $rejectionReason = $request->input('rejection_reason', '');
@@ -2246,7 +2174,6 @@ class AdminController extends Controller
                 'max_participants' => 'nullable|integer|min:1',
                 'status' => 'required|in:draft,pending,approved,ongoing,completed,cancelled',
                 'registration_deadline' => 'nullable|date|before_or_equal:start_time',
-                'visibility' => 'required|in:public,internal',
                 'main_organizer' => 'nullable|string|max:255',
                 'organizing_team' => 'nullable|string|max:5000',
                 'co_organizers' => 'nullable|string|max:2000',
@@ -2357,7 +2284,6 @@ class AdminController extends Controller
                 'poster_file' => 'VARCHAR(500) NULL',
                 'permit_file' => 'VARCHAR(500) NULL',
                 'guests' => 'TEXT NULL',
-                'visibility' => "ENUM('public', 'internal') DEFAULT 'public'",
             ];
             
             // Tự động thêm các cột còn thiếu
@@ -2433,10 +2359,6 @@ class AdminController extends Controller
             if (in_array('guests', $columnNames)) {
                 $data['guests'] = $guestsData;
                 $addedFields[] = 'guests';
-            }
-            if (in_array('visibility', $columnNames)) {
-                $data['visibility'] = $request->visibility;
-                $addedFields[] = 'visibility';
             }
             
             // Log dữ liệu sẽ được cập nhật
@@ -3849,7 +3771,6 @@ class AdminController extends Controller
         $club = Club::with([
             'field',
             'owner',
-            'leader', // Eager load leader để hiển thị trong view
             'clubMembers.user' => function($query) {
                 $query->select('id', 'name', 'email', 'avatar');
             },
@@ -3899,11 +3820,8 @@ class AdminController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Đảm bảo nếu CLB chỉ có 1 thành viên thì thành viên đó là leader (trước khi hiển thị)
-        $club->ensureSingleMemberIsLeader();
-
         // Phân trang danh sách thành viên đã duyệt (10 thành viên/trang)
-        // Lấy record mới nhất cho mỗi user_id, đảm bảo lấy đúng position hiện tại
+        // Lấy record mới nhất cho mỗi user_id
         $approvedMembers = ClubMember::where('club_id', $club->id)
             ->whereIn('status', ['approved', 'active'])
             ->with('user:id,name,email,avatar')
@@ -4172,16 +4090,10 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Không thể xóa trưởng câu lạc bộ.');
         }
 
-        // Lấy club để kiểm tra số thành viên sau khi xóa
-        $club = Club::findOrFail($club);
-
         // Force delete để xóa cứng (không dùng SoftDelete)
         $clubMember->forceDelete();
 
         \Log::info('Member deleted successfully');
-
-        // Sau khi xóa, kiểm tra nếu CLB chỉ còn 1 thành viên thì tự động set làm leader
-        $club->ensureSingleMemberIsLeader();
 
         return redirect()->back()->with('success', 'Đã xóa thành viên thành công!');
     }
@@ -4440,9 +4352,6 @@ class AdminController extends Controller
         
         // Refresh lại model để đảm bảo dữ liệu mới nhất
         $clubMember->refresh();
-        
-        // Sau khi cập nhật role, kiểm tra nếu CLB chỉ còn 1 thành viên thì tự động set làm leader
-        $clubModel->ensureSingleMemberIsLeader();
 
         return redirect()->back()->with('success', 'Đã cập nhật vai trò thành viên thành công!');
     }

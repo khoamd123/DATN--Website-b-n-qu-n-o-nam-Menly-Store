@@ -225,14 +225,6 @@
                             <hr>
                             <p><strong><i class="fas fa-tag me-2"></i>Lĩnh vực:</strong> {{ $club->field->name ?? 'Chưa xác định' }}</p>
                             <p><strong><i class="fas fa-user-crown me-2"></i>Chủ sở hữu:</strong> {{ $club->owner->name ?? 'Chưa xác định' }}</p>
-                            @if($club->leader)
-                                <p><strong><i class="fas fa-crown me-2 text-warning"></i>Trưởng CLB:</strong> 
-                                    <span class="badge bg-warning text-dark">{{ $club->leader->name ?? 'Chưa xác định' }}</span>
-                                    @if($club->owner_id && $club->leader_id && $club->owner_id === $club->leader_id)
-                                        <small class="text-muted">(Chủ sở hữu)</small>
-                                    @endif
-                                </p>
-                            @endif
                             <p><strong><i class="fas fa-calendar-alt me-2"></i>Ngày tạo:</strong> {{ $club->created_at->format('d/m/Y') }}</p>
                         </div>
                     </div>

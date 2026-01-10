@@ -29,26 +29,6 @@ class HomeController extends Controller
             'posts' => Post::where('status', 'published')->count(),
         ];
 
-        // Kiểm tra user đăng nhập trước để filter events
-        $isLoggedIn = session('user_id');
-        $user = null;
-        $latestAnnouncement = null;
-        
-        if ($isLoggedIn) {
-            $user = User::with('clubs')->find(session('user_id'));
-            
-            // Lấy thông báo mới nhất từ các CLB mà user tham gia
-            if ($user && $user->clubs->count() > 0) {
-                $userClubIds = $user->clubs->pluck('id')->toArray();
-                $latestAnnouncement = Post::with(['club', 'user'])
-                    ->where('type', 'announcement')
-                    ->where('status', '!=', 'deleted')
-                    ->whereIn('club_id', $userClubIds)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-            }
-        }
-
         // Featured clubs (top by active members) - chỉ lấy 4 clubs
         $featuredClubs = Club::with(['field'])
             ->withCount([
@@ -61,29 +41,23 @@ class HomeController extends Controller
             ->limit(4)
             ->get();
 
-        // Upcoming events - filter theo visibility
-        $upcomingEventsQuery = Event::with('club')
-            ->where('start_time', '>=', now())
-            ->where('status', 'approved'); // Chỉ hiển thị events đã được duyệt
-        
-        // Nếu user đã đăng nhập, filter theo visibility và membership
-        if ($isLoggedIn && $user) {
-            $userClubIds = $user->clubs->pluck('id')->toArray();
-            $upcomingEventsQuery->where(function($query) use ($userClubIds) {
-                // Công khai: tất cả mọi người có thể xem
-                $query->where('visibility', 'public')
-                    ->orWhere(function($q) use ($userClubIds) {
-                        // Chỉ nội bộ CLB: chỉ thành viên của CLB đó mới xem được
-                        $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
-                    });
-            });
-        } else {
-            // Nếu chưa đăng nhập, chỉ hiển thị events công khai
-            $upcomingEventsQuery->where('visibility', 'public');
-        }
-        
-        $upcomingEvents = $upcomingEventsQuery->orderBy('start_time')->limit(6)->get();
+        // Today's events (events happening today)
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
+        $todayEvents = Event::with(['club', 'images'])
+            ->whereIn('status', ['approved', 'ongoing'])
+            ->where('start_time', '<=', $todayEnd)
+            ->where('end_time', '>=', $todayStart)
+            ->orderBy('start_time')
+            ->get();
+
+        // Upcoming events (events after today)
+        $upcomingEvents = Event::with('club')
+            ->where('start_time', '>', $todayEnd)
+            ->whereIn('status', ['approved', 'ongoing'])
+            ->orderBy('start_time')
+            ->limit(6)
+            ->get();
 
         // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
         $recentPosts = Post::with(['club', 'user', 'attachments'])
@@ -131,15 +105,42 @@ class HomeController extends Controller
 
         $clubs = $clubsQuery->paginate(8)->withQueryString();
 
+        // Newest clubs for student homepage
+        $newestClubs = Club::with(['field'])
+            ->where('status', 'active')
+            ->orderByDesc('created_at')
+            ->limit(4)
+            ->get();
+
+        $isLoggedIn = session('user_id');
         $viewName = $isLoggedIn ? 'home.index_student' : 'home.index';
+        $user = null;
+        $latestAnnouncement = null;
+        
+        if ($isLoggedIn) {
+            $user = User::with('clubs')->find(session('user_id'));
+            
+            // Lấy thông báo mới nhất từ các CLB mà user tham gia
+            if ($user && $user->clubs->count() > 0) {
+                $userClubIds = $user->clubs->pluck('id')->toArray();
+                $latestAnnouncement = Post::with(['club', 'user'])
+                    ->where('type', 'announcement')
+                    ->where('status', '!=', 'deleted')
+                    ->whereIn('club_id', $userClubIds)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+            }
+        }
 
         return view($viewName, [
             'stats' => $stats,
             'featuredClubs' => $featuredClubs,
+            'todayEvents' => $todayEvents,
             'upcomingEvents' => $upcomingEvents,
             'recentPosts' => $recentPosts,
             'fields' => $fields,
             'clubs' => $clubs,
+            'newestClubs' => $newestClubs,
             'search' => $search,
             'fieldId' => $fieldId,
             'sort' => $sort,

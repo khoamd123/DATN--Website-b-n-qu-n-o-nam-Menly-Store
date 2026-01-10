@@ -16,9 +16,9 @@ class NotificationController extends Controller
         $this->oldController = new OldController();
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->oldController->notifications();
+        return $this->oldController->notifications($request);
     }
 
     public function markAsRead(Request $request, $notification)

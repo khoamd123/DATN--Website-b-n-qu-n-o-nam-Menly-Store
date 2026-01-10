@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\FundSettlementController;
 use App\Http\Controllers\Admin\ClubResourceController;
 use App\Http\Controllers\Admin\TrashController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -145,5 +146,12 @@ Route::prefix('admin')->name('admin.')->middleware([\App\Http\Middleware\SimpleA
     Route::get('/clubs-management', [ClubController::class, 'management'])->name('clubs.management');
     Route::post('/clubs-management', [ClubController::class, 'storeManagement'])->name('clubs.management.store');
     Route::post('/create-student', [ClubController::class, 'createStudentAccount'])->name('create.student');
+    
+    // Learning Materials (Tài nguyên CLB)
+    Route::get('/learning-materials', [AdminController::class, 'learningMaterials'])->name('learning-materials');
+    Route::get('/learning-materials/create', [AdminController::class, 'learningMaterialsCreate'])->name('learning-materials.create');
+    Route::post('/learning-materials', [AdminController::class, 'learningMaterialsStore'])->name('learning-materials.store');
+    Route::get('/learning-materials/{id}/edit', [AdminController::class, 'learningMaterialsEdit'])->name('learning-materials.edit');
+    Route::put('/learning-materials/{id}', [AdminController::class, 'learningMaterialsUpdate'])->name('learning-materials.update');
 });
 

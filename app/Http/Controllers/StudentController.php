@@ -179,6 +179,196 @@ class StudentController extends Controller
         return view('student.clubs._other_clubs_list', compact('otherClubs', 'search'));
     }
 
+    /**
+     * Show form for creating a new club.
+     */
+    public function createClub()
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $fields = Field::orderBy('name')->get();
+
+        return view('student.clubs.create', compact('user', 'fields'));
+    }
+
+    /**
+     * Store a new club request.
+     */
+    public function storeClub(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Validate description riêng để xử lý HTML từ CKEditor
+        $description = $request->input('description', '');
+        $descriptionText = strip_tags($description);
+        $descriptionText = trim($descriptionText);
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required',
+            'introduction' => 'nullable|string',
+            'field_id' => 'nullable|exists:fields,id',
+            'new_field_name' => 'nullable|string|max:100',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ], [
+            'name.required' => 'Vui lòng nhập tên câu lạc bộ.',
+            'name.max' => 'Tên câu lạc bộ không được vượt quá 255 ký tự.',
+            'description.required' => 'Vui lòng nhập mô tả ngắn về câu lạc bộ.',
+            'logo.image' => 'Logo phải là file hình ảnh.',
+            'logo.mimes' => 'Logo phải có định dạng: jpeg, png, jpg, gif, webp.',
+            'logo.max' => 'Logo không được vượt quá 2MB.',
+        ]);
+
+        // Kiểm tra độ dài description sau khi strip HTML
+        if (mb_strlen($descriptionText) > 255) {
+            return back()->withInput()->with('error', 'Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' . mb_strlen($descriptionText) . ' ký tự.');
+        }
+        
+        if (empty($descriptionText)) {
+            return back()->withInput()->with('error', 'Vui lòng nhập mô tả ngắn về câu lạc bộ.');
+        }
+
+        // Validate field_id hoặc new_field_name
+        $fieldId = $request->field_id;
+        if (empty($fieldId) && empty($request->new_field_name)) {
+            return back()->withInput()->with('error', 'Vui lòng chọn một lĩnh vực có sẵn hoặc tạo lĩnh vực mới.');
+        }
+
+        // Xử lý field_id: nếu có new_field_name thì tạo field mới, nếu không thì dùng field_id
+        $fieldId = null;
+        if ($request->filled('new_field_name')) {
+            $newFieldName = trim($request->new_field_name);
+            if (empty($newFieldName)) {
+                return back()->withInput()->with('error', 'Tên lĩnh vực mới không được để trống.');
+            }
+            $slug = Str::slug($newFieldName);
+            if (empty($slug)) {
+                $slug = 'field-' . time();
+            }
+            $originalSlug = $slug;
+            $suffix = 1;
+            while (Field::where('slug', $slug)->exists()) {
+                $slug = $originalSlug . '-' . $suffix;
+                $suffix++;
+            }
+            try {
+                $field = Field::create([
+                    'name' => $newFieldName,
+                    'slug' => $slug,
+                    'description' => 'Lĩnh vực mới được tạo bởi ' . $user->name,
+                ]);
+                $fieldId = $field->id;
+            } catch (\Exception $e) {
+                return back()->withInput()->with('error', 'Không thể tạo lĩnh vực mới: ' . $e->getMessage());
+            }
+        } elseif (!empty($request->field_id)) {
+            $fieldId = $request->field_id;
+        } else {
+            return back()->withInput()->with('error', 'Vui lòng chọn một lĩnh vực có sẵn hoặc tạo lĩnh vực mới.');
+        }
+
+        $clubSlug = Str::slug($request->name);
+        if (empty($clubSlug)) {
+            $clubSlug = 'club-' . time();
+        }
+        $originalClubSlug = $clubSlug;
+        $clubSuffix = 1;
+        while (Club::withTrashed()->where('slug', $clubSlug)->exists()) {
+            $clubSlug = $originalClubSlug . '-' . $clubSuffix;
+            $clubSuffix++;
+        }
+
+        $logoPath = '';
+        if ($request->hasFile('logo')) {
+            try {
+                $logo = $request->file('logo');
+                $filename = time() . '_' . $originalClubSlug . '.' . $logo->getClientOriginalExtension();
+                $logoDir = public_path('uploads/clubs/logos');
+                if (!is_dir($logoDir)) {
+                    @mkdir($logoDir, 0755, true);
+                }
+                $logo->move($logoDir, $filename);
+                $logoPath = 'uploads/clubs/logos/' . $filename;
+            } catch (\Throwable $e) {
+                return back()->withInput()->with('error', 'Không thể tải logo lên: ' . $e->getMessage());
+            }
+        }
+
+        try {
+            $club = Club::create([
+                'name' => trim($request->name),
+                'slug' => $clubSlug,
+                'description' => $request->description, // HTML từ CKEditor
+                'logo' => $logoPath ?: null,
+                'field_id' => $fieldId,
+                'owner_id' => $user->id,
+                'leader_id' => $user->id,
+                'status' => 'pending',
+            ]);
+
+            // Tạo thành viên với vai trò leader cho người tạo CLB
+            ClubMember::create([
+                'club_id' => $club->id,
+                'user_id' => $user->id,
+                'position' => 'leader',
+                'status' => 'approved',
+                'joined_at' => now(),
+            ]);
+
+            // Cấp tất cả quyền cho leader
+            $allPermissions = Permission::all();
+            foreach ($allPermissions as $permission) {
+                DB::table('user_permissions_club')->insert([
+                    'user_id' => $user->id,
+                    'club_id' => $club->id,
+                    'permission_id' => $permission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Tự động tạo quỹ cho CLB
+            try {
+                Fund::create([
+                    'club_id' => $club->id,
+                    'name' => 'Quỹ ' . $club->name,
+                    'balance' => 0,
+                    'created_by' => $user->id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Không thể tạo quỹ cho CLB mới: ' . $e->getMessage());
+            }
+
+            // Gửi thông báo cho tất cả admin về yêu cầu tạo CLB mới
+            try {
+                $this->notifyAdmins([
+                    'sender_id' => $user->id,
+                    'title' => 'Yêu cầu tạo CLB mới cần duyệt',
+                    'message' => "Sinh viên {$user->name} đã gửi yêu cầu tạo CLB mới: \"{$club->name}\". Vui lòng xem xét và duyệt yêu cầu.",
+                    'related_id' => $club->id,
+                    'related_type' => 'Club',
+                    'type' => 'club',
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Không thể gửi thông báo cho admin về CLB mới: ' . $e->getMessage());
+                // Không fail toàn bộ request nếu thông báo lỗi
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Lỗi khi tạo CLB: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Không thể tạo câu lạc bộ. Vui lòng thử lại sau.');
+        }
+
+        return redirect()->route('student.clubs.index')
+            ->with('success', 'Yêu cầu tạo câu lạc bộ đã được gửi. Ban quản trị sẽ xem xét và phản hồi sớm nhất.');
+    }
+
     public function events()
     {
         $user = $this->checkStudentAuth();
@@ -190,15 +380,23 @@ class StudentController extends Controller
         $userClubIds = $user->clubs->pluck('id')->toArray();
 
         // Lấy events đang diễn ra (đã bắt đầu nhưng chưa kết thúc) - chỉ lấy events đã được duyệt hoặc ongoing
+        // Logic visibility: 
+        // - public hoặc NULL: Tất cả mọi người đều thấy
+        // - internal: CHỈ thành viên của CLB tạo sự kiện đó mới thấy (club_id của event)
         $ongoingEvents = Event::with(['club', 'creator', 'images'])
             ->whereIn('status', ['approved', 'ongoing'])
             ->where('start_time', '<=', now())
             ->where('end_time', '>=', now())
             ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
+                // Công khai hoặc NULL: tất cả mọi người thấy
+                $query->where(function($q) {
+                    $q->where('visibility', 'public')
+                      ->orWhereNull('visibility'); // Coi NULL là public
+                })
+                    // Hoặc nội bộ: CHỈ thành viên của CLB tạo sự kiện đó
                     ->orWhere(function($q) use ($userClubIds) {
                         $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
+                          ->whereIn('club_id', $userClubIds); // Chỉ CLB tạo event mới được xem
                     });
             })
             ->orderBy('start_time', 'asc')
@@ -210,10 +408,15 @@ class StudentController extends Controller
             ->where('start_time', '>', now())
             ->where('end_time', '>=', now())
             ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
+                // Công khai hoặc NULL: tất cả mọi người thấy
+                $query->where(function($q) {
+                    $q->where('visibility', 'public')
+                      ->orWhereNull('visibility'); // Coi NULL là public
+                })
+                    // Hoặc nội bộ: CHỈ thành viên của CLB tạo sự kiện đó
                     ->orWhere(function($q) use ($userClubIds) {
                         $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
+                          ->whereIn('club_id', $userClubIds); // Chỉ CLB tạo event mới được xem
                     });
             })
             ->orderBy('start_time', 'asc')
@@ -228,14 +431,20 @@ class StudentController extends Controller
             ->pluck('event_id')
             ->toArray();
 
+        // Events đã đăng ký: hiển thị nếu public hoặc internal mà user là thành viên CLB tạo event
         $registeredEvents = Event::with(['club', 'creator', 'images'])
             ->whereIn('id', $registeredEventIds)
             ->whereIn('status', ['approved', 'ongoing'])
             ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
+                // Công khai hoặc NULL: tất cả mọi người thấy
+                $query->where(function($q) {
+                    $q->where('visibility', 'public')
+                      ->orWhereNull('visibility'); // Coi NULL là public
+                })
+                    // Hoặc nội bộ: CHỈ thành viên của CLB tạo sự kiện đó
                     ->orWhere(function($q) use ($userClubIds) {
                         $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
+                          ->whereIn('club_id', $userClubIds); // Chỉ CLB tạo event mới được xem
                     });
             })
             ->orderBy('start_time', 'asc')
@@ -250,49 +459,49 @@ class StudentController extends Controller
             ->toArray();
 
         // Thống kê sidebar - đếm events đã được duyệt hoặc đang diễn ra
+        // Logic: public hoặc NULL = tất cả thấy, internal = chỉ thành viên CLB tạo event thấy
+        $visibilityFilter = function($query) use ($userClubIds) {
+            $query->where(function($q) {
+                $q->where('visibility', 'public')
+                  ->orWhereNull('visibility'); // Coi NULL là public
+            })
+            ->orWhere(function($q) use ($userClubIds) {
+                $q->where('visibility', 'internal')
+                  ->whereIn('club_id', $userClubIds); // Chỉ CLB tạo event mới được xem
+            });
+        };
+        
         $todayEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereDate('start_time', now()->toDateString())
-            ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
-                    ->orWhere(function($q) use ($userClubIds) {
-                        $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
-                    });
-            })
+            ->where($visibilityFilter)
             ->count();
 
         $thisWeekEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereBetween('start_time', [now()->startOfWeek(), now()->endOfWeek()])
-            ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
-                    ->orWhere(function($q) use ($userClubIds) {
-                        $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
-                    });
-            })
+            ->where($visibilityFilter)
             ->count();
 
         $thisMonthEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereMonth('start_time', now()->month)
             ->whereYear('start_time', now()->year)
-            ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
-                    ->orWhere(function($q) use ($userClubIds) {
-                        $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
-                    });
-            })
+            ->where($visibilityFilter)
             ->count();
 
         // Sự kiện hot (có nhiều đăng ký nhất) - lấy events đã được duyệt hoặc đang diễn ra
+        // Logic: public hoặc NULL = tất cả thấy, internal = chỉ thành viên CLB tạo event thấy
         $hotEvents = Event::with(['club'])
             ->whereIn('status', ['approved', 'ongoing'])
             ->where('end_time', '>=', now())
             ->where(function($query) use ($userClubIds) {
-                $query->where('visibility', 'public')
+                // Công khai hoặc NULL: tất cả mọi người thấy
+                $query->where(function($q) {
+                    $q->where('visibility', 'public')
+                      ->orWhereNull('visibility'); // Coi NULL là public
+                })
+                    // Hoặc nội bộ: CHỈ thành viên của CLB tạo sự kiện đó
                     ->orWhere(function($q) use ($userClubIds) {
                         $q->where('visibility', 'internal')
-                          ->whereIn('club_id', $userClubIds);
+                          ->whereIn('club_id', $userClubIds); // Chỉ CLB tạo event mới được xem
                     });
             })
             ->get()
@@ -424,6 +633,7 @@ class StudentController extends Controller
             }
 
             // Kiểm tra visibility: nếu là internal và user không phải thành viên CLB thì không cho đăng ký
+            // Lấy visibility với giá trị mặc định 'public' nếu NULL
             $eventVisibility = $event->visibility ?? 'public';
             if ($eventVisibility === 'internal') {
                 $isClubMember = $event->club_id && $user->clubs->contains('id', $event->club_id);
@@ -625,7 +835,9 @@ class StudentController extends Controller
             }
 
             // Kiểm tra visibility: nếu là internal và user không phải thành viên CLB thì không cho xem
-            if ($event->visibility === 'internal' && !$isClubMember) {
+            // Lấy visibility với giá trị mặc định 'public' nếu NULL
+            $eventVisibility = $event->visibility ?? 'public';
+            if ($eventVisibility === 'internal' && !$isClubMember) {
                 return redirect()->route('student.events.index')
                     ->with('error', 'Sự kiện này chỉ dành cho thành viên CLB ' . ($event->club->name ?? '') . '.');
             }
@@ -959,6 +1171,7 @@ class StudentController extends Controller
             
             // Danh sách cột cần thiết
             $requiredColumns = [
+                'visibility' => "ENUM('public', 'internal') DEFAULT 'public'",
                 'registration_deadline' => 'DATETIME NULL',
                 'main_organizer' => 'VARCHAR(255) NULL',
                 'organizing_team' => 'TEXT NULL',
@@ -982,6 +1195,11 @@ class StudentController extends Controller
                 }
             }
             
+            // Đảm bảo visibility luôn có trong columnNames sau khi kiểm tra/tạo
+            if (!in_array('visibility', $columnNames)) {
+                $columnNames[] = 'visibility';
+            }
+            
             $eventData = [
                 'title' => $request->title,
                 'slug' => $slug,
@@ -995,12 +1213,8 @@ class StudentController extends Controller
                 'max_participants' => $request->max_participants,
                 'status' => 'pending', // User tạo sự kiện sẽ ở trạng thái chờ duyệt
                 'created_by' => $user->id,
+                'visibility' => $request->visibility ?? 'public', // Luôn thêm visibility với giá trị mặc định public
             ];
-            
-            // Thêm visibility vào eventData
-            if (in_array('visibility', $columnNames)) {
-                $eventData['visibility'] = $request->visibility;
-            }
             
             // Thêm các field mới vào eventData
             if (in_array('registration_deadline', $columnNames)) {
@@ -1085,24 +1299,34 @@ class StudentController extends Controller
             return null;
         }
 
+        // Chỉ lấy các field cơ bản, luôn có trong database
         $notificationData = [
             'sender_id' => $payload['sender_id'],
-            'title' => $payload['title'],
-            'message' => $payload['message'],
+            'title' => $payload['title'] ?? '',
+            'message' => $payload['message'] ?? '',
         ];
 
+        // Chỉ thêm các field optional nếu cột tồn tại trong database
+        // Kiểm tra từng cột riêng biệt để đảm bảo chính xác
         if (Schema::hasColumn('notifications', 'type')) {
-            $notificationData['type'] = $payload['type'] ?? 'system';
+            if (isset($payload['type']) && !empty($payload['type'])) {
+                $notificationData['type'] = $payload['type'];
+            }
         }
         if (Schema::hasColumn('notifications', 'related_id')) {
-            $notificationData['related_id'] = $payload['related_id'] ?? null;
+            if (isset($payload['related_id']) && $payload['related_id'] !== null) {
+                $notificationData['related_id'] = $payload['related_id'];
+            }
         }
         if (Schema::hasColumn('notifications', 'related_type')) {
-            $notificationData['related_type'] = $payload['related_type'] ?? null;
+            if (isset($payload['related_type']) && !empty($payload['related_type'])) {
+                $notificationData['related_type'] = $payload['related_type'];
+            }
         }
 
         try {
-            $notification = Notification::create(array_filter($notificationData, fn($value) => $value !== null));
+            // Đảm bảo chỉ insert các field hợp lệ
+            $notification = Notification::create($notificationData);
             if (!$notification) {
                 return null;
             }
@@ -1122,6 +1346,46 @@ class StudentController extends Controller
             }
 
             return $notification;
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Nếu lỗi do thiếu cột, thử thêm cột và tạo lại
+            if (strpos($e->getMessage(), "Unknown column 'type'") !== false || 
+                strpos($e->getMessage(), "Unknown column") !== false) {
+                try {
+                    // Thử thêm các cột cần thiết
+                    if (!Schema::hasColumn('notifications', 'type')) {
+                        DB::statement("ALTER TABLE notifications ADD COLUMN type VARCHAR(50) NULL AFTER sender_id");
+                    }
+                    if (!Schema::hasColumn('notifications', 'related_id')) {
+                        DB::statement("ALTER TABLE notifications ADD COLUMN related_id BIGINT UNSIGNED NULL AFTER type");
+                    }
+                    if (!Schema::hasColumn('notifications', 'related_type')) {
+                        DB::statement("ALTER TABLE notifications ADD COLUMN related_type VARCHAR(50) NULL AFTER related_id");
+                    }
+                    
+                    // Thử tạo lại notification
+                    $notification = Notification::create($notificationData);
+                    if ($notification) {
+                        $admins = User::where('is_admin', true)->get();
+                        foreach ($admins as $admin) {
+                            NotificationTarget::create([
+                                'notification_id' => $notification->id,
+                                'target_type' => 'user',
+                                'target_id' => $admin->id,
+                            ]);
+                            NotificationRead::create([
+                                'notification_id' => $notification->id,
+                                'user_id' => $admin->id,
+                                'is_read' => false,
+                            ]);
+                        }
+                        return $notification;
+                    }
+                } catch (\Exception $retryException) {
+                    \Log::error('Failed to auto-fix and create admin notification: ' . $retryException->getMessage());
+                }
+            }
+            \Log::error('Failed to create admin notification: ' . $e->getMessage());
+            return null;
         } catch (\Exception $e) {
             \Log::error('Failed to create admin notification: ' . $e->getMessage());
             return null;
@@ -1326,6 +1590,19 @@ class StudentController extends Controller
                 }
             }
             
+            // Đảm bảo cột visibility tồn tại
+            $columns = DB::select("SHOW COLUMNS FROM events");
+            $columnNames = array_column($columns, 'Field');
+            
+            if (!in_array('visibility', $columnNames)) {
+                try {
+                    DB::statement("ALTER TABLE events ADD COLUMN visibility ENUM('public', 'internal') DEFAULT 'public'");
+                    $columnNames[] = 'visibility';
+                } catch (\Exception $e) {
+                    \Log::warning("UpdateEvent - Failed to add column visibility: " . $e->getMessage());
+                }
+            }
+            
             // Cập nhật event
             $updateData = [
                 'title' => $request->title,
@@ -1347,14 +1624,8 @@ class StudentController extends Controller
                 'permit_file' => $permitFilePath,
                 'guests' => $guestsData,
                 'status' => 'pending', // Chuyển về chế độ chờ duyệt sau khi chỉnh sửa
+                'visibility' => $request->visibility ?? 'public', // Luôn cập nhật visibility
             ];
-            
-            // Thêm visibility nếu cột tồn tại
-            $columns = DB::select("SHOW COLUMNS FROM events");
-            $columnNames = array_column($columns, 'Field');
-            if (in_array('visibility', $columnNames)) {
-                $updateData['visibility'] = $request->visibility;
-            }
             
             $event->update($updateData);
             
@@ -4288,13 +4559,41 @@ class StudentController extends Controller
             return $user;
         }
 
+        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
+        
+        // Load posts
         $club->load(['posts' => function ($query) {
             $query->where('status', 'published')->orderBy('created_at', 'desc')->limit(5);
-        }, 'events' => function ($query) {
-            $query->where('status', 'approved')->orderBy('start_time', 'asc');
         }, 'members']);
-
-        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
+        
+        // Load events với filter visibility
+        // Logic: 
+        // - public hoặc NULL: Tất cả mọi người đều thấy (kể cả không phải thành viên)
+        // - internal: CHỈ thành viên của CLB tạo sự kiện đó (CLB này) mới thấy
+        $eventsQuery = Event::with(['club', 'creator', 'images'])
+            ->where('club_id', $club->id)
+            ->where('status', 'approved');
+        
+        // Nếu user không phải thành viên CLB này, chỉ hiển thị events công khai hoặc NULL
+        // Nếu là thành viên, hiển thị cả public, NULL và internal (vì là CLB của họ)
+        if (!$isMember) {
+            $eventsQuery->where(function($query) {
+                $query->where('visibility', 'public')
+                    ->orWhereNull('visibility'); // Coi NULL là public
+            });
+        } else {
+            // Thành viên CLB có thể xem tất cả events của CLB (cả public, NULL và internal)
+            $eventsQuery->where(function($query) {
+                $query->where('visibility', 'public')
+                    ->orWhereNull('visibility') // Coi NULL là public
+                    ->orWhere('visibility', 'internal');
+            });
+        }
+        
+        $clubEvents = $eventsQuery->orderBy('start_time', 'asc')->get();
+        
+        // Gán events vào club object để view có thể dùng
+        $club->setRelation('events', $clubEvents);
         
         // Lấy thông tin thành viên nếu user là thành viên
         $clubMember = null;

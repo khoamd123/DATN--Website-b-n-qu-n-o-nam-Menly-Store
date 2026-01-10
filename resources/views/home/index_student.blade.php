@@ -179,7 +179,7 @@
     @endif
 
     {{-- Newest Clubs Section --}}
-    @if($newestClubs->count())
+    @if(isset($newestClubs) && $newestClubs->count() > 0)
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">
                 <i class="fas fa-sparkles text-primary me-2"></i>CLB mới nhất
@@ -375,7 +375,7 @@
     @endif
 
     {{-- Upcoming Events Section --}}
-    @if($upcomingEvents->count() || $todayEvents->count())
+    @if((isset($upcomingEvents) && $upcomingEvents->count() > 0) || (isset($todayEvents) && $todayEvents->count() > 0))
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -388,7 +388,7 @@
                 </div>
                 <div class="event-list">
                     {{-- Today's Events --}}
-                    @if($todayEvents->count())
+                    @if(isset($todayEvents) && $todayEvents->count() > 0)
                         @foreach($todayEvents as $event)
                             @php
                                 $hasImages = $event->images && $event->images->count() > 0;
@@ -431,12 +431,12 @@
                                 </div>
                             </a>
                         @endforeach
-                        @if($upcomingEvents->count())
+                        @if(isset($upcomingEvents) && $upcomingEvents->count() > 0)
                             <hr class="my-3">
                         @endif
                     @endif
                     {{-- Upcoming Events --}}
-                    @if($upcomingEvents->count())
+                    @if(isset($upcomingEvents) && $upcomingEvents->count() > 0)
                         @foreach($upcomingEvents->take(3) as $event)
                             @php
                                 $hasImages = $event->images && $event->images->count() > 0;

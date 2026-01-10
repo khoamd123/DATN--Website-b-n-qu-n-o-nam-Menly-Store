@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
@@ -26,6 +28,48 @@ require __DIR__.'/student.php';
 // Routes for notifications (from Dũng's commit)
 // Debug route for date filter
 Route::get('/admin/debug-date-filter', [AdminController::class, 'debugDateFilter'])->name('admin.debug-date-filter');
+
+// Temporary route to fix notifications table columns (CHỈ CHẠY MỘT LẦN)
+Route::get('/fix-notifications-columns', function() {
+    if (!session('is_admin')) {
+        return redirect()->route('simple.login')->with('error', 'Chỉ quản trị viên mới có thể truy cập.');
+    }
+    
+    $results = [];
+    
+    try {
+        // Kiểm tra và thêm cột type
+        if (!Schema::hasColumn('notifications', 'type')) {
+            DB::statement("ALTER TABLE notifications ADD COLUMN type VARCHAR(50) NULL AFTER sender_id");
+            $results[] = "✓ Đã thêm cột 'type'";
+        } else {
+            $results[] = "✓ Cột 'type' đã tồn tại";
+        }
+        
+        // Kiểm tra và thêm cột related_id
+        if (!Schema::hasColumn('notifications', 'related_id')) {
+            DB::statement("ALTER TABLE notifications ADD COLUMN related_id BIGINT UNSIGNED NULL AFTER type");
+            $results[] = "✓ Đã thêm cột 'related_id'";
+        } else {
+            $results[] = "✓ Cột 'related_id' đã tồn tại";
+        }
+        
+        // Kiểm tra và thêm cột related_type
+        if (!Schema::hasColumn('notifications', 'related_type')) {
+            DB::statement("ALTER TABLE notifications ADD COLUMN related_type VARCHAR(50) NULL AFTER related_id");
+            $results[] = "✓ Đã thêm cột 'related_type'";
+        } else {
+            $results[] = "✓ Cột 'related_type' đã tồn tại";
+        }
+        
+        return response('<h2>Thêm cột vào bảng notifications</h2><pre>' . implode("\n", $results) . "\n\n✓ Hoàn thành!</pre><p><a href='" . route('admin.dashboard') . "'>Quay lại trang admin</a></p>", 200)
+            ->header('Content-Type', 'text/html; charset=utf-8');
+            
+    } catch (\Exception $e) {
+        return response('<h2>Lỗi khi thêm cột</h2><pre>✗ Lỗi: ' . htmlspecialchars($e->getMessage()) . '</pre>', 500)
+            ->header('Content-Type', 'text/html; charset=utf-8');
+    }
+})->name('fix.notifications.columns');
 
 
 Route::get('/admin/test-date-filter', [AdminController::class, 'testDateFilter'])->name('admin.test-date-filter');
@@ -133,9 +177,10 @@ Route::get('/student/profile', [\App\Http\Controllers\StudentProfileController::
 Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileController::class, 'edit'])->name('student.profile.edit');
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
-Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
-Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
-Route::post('/student/notifications/{id}/mark-read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.mark-read');
+// Notifications routes đã được di chuyển vào routes/student.php để tránh conflict
+// Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
+// Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
+// Route::post('/student/notifications/{id}/mark-read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.mark-read');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 

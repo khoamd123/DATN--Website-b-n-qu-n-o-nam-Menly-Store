@@ -4,14 +4,11 @@
 
 @section('content')
 @php
-    // Sử dụng relationship đã được eager load từ controller
-    // Chỉ lấy những clubMember có status approved/active và có club tồn tại
-    $userClubs = collect($user->clubMembers ?? [])
-        ->filter(function($clubMember) {
-            // Lọc bỏ những clubMember không có status approved/active hoặc có club null
-            return in_array($clubMember->status ?? '', ['approved', 'active']) 
-                && $clubMember->club !== null;
-        });
+    // Lấy tất cả clubMembers với status = 'approved' hoặc 'active'
+    $userClubs = $user->clubMembers()
+        ->whereIn('status', ['approved', 'active'])
+        ->with('club')
+        ->get();
 @endphp
 
 <div class="container-fluid">
@@ -162,10 +159,7 @@
                                         if($position === 'leader' || $position === 'chunhiem') {
                                             $badgeColor = 'danger';
                                             $positionLabel = 'Trưởng CLB';
-                                        } elseif($position === 'vice_president' || $position === 'phonhiem') {
-                                            $badgeColor = 'warning';
-                                            $positionLabel = 'Phó CLB';
-                                        } elseif($position === 'officer' || $position === 'can_su') {
+                                        } elseif($position === 'officer' || $position === 'phonhiem') {
                                             $badgeColor = 'info';
                                             $positionLabel = 'Cán sự';
                                         } elseif($position === 'member' || $position === 'thanhvien') {
@@ -173,12 +167,10 @@
                                             $positionLabel = 'Thành viên';
                                         }
                                     @endphp
-                                    @if($clubMember->club)
                                     <div class="mb-2">
-                                            <strong>{{ $clubMember->club->name ?? 'CLB không tồn tại' }}:</strong><br>
+                                        <strong>{{ $clubMember->club->name }}:</strong><br>
                                         <span class="badge bg-{{ $badgeColor }}">{{ $positionLabel }}</span>
                                     </div>
-                                    @endif
                                 @endforeach
                             @else
                                 <div class="text-muted">
