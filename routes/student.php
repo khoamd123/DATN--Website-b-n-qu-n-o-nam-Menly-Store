@@ -72,8 +72,10 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
     Route::put('/announcements/{announcement}', [PostController::class, 'updateAnnouncement'])->name('announcements.update');
     
     // Notifications
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    // Notifications (prefix student.notifications.* để khớp view)
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('student.notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('student.notifications.read');
+    Route::post('/notifications/settings', [DashboardController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
     
     // Contact
     Route::get('/contact', [DashboardController::class, 'contact'])->name('contact.index');

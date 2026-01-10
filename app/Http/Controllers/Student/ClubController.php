@@ -127,12 +127,13 @@ class ClubController extends Controller
                 'max_members' => 100,
             ]);
 
-            // Thêm user làm leader của CLB
+            // Thêm user làm leader của CLB (position = leader, status = approved)
             ClubMember::create([
-                'user_id' => $user->id,
-                'club_id' => $club->id,
-                'role' => 'leader',
-                'status' => 'approved',
+                'user_id'   => $user->id,
+                'club_id'   => $club->id,
+                'position'  => 'leader',
+                'status'    => 'approved',
+                'joined_at' => now(),
             ]);
 
             // Gửi thông báo cho admin

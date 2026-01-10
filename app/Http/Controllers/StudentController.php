@@ -150,8 +150,8 @@ class StudentController extends Controller
             });
         }
 
-        // Lấy kết quả với phân trang
-        $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8);
+        // Lấy tất cả kết quả không phân trang
+        $otherClubs = $otherClubsQuery->orderBy('name')->get();
 
         return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search'));
     }
@@ -167,12 +167,17 @@ class StudentController extends Controller
         $search = $request->input('search', '');
         $myClubIds = $user->clubs->pluck('id')->toArray();
 
-        $otherClubs = Club::where('status', 'active')
+        $query = Club::where('status', 'active')
             ->whereNotIn('id', $myClubIds)
-            ->where('name', 'like', '%' . $search . '%')
-            ->withCount('members')
-            ->orderBy('name')
-            ->paginate(8);
+            ->withCount('members');
+            
+        // Áp dụng tìm kiếm nếu có
+        if ($search) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+            
+        // Lấy tất cả kết quả không phân trang
+        $otherClubs = $query->orderBy('name')->get();
 
         return view('student.clubs._other_clubs_list', compact('otherClubs', 'search'));
     }
@@ -1227,7 +1232,8 @@ class StudentController extends Controller
             // Leader, Vice President và Treasurer có quyền quản lý CLB
             $hasManagementRole = in_array($userPosition, ['leader', 'vice_president', 'treasurer']);
 
-            // Tính toán thống kê cơ bản cho view
+            // Tính toán thống kê cơ bản cho view (chỉ khi có clubId)
+            if ($clubId) {
             $activeMembers = ClubMember::where('club_id', $clubId)
                 ->whereIn('status', ['approved', 'active'])
                 ->count();
@@ -1309,6 +1315,18 @@ class StudentController extends Controller
                     return $member;
                 });
             $allPermissions = Permission::orderBy('name')->get();
+            } else {
+                // Nếu không có clubId, set default values
+                $clubStats = [
+                    'members' => ['active' => 0, 'pending' => 0],
+                    'events' => ['total' => 0, 'upcoming' => 0],
+                    'posts' => 0,
+                    'announcements' => ['total' => 0, 'today' => 0],
+                    'fundRequests' => ['total' => 0, 'pending' => 0],
+                    'fund' => ['balance' => 0, 'income' => 0, 'expense' => 0, 'exists' => false],
+                    'resources' => ['total' => 0, 'files' => 0],
+                ];
+            }
         }
 
         // Truyền thêm $clubId để tránh lỗi undefined variable trong view
@@ -1679,33 +1697,86 @@ class StudentController extends Controller
                 }
                 
                 // Kiểm tra giới hạn số lượng treasurer (chỉ 1) - cho calculatedPosition
-                if ($calculatedPosition === 'treasurer') {
-                    $treasurerCount = ClubMember::where('club_id', $clubId)
-                ->whereIn('status', ['approved', 'active'])
+                // Lưu ý: calculatedPosition chỉ áp dụng khi không có requestedPosition
+                // Nếu đã có requestedPosition thì sẽ xử lý ở phần trên
+                if ($calculatedPosition === 'treasurer' && !$requestedPosition) {
+                    $existingTreasurer = ClubMember::where('club_id', $clubId)
+                        ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'treasurer')
                         ->where('id', '!=', $clubMember->id)
-                        ->count();
+                        ->first();
                     
-                    if ($treasurerCount >= 1) {
-                        // Nếu đã có treasurer, chuyển về member
+                    if ($existingTreasurer) {
+                        // Nếu đã có treasurer và đang tự động tính toán từ quyền,
+                        // thì chuyển về member để tránh conflict
                         $calculatedPosition = 'member';
+                        \Log::info("Tự động chuyển calculatedPosition từ treasurer về member do CLB {$clubId} đã có thủ quỹ");
                     }
                 }
                 
                 // Ưu tiên position từ form nếu có, nếu không thì dùng position được tính toán từ quyền
                 $finalPosition = $requestedPosition ?: $calculatedPosition;
                 
+                // Đảm bảo permissions phù hợp với finalPosition
+                // Nếu finalPosition được set từ form, đảm bảo permissions đúng
+                if ($finalPosition === 'treasurer' && !in_array('quan_ly_quy', $permissionNames)) {
+                    // Nếu position là treasurer nhưng chưa có quyền quan_ly_quy, thêm vào
+                    $permissionNames[] = 'quan_ly_quy';
+                    if (!in_array('xem_bao_cao', $permissionNames)) {
+                        $permissionNames[] = 'xem_bao_cao';
+                    }
+                    // Cập nhật lại permissionIds
+                    $permissionIds = Permission::whereIn('name', (array) $permissionNames)->pluck('id');
+                }
+                
                 // Kiểm tra giới hạn cho position từ form (nếu có)
                 if ($requestedPosition === 'treasurer') {
-                    $treasurerCount = ClubMember::where('club_id', $clubId)
+                    // Kiểm tra xem user đã là treasurer/leader ở CLB khác chưa
+                    $existingLeaderTreasurer = ClubMember::where('user_id', $clubMember->user_id)
+                        ->whereIn('status', ['approved', 'active'])
+                        ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
+                        ->where('club_id', '!=', $clubId)
+                        ->whereHas('club', function($query) {
+                            $query->whereNull('deleted_at');
+                        })
+                        ->first();
+                    
+                    if ($existingLeaderTreasurer) {
+                        $existingClub = \App\Models\Club::find($existingLeaderTreasurer->club_id);
+                        throw new \Exception("Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$existingClub->name}'. Một người chỉ được làm thủ quỹ/phó CLB/trưởng ở 1 CLB.");
+                    }
+                    
+                    // Chỉ được có 1 Treasurer - Nếu đã có, tự động chuyển treasurer cũ về member
+                    $existingTreasurer = ClubMember::where('club_id', $clubId)
                         ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'treasurer')
                         ->where('id', '!=', $clubMember->id)
-                        ->count();
+                        ->first();
                     
-                    if ($treasurerCount >= 1) {
-                        // Nếu đã có treasurer, không cho phép thay đổi
-                        throw new \Exception("CLB này đã có thủ quỹ. Vui lòng chuyển thủ quỹ hiện tại về thành viên trước.");
+                    if ($existingTreasurer) {
+                        // Chuyển thủ quỹ cũ về thành viên
+                        DB::table('club_members')
+                            ->where('id', $existingTreasurer->id)
+                            ->update(['position' => 'member']);
+                        
+                        // Xóa quyền của thủ quỹ cũ, chỉ giữ xem_bao_cao
+                        DB::table('user_permissions_club')
+                            ->where('user_id', $existingTreasurer->user_id)
+                            ->where('club_id', $clubId)
+                            ->delete();
+                        
+                        $xemBaoCaoPerm = Permission::where('name', 'xem_bao_cao')->first();
+                        if ($xemBaoCaoPerm) {
+                            DB::table('user_permissions_club')->insert([
+                                'user_id' => $existingTreasurer->user_id,
+                                'club_id' => $clubId,
+                                'permission_id' => $xemBaoCaoPerm->id,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                        
+                        \Log::info("Đã chuyển thủ quỹ cũ (user_id: {$existingTreasurer->user_id}) về thành viên trong CLB {$clubId}");
                     }
                 }
                 
@@ -1722,9 +1793,9 @@ class StudentController extends Controller
                     }
                 }
                 
-                // Cập nhật position
-                ClubMember::where('id', $clubMember->id)
-                    ->update(['position' => $finalPosition]);
+                // Cập nhật position sử dụng model để đảm bảo validation
+                $clubMember->position = $finalPosition;
+                $clubMember->save();
                 
                 // Log để debug
                 \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$finalPosition} (requested: {$requestedPosition}, calculated: {$calculatedPosition}, permission count: {$permissionCount})");
@@ -3523,21 +3594,51 @@ class StudentController extends Controller
             return $user;
         }
 
-        $club->load(['posts' => function ($query) {
-            $query->where('status', 'published')->orderBy('created_at', 'desc')->limit(5);
-        }, 'events' => function ($query) {
-            $query->where('status', 'approved')->orderBy('start_time', 'asc');
-        }, 'members']);
+        // Load relationships
+        $club->load([
+            'field',
+            'posts' => function ($query) {
+                $query->where('status', 'published')
+                      ->orderBy('created_at', 'desc')
+                      ->limit(5);
+            }, 
+            'events' => function ($query) {
+                $query->where('status', 'approved')
+                      ->orderBy('start_time', 'asc');
+            },
+            'clubMembers' => function ($query) {
+                $query->whereIn('status', ['approved', 'active']);
+            }
+        ]);
 
-        $isMember = $user->clubs()->where('club_id', $club->id)->exists();
-        
-        // Lấy thông tin thành viên nếu user là thành viên
-        $clubMember = null;
-        if ($isMember) {
-            $clubMember = \App\Models\ClubMember::where('user_id', $user->id)
-                ->where('club_id', $club->id)
-                ->first();
+        // Nếu CLB chưa có leader nhưng chỉ có 1 thành viên đã duyệt/đang hoạt động,
+        // tự động gán thành viên đó làm Trưởng CLB để tránh trạng thái không có leader.
+        $leaderExists = ClubMember::where('club_id', $club->id)
+            ->whereIn('status', ['approved', 'active'])
+            ->where('position', 'leader')
+            ->exists();
+        if (!$leaderExists) {
+            $approvedActiveMembers = ClubMember::where('club_id', $club->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->orderByDesc('id')
+                ->get();
+            if ($approvedActiveMembers->count() === 1) {
+                $singleMember = $approvedActiveMembers->first();
+                $singleMember->position = 'leader';
+                $singleMember->save();
+                $club->leader_id = $singleMember->user_id;
+                $club->save();
+                $club->load('clubMembers');
+            }
         }
+
+        // Kiểm tra thành viên - chỉ tính các thành viên đã được duyệt hoặc đang hoạt động
+        $clubMember = \App\Models\ClubMember::where('user_id', $user->id)
+            ->where('club_id', $club->id)
+            ->whereIn('status', ['approved', 'active'])
+            ->first();
+        
+        $isMember = $clubMember !== null;
         
         // Kiểm tra xem có yêu cầu tham gia đang chờ duyệt không
         $joinRequest = \App\Models\ClubJoinRequest::where('user_id', $user->id)
@@ -3545,7 +3646,37 @@ class StudentController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        return view('student.clubs.show', compact('user', 'club', 'isMember', 'clubMember', 'joinRequest'));
+        // Lấy thông báo (announcements) nếu là thành viên
+        $announcements = collect();
+        if ($isMember) {
+            $announcements = Post::where('club_id', $club->id)
+                ->where('type', 'announcement')
+                ->where('status', 'published')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+        }
+
+        // Đếm số lượng
+        $membersCount = $club->clubMembers->count();
+        $eventsCount = $club->events->count();
+        $announcementsCount = $announcements->count();
+
+        // Lấy sự kiện sắp tới cho tab overview
+        $upcomingEvents = $club->events->where('start_time', '>', now())->take(3);
+
+        return view('student.clubs.show', compact(
+            'user', 
+            'club', 
+            'isMember', 
+            'clubMember', 
+            'joinRequest',
+            'announcements',
+            'membersCount',
+            'eventsCount',
+            'announcementsCount',
+            'upcomingEvents'
+        ));
     }
 
     /**

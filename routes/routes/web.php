@@ -391,6 +391,9 @@ Route::prefix('admin')->group(function () {
     
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+    Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
+    Route::post('/notifications/{id}/read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.read');
+    Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');

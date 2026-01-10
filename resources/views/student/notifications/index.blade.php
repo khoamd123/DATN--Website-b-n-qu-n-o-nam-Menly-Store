@@ -69,7 +69,7 @@
                         </p>
                         <div class="notification-actions">
                             @if(!$notification->is_read)
-                                <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline">
+                        <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
                                 </form>

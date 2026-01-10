@@ -301,21 +301,65 @@
             </div>
             @endif
             @php
-                $position = $user->getPositionInClub($clubId);
-                $canViewFund = in_array($position, ['leader', 'treasurer']);
+                // Lấy position - ưu tiên từ biến đã được tính sẵn trong controller
+                $currentPosition = $userPosition ?? null;
+                
+                // Nếu chưa có position và có clubId, lấy từ model
+                if (!$currentPosition && $clubId) {
+                    $currentPosition = $user->getPositionInClub($clubId);
+                }
+                
+                // Kiểm tra quyền quản lý quỹ
+                // Leader và Treasurer luôn có quyền quản lý quỹ (theo logic business)
+                // Logic: Chỉ Leader và Treasurer mới có quyền quản lý quỹ
+                $canManageFund = false;
+                if ($clubId && $currentPosition) {
+                    // Leader và Treasurer có quyền quản lý quỹ
+                    $canManageFund = in_array($currentPosition, ['leader', 'treasurer']);
+                }
+                
+                $fundExists = data_get($clubStats, 'fund.exists', false);
             @endphp
-            @if($userClub && $clubId && $canViewFund && data_get($clubStats, 'fund.exists', false))
+            @if($userClub && $clubId && $canManageFund)
             <div class="col-md-6 mb-4">
-                <div class="management-card">
-                    <div class="management-icon">
+                <div class="management-card" style="border-color: #f59e0b;">
+                    <div class="management-icon" style="background: #fef3c7; color: #f59e0b;">
                         <i class="fas fa-wallet"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Quỹ CLB</h5>
-                        <p class="management-description">Xem thống kê và giao dịch quỹ CLB</p>
-                        <a href="{{ route('student.club-management.fund-transactions', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-wallet me-1"></i> Quản lý quỹ
+                        <h5 class="management-title">
+                            <i class="fas fa-wallet me-1"></i> Quản lý quỹ
+                        </h5>
+                        <p class="management-description">
+                            @if($fundExists)
+                                Quản lý quỹ CLB, giao dịch và yêu cầu cấp kinh phí
+                            @else
+                                Tạo và quản lý quỹ CLB, theo dõi giao dịch tài chính
+                            @endif
+                        </p>
+                        @if($fundExists)
+                            <div class="management-stats">
+                                <span class="stat-item">
+                                    <strong>{{ number_format(data_get($clubStats, 'fund.balance', 0), 0, ',', '.') }}</strong>
+                                    <small>VNĐ (Số dư)</small>
+                                </span>
+                                <span class="stat-item">
+                                    <strong>{{ number_format(data_get($clubStats, 'fund.income', 0), 0, ',', '.') }}</strong>
+                                    <small>VNĐ (Thu)</small>
+                                </span>
+                            </div>
+                        @endif
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="{{ route('student.club-management.fund-transactions') }}?club={{ $clubId }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-wallet me-1"></i> 
+                                {{ $fundExists ? 'Giao dịch quỹ' : 'Tạo quỹ CLB' }}
                             </a>
+                            @if($fundExists)
+                                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $clubId }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>

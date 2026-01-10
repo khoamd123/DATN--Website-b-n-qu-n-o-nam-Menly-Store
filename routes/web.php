@@ -106,6 +106,8 @@ Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class
 
 Route::get('/student/clubs', [\App\Http\Controllers\StudentController::class, 'clubs'])->name('student.clubs.index');
 Route::get('/student/clubs/ajax-search', [\App\Http\Controllers\StudentController::class, 'ajaxSearchClubs'])->name('student.clubs.ajax_search');
+Route::get('/student/clubs/create', [\App\Http\Controllers\Student\ClubController::class, 'create'])->name('student.clubs.create');
+Route::post('/student/clubs', [\App\Http\Controllers\Student\ClubController::class, 'store'])->name('student.clubs.store');
 Route::get('/student/clubs/{club}', [\App\Http\Controllers\StudentController::class, 'showClub'])->name('student.clubs.show');
 Route::post('/student/clubs/{club}/join', [\App\Http\Controllers\StudentController::class, 'joinClub'])->name('student.clubs.join');
 Route::delete('/student/clubs/{club}/leave', [\App\Http\Controllers\StudentController::class, 'leaveClub'])->name('student.clubs.leave');
@@ -128,6 +130,8 @@ Route::get('/student/profile/edit', [\App\Http\Controllers\StudentProfileControl
 Route::put('/student/profile', [\App\Http\Controllers\StudentProfileController::class, 'update'])->name('student.profile.update');
 
 Route::get('/student/notifications', [\App\Http\Controllers\StudentController::class, 'notifications'])->name('student.notifications.index');
+Route::post('/student/notifications/{id}/read', [\App\Http\Controllers\StudentController::class, 'markNotificationRead'])->name('student.notifications.read');
+Route::post('/student/notifications/settings', [\App\Http\Controllers\StudentController::class, 'saveNotificationSettings'])->name('student.notifications.settings');
 
 Route::get('/student/contact', [\App\Http\Controllers\StudentController::class, 'contact'])->name('student.contact.index');
 
@@ -429,6 +433,9 @@ Route::prefix('admin')->group(function () {
     
     // Thông báo
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
+    Route::get('/notifications/{id}', [AdminController::class, 'showNotification'])->name('admin.notifications.show');
+    Route::post('/notifications/{id}/read', [AdminController::class, 'markNotificationRead'])->name('admin.notifications.read');
+    Route::delete('/notifications/{id}', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
     
     // Tin nhắn
     Route::get('/messages', [AdminController::class, 'messages'])->name('admin.messages');
@@ -571,8 +578,8 @@ Route::get('/test-clubs-create-view', function () {
     return view('admin.clubs.create-simple', compact('fields', 'users'));
 });
 
-// Route test với controller mới
-Route::get('/test-new-controller', [App\Http\Controllers\TestController::class, 'clubsCreate']);
+// Route test với controller mới - REMOVED: TestController does not exist
+// Route::get('/test-new-controller', [App\Http\Controllers\TestController::class, 'clubsCreate']);
 
 // Route tạm thời để khôi phục sự kiện (test)
 Route::get('/admin/events/{id}/restore-test', function($id) {

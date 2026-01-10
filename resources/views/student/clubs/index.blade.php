@@ -118,13 +118,20 @@
 
         <!-- Other Clubs / Search Results -->
         <div class="content-card" id="search-results-section">
-            <h4 class="mb-3" id="search-results-title">
-                @if(isset($search) && !empty($search))
-                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
-                @else
-                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0" id="search-results-title">
+                    @if(isset($search) && !empty($search))
+                        <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
+                    @else
+                        <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                    @endif
+                </h4>
+                @if(isset($otherClubs) && $otherClubs->count() > 0)
+                    <span class="badge bg-primary">
+                        <i class="fas fa-users me-1"></i> {{ $otherClubs->count() }} CLB
+                    </span>
                 @endif
-            </h4>
+            </div>
             
             <!-- Search Form -->
             <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form" class="mb-4">
@@ -304,10 +311,11 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
         
         // Cập nhật tiêu đề
+        const titleContainer = document.getElementById('search-results-title');
         if (query) {
-            resultsTitle.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
+            titleContainer.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
         } else {
-            resultsTitle.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
+            titleContainer.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
         }
 
         // Gửi yêu cầu AJAX đến route chuyên dụng, chỉ lấy phần HTML cần thiết
@@ -315,29 +323,41 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.text())
             .then(html => {
                 resultsContainer.innerHTML = html;
+                // Cập nhật số lượng CLB sau khi load xong
+                updateClubCount();
             })
             .catch(error => {
                 console.error('Error fetching search results:', error);
                 resultsContainer.innerHTML = `<div class="text-center py-5 text-danger">Đã có lỗi xảy ra khi tìm kiếm. Vui lòng tải lại trang và thử lại.</div>`;
             });
     }
-
-    // 3. Xử lý khi người dùng click vào link phân trang AJAX
-    document.body.addEventListener('click', function(e) {
-        const paginationLink = e.target.closest('#pagination-links a');
-        if (paginationLink) {
-            e.preventDefault();
-            const url = paginationLink.href;
-
-            // Hiển thị loading và fetch nội dung trang mới từ link phân trang
-            resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    resultsContainer.innerHTML = html;
-                });
+    
+    function updateClubCount() {
+        // Đếm số lượng CLB trong container
+        const clubCards = resultsContainer.querySelectorAll('.club-card');
+        const count = clubCards.length;
+        
+        // Tìm hoặc tạo badge số lượng
+        const titleContainer = document.getElementById('search-results-title');
+        if (!titleContainer) return;
+        
+        const parentContainer = titleContainer.parentElement;
+        let countBadge = parentContainer.querySelector('.badge.bg-primary');
+        
+        if (count > 0) {
+            if (countBadge) {
+                countBadge.innerHTML = `<i class="fas fa-users me-1"></i> ${count} CLB`;
+            } else {
+                const newBadge = document.createElement('span');
+                newBadge.className = 'badge bg-primary';
+                newBadge.innerHTML = `<i class="fas fa-users me-1"></i> ${count} CLB`;
+                parentContainer.appendChild(newBadge);
+            }
+        } else if (countBadge) {
+            countBadge.remove();
         }
-    });
+    }
+
 });
 </script>
 @endpush

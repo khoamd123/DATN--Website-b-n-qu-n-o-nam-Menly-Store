@@ -1,4 +1,10 @@
 @if($otherClubs->count() > 0)
+    <div class="mb-3">
+        <p class="text-muted mb-0">
+            <i class="fas fa-info-circle me-1"></i> 
+            Hiển thị <strong>{{ $otherClubs->count() }}</strong> câu lạc bộ
+        </p>
+    </div>
     <div class="row">
         @foreach($otherClubs as $club)
         <div class="col-md-6 mb-4">

@@ -206,6 +206,49 @@ class TrashController extends Controller
                     break;
                 case 'club':
                     $item = Club::onlyTrashed()->findOrFail($id);
+                    // Xóa các bảng phụ thuộc trước để tránh lỗi ràng buộc khóa ngoại
+                    // 0. Event related (theo club_id hoặc event_id)
+                    $eventIds = \DB::table('events')->where('club_id', $id)->pluck('id');
+                    if ($eventIds->isNotEmpty()) {
+                        \DB::table('event_registrations')->whereIn('event_id', $eventIds)->delete();
+                        \DB::table('event_comments')->whereIn('event_id', $eventIds)->delete();
+                        \DB::table('event_logs')->whereIn('event_id', $eventIds)->delete();
+                        \DB::table('event_member_evaluations')->whereIn('event_id', $eventIds)->delete();
+                    }
+                    \DB::table('event_member_evaluations')->where('club_id', $id)->delete();
+                    \DB::table('events')->where('club_id', $id)->delete();
+
+                    // 1. Department members thuộc các department của CLB
+                    $departmentIds = \DB::table('departments')->where('club_id', $id)->pluck('id');
+                    if ($departmentIds->isNotEmpty()) {
+                        \DB::table('department_members')->whereIn('department_id', $departmentIds)->delete();
+                    }
+                    // 2. Departments thuộc CLB
+                    \DB::table('departments')->where('club_id', $id)->delete();
+
+                    // 3. Funds và giao dịch quỹ
+                    $fundIds = \DB::table('funds')->where('club_id', $id)->pluck('id');
+                    if ($fundIds->isNotEmpty()) {
+                        \DB::table('fund_transactions')->whereIn('fund_id', $fundIds)->delete();
+                    }
+                    \DB::table('fund_requests')->where('club_id', $id)->delete();
+                    \DB::table('funds')->where('club_id', $id)->delete();
+
+                    // 4. Tài nguyên CLB
+                    $resourceIds = \DB::table('club_resources')->where('club_id', $id)->pluck('id');
+                    if ($resourceIds->isNotEmpty()) {
+                        \DB::table('club_resource_files')->whereIn('club_resource_id', $resourceIds)->delete();
+                    }
+                    \DB::table('club_resources')->where('club_id', $id)->delete();
+
+                    // 5. Bài viết / thông báo
+                    $postIds = \DB::table('posts')->where('club_id', $id)->pluck('id');
+                    if ($postIds->isNotEmpty()) {
+                        \DB::table('post_attachments')->whereIn('post_id', $postIds)->delete();
+                        \DB::table('post_comments')->whereIn('post_id', $postIds)->delete();
+                    }
+                    \DB::table('posts')->where('club_id', $id)->delete();
+
                     // Xóa tất cả club_members của club
                     \DB::table('club_members')->where('club_id', $id)->delete();
                     // Xóa tất cả permissions của club

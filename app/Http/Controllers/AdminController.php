@@ -3557,6 +3557,28 @@ class AdminController extends Controller
         // Refresh lại relationship để đảm bảo dữ liệu mới nhất
         $club->load('clubMembers');
 
+        // Nếu CLB chưa có leader nhưng chỉ có 1 thành viên đã duyệt/đang hoạt động,
+        // tự động gán thành viên đó làm Trưởng CLB để tránh trạng thái không có leader.
+        $leaderExists = ClubMember::where('club_id', $club->id)
+            ->whereIn('status', ['approved', 'active'])
+            ->where('position', 'leader')
+            ->exists();
+        if (!$leaderExists) {
+            $approvedActiveMembers = ClubMember::where('club_id', $club->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->orderByDesc('id')
+                ->get();
+            if ($approvedActiveMembers->count() === 1) {
+                $singleMember = $approvedActiveMembers->first();
+                $singleMember->position = 'leader';
+                $singleMember->save();
+                $club->leader_id = $singleMember->user_id;
+                $club->save();
+                // Refresh lại để hiển thị đúng
+                $club->load('clubMembers');
+            }
+        }
+
         // Debug: Log tất cả clubMembers
         \Log::info('Club Members Debug', [
             'club_id' => $club->id,
@@ -4121,10 +4143,15 @@ class AdminController extends Controller
             // Không cần xóa quyền ở đây vì đã được xóa và cấp lại ở các block if/elseif trên
         }
 
-        // Cập nhật position - SỬ DỤNG DB::table để đảm bảo cập nhật trực tiếp vào database
-        DB::table('club_members')
-            ->where('id', $clubMember->id)
-            ->update(['position' => $newPosition]);
+        // Cập nhật position - Đảm bảo giá trị hợp lệ
+        $validPositions = ['leader', 'vice_president', 'treasurer', 'member'];
+        if (!in_array($newPosition, $validPositions)) {
+            return redirect()->back()->with('error', 'Vai trò không hợp lệ.');
+        }
+        
+        // Cập nhật position sử dụng model để đảm bảo validation
+        $clubMember->position = $newPosition;
+        $clubMember->save();
         
         // Refresh lại model để đảm bảo dữ liệu mới nhất
         $clubMember->refresh();
