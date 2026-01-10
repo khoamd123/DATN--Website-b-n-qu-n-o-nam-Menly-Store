@@ -22,14 +22,25 @@ class StudentProfileController extends Controller
             return redirect()->route('login')->with('error', 'Vui lòng đăng nhập với tài khoản sinh viên.');
         }
 
-        $user = User::with('clubs')->find(session('user_id'));
-        
-        if (!$user) {
-            session()->forget(['user_id', 'user_name', 'user_email', 'is_admin']);
-            return redirect()->route('login')->with('error', 'Phiên đăng nhập đã hết hạn.');
-        }
+        try {
+            $user = User::with('clubs')->find(session('user_id'));
+            
+            if (!$user) {
+                session()->forget(['user_id', 'user_name', 'user_email', 'is_admin']);
+                return redirect()->route('login')->with('error', 'Phiên đăng nhập đã hết hạn.');
+            }
 
-        return $user;
+            return $user;
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Xử lý lỗi kết nối database
+            \Log::error('Database connection error in checkStudentAuth: ' . $e->getMessage());
+            return redirect()->route('login')->with('error', 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.');
+        } catch (\Exception $e) {
+            // Xử lý các lỗi khác
+            \Log::error('Error in checkStudentAuth: ' . $e->getMessage());
+            session()->forget(['user_id', 'user_name', 'user_email', 'is_admin']);
+            return redirect()->route('login')->with('error', 'Đã xảy ra lỗi. Vui lòng đăng nhập lại.');
+        }
     }
 
     /**

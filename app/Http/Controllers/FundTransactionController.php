@@ -168,6 +168,62 @@ class FundTransactionController extends Controller
             }
         }
 
+        // Tạo thông báo cho admin và người quản lý quỹ
+        try {
+            $admins = \App\Models\User::where('is_admin', true)->get();
+            $typeText = $transaction->type === 'income' ? 'thu' : 'chi';
+            
+            foreach ($admins as $admin) {
+                $notification = \App\Models\Notification::create([
+                    'sender_id' => $transaction->created_by,
+                    'type' => 'fund_transaction',
+                    'title' => "Giao dịch quỹ mới ({$typeText})",
+                    'message' => "Có giao dịch quỹ mới: \"{$transaction->title}\" - " . number_format($transaction->amount, 0, ',', '.') . " VNĐ. Đang chờ duyệt.",
+                    'related_id' => $transaction->id,
+                    'related_type' => 'FundTransaction',
+                ]);
+                
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $admin->id,
+                ]);
+            }
+            
+            // Gửi thông báo cho người quản lý quỹ (nếu quỹ có CLB)
+            if ($fund->club_id) {
+                $club = $fund->club;
+                if ($club) {
+                    $clubLeaders = \App\Models\ClubMember::where('club_id', $club->id)
+                        ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
+                        ->where('status', 'approved')
+                        ->with('user')
+                        ->get();
+                    
+                    foreach ($clubLeaders as $member) {
+                        if ($member->user) {
+                            $notification = \App\Models\Notification::create([
+                                'sender_id' => $transaction->created_by,
+                                'type' => 'fund_transaction',
+                                'title' => "Giao dịch quỹ mới ({$typeText})",
+                                'message' => "Có giao dịch quỹ mới trong CLB {$club->name}: \"{$transaction->title}\" - " . number_format($transaction->amount, 0, ',', '.') . " VNĐ. Đang chờ duyệt.",
+                                'related_id' => $transaction->id,
+                                'related_type' => 'FundTransaction',
+                            ]);
+                            
+                            \App\Models\NotificationTarget::create([
+                                'notification_id' => $notification->id,
+                                'target_type' => 'user',
+                                'target_id' => $member->user->id,
+                            ]);
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for new fund transaction: ' . $e->getMessage());
+        }
+
         return redirect()->route('admin.funds.transactions', $fund->id)
             ->with('success', 'Tạo giao dịch thành công! Giao dịch đang chờ duyệt.');
         } catch (\Exception $e) {
@@ -304,6 +360,27 @@ class FundTransactionController extends Controller
 
         $transaction->approve(session('user_id', 1));
 
+        // Tạo thông báo cho người tạo giao dịch
+        try {
+            $typeText = $transaction->type === 'income' ? 'thu' : 'chi';
+            $notification = \App\Models\Notification::create([
+                'sender_id' => session('user_id', 1),
+                'type' => 'fund_transaction',
+                'title' => "Giao dịch quỹ ({$typeText}) đã được duyệt",
+                'message' => "Giao dịch quỹ \"{$transaction->title}\" của bạn đã được duyệt. Số tiền: " . number_format($transaction->amount, 0, ',', '.') . " VNĐ.",
+                'related_id' => $transaction->id,
+                'related_type' => 'FundTransaction',
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $transaction->created_by,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for approved fund transaction: ' . $e->getMessage());
+        }
+
         return redirect()->route('admin.funds.transactions', $fund->id)
             ->with('success', 'Duyệt giao dịch thành công!');
     }
@@ -390,6 +467,33 @@ class FundTransactionController extends Controller
         // Cập nhật số dư quỹ
         $fund->updateCurrentAmount();
 
+        // Tạo thông báo cho người tạo giao dịch
+        try {
+            $typeText = $transaction->type === 'income' ? 'thu' : 'chi';
+            $message = "Giao dịch quỹ \"{$transaction->title}\" của bạn đã được duyệt một phần. ";
+            $message .= "Đã duyệt " . count($approvedItems) . " khoản mục với tổng số tiền: " . number_format($approvedAmount, 0, ',', '.') . " VNĐ.";
+            if (!empty($rejectedItems)) {
+                $message .= " " . count($rejectedItems) . " khoản mục đã bị từ chối.";
+            }
+            
+            $notification = \App\Models\Notification::create([
+                'sender_id' => session('user_id', 1),
+                'type' => 'fund_transaction',
+                'title' => "Giao dịch quỹ ({$typeText}) đã được duyệt một phần",
+                'message' => $message,
+                'related_id' => $transaction->id,
+                'related_type' => 'FundTransaction',
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $transaction->created_by,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for partially approved fund transaction: ' . $e->getMessage());
+        }
+
         $message = 'Đã duyệt ' . count($approvedItems) . ' khoản mục';
         if (!empty($rejectedItems)) {
             $message .= ' và từ chối ' . count($rejectedItems) . ' khoản mục';
@@ -413,6 +517,27 @@ class FundTransactionController extends Controller
         }
 
         $transaction->reject(session('user_id', 1), $request->rejection_reason);
+
+        // Tạo thông báo cho người tạo giao dịch
+        try {
+            $typeText = $transaction->type === 'income' ? 'thu' : 'chi';
+            $notification = \App\Models\Notification::create([
+                'sender_id' => session('user_id', 1),
+                'type' => 'fund_transaction',
+                'title' => "Giao dịch quỹ ({$typeText}) đã bị từ chối",
+                'message' => "Giao dịch quỹ \"{$transaction->title}\" của bạn đã bị từ chối. Lý do: {$request->rejection_reason}",
+                'related_id' => $transaction->id,
+                'related_type' => 'FundTransaction',
+            ]);
+            
+            \App\Models\NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_type' => 'user',
+                'target_id' => $transaction->created_by,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification for rejected fund transaction: ' . $e->getMessage());
+        }
 
         return redirect()->route('admin.funds.transactions', $fund->id)
             ->with('success', 'Từ chối giao dịch thành công!');

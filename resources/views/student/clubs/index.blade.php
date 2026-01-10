@@ -5,7 +5,7 @@
 @section('content')
 <div class="row">
     <!-- Main Content -->
-    <div class="col-lg-8">
+    <div class="col-12">
         <!-- Page Header -->
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -43,9 +43,14 @@
 
         <!-- My Clubs -->
         <div class="content-card">
-            <h4 class="mb-3">
-                <i class="fas fa-star text-warning me-2"></i> CLB của tôi
-            </h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-star text-warning me-2"></i> CLB của tôi
+                </h4>
+                @if(isset($search) && !empty($search))
+                    <span class="text-muted small">{{ $myClubs->count() }} kết quả</span>
+                @endif
+            </div>
             
             @if($myClubs->count() > 0)
                 <div class="row">
@@ -54,8 +59,31 @@
                         <div class="card h-100 border-0 shadow-sm club-card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center mb-3">
+                                    @php
+                                        $logoUrl = null;
+                                        $hasLogo = false;
+                                        if ($club->logo) {
+                                            $logoPath = $club->logo;
+                                            if (str_starts_with($logoPath, 'http://') || str_starts_with($logoPath, 'https://')) {
+                                                $logoUrl = $logoPath;
+                                                $hasLogo = true;
+                                            } else {
+                                                $fullPath = public_path($logoPath);
+                                                if (file_exists($fullPath)) {
+                                                    $logoUrl = asset($logoPath);
+                                                    $hasLogo = true;
+                                                }
+                                            }
+                                        }
+                                    @endphp
                                     <div class="club-logo me-3">
-                                        {{ substr($club->name, 0, 2) }}
+                                        @if($hasLogo && $logoUrl)
+                                            <img src="{{ $logoUrl }}" alt="{{ $club->name }}" class="club-logo-img" 
+                                                 onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <span class="club-logo-fallback" style="display: none;">{{ substr($club->name, 0, 2) }}</span>
+                                        @else
+                                            <span class="club-logo-fallback">{{ substr($club->name, 0, 2) }}</span>
+                                        @endif
                                     </div>
                                     <div class="flex-grow-1">
                                         <h5 class="card-title mb-1 fw-bold">{{ $club->name }}</h5>
@@ -64,7 +92,7 @@
                                         </small>
                                     </div>
                                 </div>
-                                <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags($club->description ?? ''), 100) }}</p>
+                                <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags(html_entity_decode($club->description ?? '', ENT_QUOTES, 'UTF-8')), 100) }}</p>
 
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge bg-teal rounded-pill">
@@ -90,13 +118,20 @@
 
         <!-- Other Clubs / Search Results -->
         <div class="content-card" id="search-results-section">
-            <h4 class="mb-3" id="search-results-title">
-                @if(isset($search) && !empty($search))
-                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
-                @else
-                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0" id="search-results-title">
+                    @if(isset($search) && !empty($search))
+                        <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
+                    @else
+                        <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                    @endif
+                </h4>
+                @if(isset($otherClubs) && $otherClubs->count() > 0)
+                    <span class="badge bg-primary">
+                        <i class="fas fa-users me-1"></i> {{ $otherClubs->count() }} CLB
+                    </span>
                 @endif
-            </h4>
+            </div>
             
             <!-- Search Form -->
             <form action="{{ route('student.clubs.index') }}" method="GET" id="search-form" class="mb-4">
@@ -113,66 +148,6 @@
 
             <div id="search-results-container">
                 @include('student.clubs._other_clubs_list', ['otherClubs' => $otherClubs, 'search' => $search])
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="sidebar">
-            <h5 class="sidebar-title">
-                <i class="fas fa-chart-bar"></i> Thống kê
-            </h5>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">{{ $user->clubs->count() }}</div>
-                    <small class="text-muted">CLB đã tham gia</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">0</div>
-                    <small class="text-muted">Sự kiện đã tham gia</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-trophy"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">0</div>
-                    <small class="text-muted">Giải thưởng</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar mt-4">
-            <h5 class="sidebar-title">
-                <i class="fas fa-bell"></i> Thông báo
-            </h5>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-info-circle"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Chào mừng!</div>
-                    <small class="text-muted">Bạn đã tham gia UniClubs</small>
-                </div>
-            </div>
-            <div class="sidebar-item">
-                <div class="sidebar-icon">
-                    <i class="fas fa-calendar-check"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Sự kiện mới</div>
-                    <small class="text-muted">Workshop "Lập trình Web"</small>
-                </div>
             </div>
         </div>
     </div>
@@ -193,6 +168,23 @@
         font-size: 1.3rem;
         box-shadow: 0 4px 6px rgba(20, 184, 166, 0.2);
         flex-shrink: 0;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .club-logo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 16px;
+    }
+    
+    .club-logo-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
     
     .club-card {
@@ -319,10 +311,11 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
         
         // Cập nhật tiêu đề
+        const titleContainer = document.getElementById('search-results-title');
         if (query) {
-            resultsTitle.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
+            titleContainer.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
         } else {
-            resultsTitle.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
+            titleContainer.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
         }
 
         // Gửi yêu cầu AJAX đến route chuyên dụng, chỉ lấy phần HTML cần thiết
@@ -330,29 +323,41 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.text())
             .then(html => {
                 resultsContainer.innerHTML = html;
+                // Cập nhật số lượng CLB sau khi load xong
+                updateClubCount();
             })
             .catch(error => {
                 console.error('Error fetching search results:', error);
                 resultsContainer.innerHTML = `<div class="text-center py-5 text-danger">Đã có lỗi xảy ra khi tìm kiếm. Vui lòng tải lại trang và thử lại.</div>`;
             });
     }
-
-    // 3. Xử lý khi người dùng click vào link phân trang AJAX
-    document.body.addEventListener('click', function(e) {
-        const paginationLink = e.target.closest('#pagination-links a');
-        if (paginationLink) {
-            e.preventDefault();
-            const url = paginationLink.href;
-
-            // Hiển thị loading và fetch nội dung trang mới từ link phân trang
-            resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    resultsContainer.innerHTML = html;
-                });
+    
+    function updateClubCount() {
+        // Đếm số lượng CLB trong container
+        const clubCards = resultsContainer.querySelectorAll('.club-card');
+        const count = clubCards.length;
+        
+        // Tìm hoặc tạo badge số lượng
+        const titleContainer = document.getElementById('search-results-title');
+        if (!titleContainer) return;
+        
+        const parentContainer = titleContainer.parentElement;
+        let countBadge = parentContainer.querySelector('.badge.bg-primary');
+        
+        if (count > 0) {
+            if (countBadge) {
+                countBadge.innerHTML = `<i class="fas fa-users me-1"></i> ${count} CLB`;
+            } else {
+                const newBadge = document.createElement('span');
+                newBadge.className = 'badge bg-primary';
+                newBadge.innerHTML = `<i class="fas fa-users me-1"></i> ${count} CLB`;
+                parentContainer.appendChild(newBadge);
+            }
+        } else if (countBadge) {
+            countBadge.remove();
         }
-    });
+    }
+
 });
 </script>
 @endpush

@@ -15,98 +15,86 @@
                     </h2>
                     <p class="text-muted mb-0">Cập nhật mới nhất từ UniClubs và câu lạc bộ</p>
                 </div>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary active">Tất cả</button>
-                    <button type="button" class="btn btn-outline-primary">Chưa đọc</button>
-                    <button type="button" class="btn btn-outline-primary">Đã đọc</button>
-                </div>
-                <div>
-                    <form method="POST" action="{{ route('student.notifications.mark-all-read') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-success btn-sm">
-                            <i class="fas fa-check-double"></i> Đánh dấu tất cả đã đọc
-                        </button>
-                    </form>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ route('student.notifications.index', ['filter' => 'all']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'all' ? 'active' : '' }}">
+                        Tất cả
+                    </a>
+                    <a href="{{ route('student.notifications.index', ['filter' => 'unread']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'unread' ? 'active' : '' }}">
+                        Chưa đọc
+                    </a>
+                    <a href="{{ route('student.notifications.index', ['filter' => 'read']) }}" 
+                       class="btn btn-outline-primary {{ ($filter ?? 'all') === 'read' ? 'active' : '' }}">
+                        Đã đọc
+                    </a>
                 </div>
             </div>
         </div>
 
         <!-- Notifications -->
         <div class="content-card">
-            @if(isset($notifications) && $notifications->count() > 0)
-                @foreach($notifications as $notification)
+            @forelse($notifications as $notification)
+                <div class="notification-item {{ !$notification->is_read ? 'unread' : '' }}">
                     @php
-                        $type = strtolower($notification->type ?? ($notification->related_type ?? ''));
-                        $isEvent = $type === 'event' || $type === 'app\\models\\event' || $type === 'eventnotification';
-                        $isAnnouncement = $type === 'announcement' || $type === 'post';
-                        $isSystem = $type === 'system';
-                        $iconClass = $isEvent ? 'fa-calendar-check bg-info' : ($isSystem ? 'fa-info-circle bg-primary' : 'fa-bullhorn bg-warning');
-                        $message = $notification->message ?? $notification->content ?? '';
+                        // Xác định icon và màu sắc dựa trên tiêu đề
+                        $icon = 'fa-info-circle';
+                        $bgColor = 'bg-primary';
+                        if (str_contains(strtolower($notification->title), 'duyệt') || str_contains(strtolower($notification->title), 'thành công')) {
+                            $icon = 'fa-check-circle';
+                            $bgColor = 'bg-success';
+                        } elseif (str_contains(strtolower($notification->title), 'từ chối') || str_contains(strtolower($notification->title), 'thất bại')) {
+                            $icon = 'fa-times-circle';
+                            $bgColor = 'bg-danger';
+                        } elseif (str_contains(strtolower($notification->title), 'clb') || str_contains(strtolower($notification->title), 'câu lạc bộ')) {
+                            $icon = 'fa-users';
+                            $bgColor = 'bg-info';
+                        } elseif (str_contains(strtolower($notification->title), 'sự kiện') || str_contains(strtolower($notification->title), 'event')) {
+                            $icon = 'fa-calendar';
+                            $bgColor = 'bg-warning';
+                        }
                     @endphp
-                    <div class="notification-item {{ $notification->is_read ? '' : 'unread' }}" role="button" onclick="window.location.href='{{ route('student.notifications.view', $notification->id) }}'">
-                        <div class="notification-icon {{ explode(' ', $iconClass)[1] }}">
-                            <i class="fas {{ explode(' ', $iconClass)[0] }}"></i>
+                    <div class="notification-icon {{ $bgColor }}">
+                        <i class="fas {{ $icon }}"></i>
+                    </div>
+                    <div class="notification-content">
+                        <div class="notification-header">
+                            <h6 class="mb-1">{{ $notification->title }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i> {{ $notification->created_at->format('d/m/Y H:i') }}
+                            </small>
                         </div>
-                        <div class="notification-content">
-                            <div class="notification-header">
-                                <h6 class="mb-1">{{ $notification->title }}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i> {{ $notification->created_at->format('d/m/Y H:i') }}
-                                </small>
-                            </div>
-                            <p class="notification-text mb-2">
-                                {{ \Illuminate\Support\Str::limit(strip_tags($message), 200) }}
-                            </p>
-                            <div class="notification-actions">
-                                @if($isEvent && $notification->related_id)
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="event.stopPropagation(); window.location.href='{{ route('student.events.show', $notification->related_id) }}'">Xem sự kiện</button>
-                                @elseif($isAnnouncement && $notification->related_id)
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="event.stopPropagation(); window.location.href='{{ route('student.posts.show', $notification->related_id) }}'">Xem chi tiết</button>
-                                @endif
-                            </div>
+                        <p class="notification-text mb-2">
+                            {{ $notification->message }}
+                        </p>
+                        <div class="notification-actions">
+                            @if(!$notification->is_read)
+                        <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
+                                </form>
+                            @else
+                                <span class="text-muted small"><i class="fas fa-check me-1"></i> Đã đọc</span>
+                            @endif
                         </div>
                     </div>
-                @endforeach
-
-                <!-- Pagination -->
-                <div class="mt-4 d-flex justify-content-center">
-                    {{ $notifications->links('pagination::bootstrap-5') }}
                 </div>
-            @else
+            @empty
                 <div class="text-center py-5">
                     <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Bạn chưa có thông báo nào.</p>
+                    <h5 class="text-muted">Chưa có thông báo nào</h5>
+                    <p class="text-muted">Thông báo mới sẽ xuất hiện ở đây khi có cập nhật.</p>
                 </div>
-            @endif
+            @endforelse
         </div>
 
-    </div>
-
-    {{-- Modal Thông báo --}}
-    @if(isset($latestAnnouncement) && $latestAnnouncement)
-    <div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content" style="border-radius: 0; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-                <div class="modal-header" style="border-bottom: 1px solid #e0e0e0; padding: 1.5rem 2rem; position: relative;">
-                    <div class="w-100 text-center">
-                        <h1 class="modal-title fw-bold m-0" id="announcementModalLabel" style="font-size: 1.3rem; color: #333; text-transform: uppercase; letter-spacing: 1px;">
-                            THÔNG BÁO
-                        </h1>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; font-size: 1rem; opacity: 0.7;"></button>
-                </div>
-                <div class="modal-body" style="padding: 2rem; max-height: calc(100vh - 60px); overflow-y: auto;">
-                    <h2 class="mb-3" style="font-size: 1.3rem; color: #333; font-weight: 600; line-height: 1.4;">
-                        {{ $latestAnnouncement->title }}
-                    </h2>
-                    <div class="announcement-content" style="line-height: 1.8; color: #333; font-size: 1rem;">
-                        {!! $latestAnnouncement->content !!}
-                    </div>
-                </div>
+        <!-- Pagination -->
+        @if($notifications->hasPages())
+            <div class="text-center mt-4">
+                {{ $notifications->links('vendor.pagination.bootstrap-5') }}
             </div>
-        </div>
+        @endif
     </div>
-    @endif
 
     <!-- Sidebar -->
     <div class="col-lg-4">
@@ -115,21 +103,26 @@
                 <i class="fas fa-filter"></i> Lọc thông báo
             </h5>
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ route('student.notifications.index', ['category' => 'system']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'system' ? 'active' : '' }}">
                     <i class="fas fa-info-circle me-2 text-primary"></i> Thông báo hệ thống
-                    <span class="badge bg-primary rounded-pill ms-auto">{{ $stats['system'] ?? 0 }}</span>
+                    @if(isset($stats['system']) && $stats['system'] > 0)
+                        <span class="badge bg-primary rounded-pill ms-auto">{{ $stats['system'] }}</span>
+                    @endif
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-bullhorn me-2 text-warning"></i> Thông báo CLB
-                    <span class="badge bg-warning rounded-pill ms-auto">{{ $stats['announcements'] ?? 0 }}</span>
+                <a href="{{ route('student.notifications.index', ['category' => 'announcements']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'announcements' ? 'active' : '' }}">
+                    <i class="fas fa-bullhorn me-2 text-success"></i> Thông báo
+                    @if(isset($stats['announcements']) && $stats['announcements'] > 0)
+                        <span class="badge bg-success rounded-pill ms-auto">{{ $stats['announcements'] }}</span>
+                    @endif
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ route('student.notifications.index', ['category' => 'clubs']) }}" 
+                   class="list-group-item list-group-item-action {{ ($category ?? '') === 'clubs' ? 'active' : '' }}">
                     <i class="fas fa-users me-2 text-info"></i> Câu lạc bộ
-                    <span class="badge bg-info rounded-pill ms-auto">{{ $stats['clubs'] ?? 0 }}</span>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-trophy me-2 text-secondary"></i> Giải thưởng
-                    <span class="badge bg-secondary rounded-pill ms-auto">{{ $stats['awards'] ?? 0 }}</span>
+                    @if(isset($stats['clubs']) && $stats['clubs'] > 0)
+                        <span class="badge bg-info rounded-pill ms-auto">{{ $stats['clubs'] }}</span>
+                    @endif
                 </a>
             </div>
         </div>
@@ -138,39 +131,48 @@
             <h5 class="sidebar-title">
                 <i class="fas fa-cog"></i> Cài đặt thông báo
             </h5>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
-                <label class="form-check-label" for="emailNotifications">
-                    Thông báo qua email
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="pushNotifications" checked>
-                <label class="form-check-label" for="pushNotifications">
-                    Thông báo đẩy
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="eventNotifications" checked>
-                <label class="form-check-label" for="eventNotifications">
-                    Thông báo sự kiện
-                </label>
-            </div>
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="clubNotifications" checked>
-                <label class="form-check-label" for="clubNotifications">
-                    Thông báo từ CLB
-                </label>
-            </div>
-            <button class="btn btn-primary btn-sm w-100">
-                <i class="fas fa-save me-2"></i> Lưu cài đặt
-            </button>
+            <form id="notificationSettingsForm">
+                @csrf
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email" {{ ($notificationSettings['email'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="emailNotifications">
+                        Thông báo qua email
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="pushNotifications" name="push" {{ ($notificationSettings['push'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="pushNotifications">
+                        Thông báo đẩy
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="eventNotifications" name="event" {{ ($notificationSettings['event'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="eventNotifications">
+                        Thông báo sự kiện
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="clubNotifications" name="club" {{ ($notificationSettings['club'] ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="clubNotifications">
+                        Thông báo từ CLB
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-teal btn-sm w-100" style="background-color: #14b8a6; color: white;">
+                    <i class="fas fa-save me-2"></i> Lưu cài đặt
+                </button>
+            </form>
         </div>
     </div>
 </div>
 
 @push('styles')
 <style>
+    /* Filter buttons - smaller size */
+    .btn-group[role="group"] .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
     .notification-item {
         display: flex;
         padding: 1.5rem;
@@ -230,93 +232,52 @@
     .text-teal {
         color: #14b8a6 !important;
     }
-    
-    /* Modal Announcement Styles */
-    #announcementModal .modal-content {
-        animation: modalFadeIn 0.3s ease-out;
-    }
-    
-    #announcementModal .modal-header {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        flex-wrap: nowrap !important;
-        visibility: visible !important;
-    }
-    
-    #announcementModal .modal-title {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        font-size: 2rem !important;
-        color: #333 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        flex: 1 1 auto !important;
-        margin-right: 1rem !important;
-    }
-    
-    #announcementModal .modal-title::before,
-    #announcementModal .modal-title::after {
-        display: none !important;
-    }
-    
-    @keyframes modalFadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    #announcementModal .modal-dialog {
-        max-width: 85%;
-    }
-    
-    #announcementModal .modal-body {
-        max-height: calc(100vh - 60px);
-        overflow-y: auto;
-    }
-    
-    #announcementModal .announcement-content {
-        max-height: none;
-        overflow-y: visible;
-    }
-    
-    #announcementModal .announcement-content img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-        margin: 1rem 0;
-    }
-    
-    #announcementModal .announcement-content p {
-        margin-bottom: 1rem;
-    }
 </style>
 @endpush
 
 @push('scripts')
-<script>
-    @if(isset($latestAnnouncement) && $latestAnnouncement)
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hiển thị modal mỗi khi trang load
-        var modalElement = document.getElementById('announcementModal');
-        if (modalElement) {
-            // Thêm delay nhỏ để đảm bảo Bootstrap đã load
-            setTimeout(function() {
-                var modal = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static',
-                    keyboard: false
-                });
-                modal.show();
-            }, 100);
-        }
+    // Xử lý form lưu cài đặt thông báo
+    document.getElementById('notificationSettingsForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const data = {
+            email: document.getElementById('emailNotifications').checked,
+            push: document.getElementById('pushNotifications').checked,
+            event: document.getElementById('eventNotifications').checked,
+            club: document.getElementById('clubNotifications').checked,
+        };
+        
+        fetch('{{ route("student.notifications.settings") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Hiển thị thông báo thành công
+                const btn = this.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i> Đã lưu!';
+                btn.classList.remove('btn-teal');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-teal');
+                }, 2000);
+            } else {
+                alert('Có lỗi xảy ra khi lưu cài đặt');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi lưu cài đặt');
+        });
     });
-    @endif
-</script>
 @endpush
 @endsection

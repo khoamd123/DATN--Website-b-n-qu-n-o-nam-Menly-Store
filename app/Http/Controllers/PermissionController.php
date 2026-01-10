@@ -61,43 +61,6 @@ class PermissionController extends Controller
                 }])
                 ->get();
             
-            // Tự động đồng bộ position dựa trên số quyền cho mỗi CLB
-            foreach ($userClubs as $clubMember) {
-                if ($clubMember->club) {
-                    $permissionCount = \DB::table('user_permissions_club')
-                        ->where('user_id', $user->id)
-                        ->where('club_id', $clubMember->club->id)
-                        ->count();
-                    
-                    $permissionNames = \DB::table('user_permissions_club')
-                        ->where('user_id', $user->id)
-                        ->where('club_id', $clubMember->club->id)
-                        ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
-                        ->pluck('permissions.name')
-                        ->toArray();
-                    
-                    $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-                    
-                    // Xác định position mong muốn
-                    $expectedPosition = 'member';
-                    if ($permissionCount >= 5) {
-                        $expectedPosition = 'leader';
-                    } elseif ($hasOtherPermissions && $permissionCount == 4) {
-                        // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
-                        $expectedPosition = 'vice_president';
-                    } elseif ($hasOtherPermissions && $permissionCount >= 2 && $permissionCount <= 3) {
-                        // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
-                        $expectedPosition = 'officer';
-                    }
-                    
-                    // Nếu position không đúng, cập nhật lại
-                    if ($clubMember->position !== $expectedPosition) {
-                        $clubMember->update(['position' => $expectedPosition]);
-                        $clubMember->position = $expectedPosition; // Cập nhật trong memory
-                    }
-                }
-            }
-            
             $user->setRelation('clubMembers', $userClubs);
         }
         
@@ -180,7 +143,7 @@ class PermissionController extends Controller
     }
 
     /**
-     * Cập nhật quyền của user trong CLB
+     * Cập nhật quyền của user trong CLB - Logic mới: Cấp quyền theo vai trò được chọn
      */
     public function updateUserPermissions(Request $request)
     {
@@ -191,7 +154,7 @@ class PermissionController extends Controller
 
         $userId = $request->input('user_id');
         $clubId = $request->input('club_id');
-        $permissions = $request->input('permissions', []);
+        $position = $request->input('position', 'member'); // Nhận position từ request
 
         $user = User::find($userId);
         if (!$user) {
@@ -203,51 +166,9 @@ class PermissionController extends Controller
             return response()->json(['success' => false, 'message' => 'Club not found']);
         }
 
-        // KIỂM TRA TRƯỚC: User đã là cán sự/chủ nhiệm ở CLB khác chưa?
-        $existingLeaderOfficer = ClubMember::where('user_id', $userId)
-            ->where('club_id', '!=', $clubId)
-            ->whereIn('status', ['approved', 'active'])
-            ->whereIn('position', ['leader', 'officer', 'chunhiem'])
-            ->first();
-            
-        // Xác định position mong muốn từ số quyền
-        $permissionCount = count($permissions);
-        $permissionNames = Permission::whereIn('id', $permissions)->pluck('name')->toArray();
-        $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-        
-        $desiredPosition = 'member'; // Mặc định
-        if ($permissionCount >= 5) {
-            $desiredPosition = 'leader';
-        } elseif ($hasOtherPermissions && $permissionCount >= 2) {
-            $desiredPosition = 'officer';
-        }
-        
-        // Nếu user muốn làm leader/officer nhưng đã là leader/officer ở CLB khác
-        if ($desiredPosition === 'leader' || $desiredPosition === 'officer') {
-            if ($existingLeaderOfficer) {
-                $existingClub = Club::find($existingLeaderOfficer->club_id);
-                return response()->json([
-                    'success' => false,
-                    'message' => "Thất bại: Tài khoản này đã là cán sự/chủ nhiệm ở CLB '{$existingClub->name}'. Không thể cấp quyền cán sự/chủ nhiệm ở CLB này."
-                ]);
-            }
-        }
-        
-        // Xóa quyền cũ
-        \DB::table('user_permissions_club')
-            ->where('user_id', $userId)
-            ->where('club_id', $clubId)
-            ->delete();
-
-        // Thêm quyền mới
-        foreach ($permissions as $permissionId) {
-            \DB::table('user_permissions_club')->insert([
-                'user_id' => $userId,
-                'club_id' => $clubId,
-                'permission_id' => $permissionId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        // Validate position
+        if (!in_array($position, ['member', 'treasurer', 'vice_president', 'leader'])) {
+            return response()->json(['success' => false, 'message' => 'Vai trò không hợp lệ']);
         }
 
         // Kiểm tra xem user đã là thành viên CLB này chưa
@@ -256,93 +177,46 @@ class PermissionController extends Controller
             ->first();
         
         $isNewMember = false;
+        $oldPosition = $clubMember ? $clubMember->position : null;
         
         if (!$clubMember) {
-            // Nếu chưa là thành viên, tạo mới với position = 'member'
+            // Nếu chưa là thành viên, tạo mới
             $clubMember = ClubMember::create([
                 'user_id' => $userId,
                 'club_id' => $clubId,
                 'position' => 'member',
-                'status' => 'approved',  // Sửa từ 'active' thành 'approved'
+                'status' => 'approved',
                 'joined_at' => now()
             ]);
             $isNewMember = true;
-            \Log::info("Created new ClubMember: user_id={$userId}, club_id={$clubId}, position=member");
+            $oldPosition = 'member';
         }
-        
-        // Nếu là thành viên mới và chưa có quyền nào, tự động thêm quyền "xem_bao_cao"
-        if ($isNewMember && empty($permissions)) {
-            $viewReportPermission = Permission::where('name', 'xem_bao_cao')->first();
-            if ($viewReportPermission) {
-                \DB::table('user_permissions_club')->insert([
-                    'user_id' => $userId,
-                    'club_id' => $clubId,
-                    'permission_id' => $viewReportPermission->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                $permissions = [$viewReportPermission->id];
+
+        try {
+            // Kiểm tra giới hạn và cấp quyền theo vai trò
+            $message = $this->assignPermissionsByPosition($userId, $clubId, $position, $oldPosition);
+
+            $responseMessage = 'Đã cập nhật vai trò và quyền thành công';
+            if ($message) {
+                $responseMessage .= '. ' . $message;
             }
-        }
-        
-        // Tự động thay đổi vai trò dựa trên quyền
-        $message = $this->updateRoleBasedOnPermissions($userId, $clubId, $permissions);
 
-        $responseMessage = 'Đã cập nhật quyền và vai trò thành công';
-        if ($message) {
-            $responseMessage .= '. ' . $message;
+            return response()->json([
+                'success' => true, 
+                'message' => $responseMessage
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => $e->getMessage()
+            ]);
         }
-
-        return response()->json([
-            'success' => true, 
-            'message' => $responseMessage
-        ]);
     }
 
     /**
-     * Tự động thay đổi vai trò dựa trên số quyền
+     * Cấp quyền theo vai trò được chọn
      */
-    private function updateRoleBasedOnPermissions($userId, $clubId, $permissionIds)
-    {
-        // Lấy tên các quyền
-        $permissionNames = Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
-        
-        // Đếm số quyền
-        $permissionCount = count($permissionNames);
-        
-        // Kiểm tra có quyền khác ngoài xem_bao_cao không
-        $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-        
-        $newPosition = 'member'; // Mặc định
-        
-        // Xác định vai trò mới
-        if ($permissionCount >= 5) {
-            // Có đủ 5 quyền -> Leader (Chủ CLB)
-            $newPosition = 'leader';
-        } elseif ($hasOtherPermissions && $permissionCount == 4) {
-            // Có 4 quyền và có quyền khác ngoài xem_bao_cao -> Vice President (Phó CLB)
-            $newPosition = 'vice_president';
-        } elseif ($hasOtherPermissions && $permissionCount >= 2 && $permissionCount <= 3) {
-            // Có 2-3 quyền và có quyền khác ngoài xem_bao_cao -> Officer (Cán sự)
-            $newPosition = 'officer';
-        } else {
-            // Chỉ có xem_bao_cao -> Member
-            $newPosition = 'member';
-        }
-        
-        \Log::info("User {$userId} trong CLB {$clubId}: Permission count = {$permissionCount}, Has other permissions = " . ($hasOtherPermissions ? 'true' : 'false') . ", New position = {$newPosition}");
-        
-        // Kiểm tra giới hạn vai trò
-        $message = $this->enforceRoleLimits($userId, $clubId, $newPosition);
-        
-        return $message;
-    }
-
-    /**
-     * Áp dụng giới hạn vai trò: 1 Leader, 1 Vice President, tối đa 3 Officer
-     * Giới hạn mới: Mỗi user chỉ được làm cán sự, phó CLB hoặc chủ nhiệm ở 1 CLB
-     */
-    private function enforceRoleLimits($userId, $clubId, $newPosition)
+    private function assignPermissionsByPosition($userId, $clubId, $newPosition, $oldPosition = null)
     {
         $clubMember = ClubMember::where('user_id', $userId)
             ->where('club_id', $clubId)
@@ -352,23 +226,109 @@ class PermissionController extends Controller
             return null;
         }
 
-        $oldPosition = $clubMember->position;
         $message = null;
         
-        // KIỂM TRA: User đã là cán sự, phó CLB hoặc chủ nhiệm ở CLB khác chưa?
-        if ($newPosition === 'leader' || $newPosition === 'officer' || $newPosition === 'vice_president') {
-            $existingLeaderOfficer = ClubMember::where('user_id', $userId)
+        // Kiểm tra giới hạn vai trò trước
+        $checkResult = $this->enforceRoleLimits($userId, $clubId, $newPosition, $oldPosition);
+        if (isset($checkResult['error'])) {
+            throw new \Exception($checkResult['error']);
+        }
+        if (isset($checkResult['message'])) {
+            $message = $checkResult['message'];
+        }
+        if (isset($checkResult['position'])) {
+            $newPosition = $checkResult['position']; // Có thể bị thay đổi do giới hạn
+        }
+
+        // Xóa tất cả quyền cũ
+        \DB::table('user_permissions_club')
+            ->where('user_id', $userId)
+            ->where('club_id', $clubId)
+            ->delete();
+
+        // Cấp quyền mặc định theo vai trò
+        $permissionNames = [];
+        
+        switch ($newPosition) {
+            case 'leader':
+                // Trưởng CLB: Tất cả quyền
+                $permissionNames = ['quan_ly_clb', 'quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+                break;
+                
+            case 'vice_president':
+                // Phó CLB: 4 quyền (không có quan_ly_clb)
+                $permissionNames = ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+                break;
+                
+            case 'treasurer':
+                // Thủ quỹ: 2 quyền
+                $permissionNames = ['quan_ly_quy', 'xem_bao_cao'];
+                break;
+                
+            case 'member':
+            default:
+                // Thành viên: Chỉ xem báo cáo
+                $permissionNames = ['xem_bao_cao'];
+                break;
+        }
+
+        // Thêm quyền mới
+        $permissions = Permission::whereIn('name', $permissionNames)->get();
+        foreach ($permissions as $permission) {
+            \DB::table('user_permissions_club')->insert([
+                'user_id' => $userId,
+                'club_id' => $clubId,
+                'permission_id' => $permission->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Cập nhật position
+        \DB::table('club_members')
+            ->where('user_id', $userId)
+            ->where('club_id', $clubId)
+            ->update(['position' => $newPosition]);
+
+        // Nếu position mới là 'leader', cập nhật leader_id trong bảng clubs
+        if ($newPosition === 'leader') {
+            \DB::table('clubs')
+                ->where('id', $clubId)
+                ->update(['leader_id' => $userId]);
+        } elseif ($oldPosition === 'leader' && $newPosition !== 'leader') {
+            // Nếu Leader cũ bị chuyển sang role khác, xóa leader_id
+            \DB::table('clubs')
+                ->where('id', $clubId)
+                ->where('leader_id', $userId)
+                ->update(['leader_id' => null]);
+        }
+
+        \Log::info("User {$userId} trong CLB {$clubId}: {$oldPosition} -> {$newPosition}, Quyền: " . implode(', ', $permissionNames));
+        
+        return $message;
+    }
+
+    /**
+     * Áp dụng giới hạn vai trò: 1 Leader, 2 Vice President, 1 Treasurer
+     * Giới hạn: Mỗi user chỉ được làm thủ quỹ, phó CLB hoặc chủ nhiệm ở 1 CLB
+     */
+    private function enforceRoleLimits($userId, $clubId, $newPosition, $oldPosition = null)
+    {
+        $result = ['position' => $newPosition, 'message' => null];
+        
+        // KIỂM TRA: User đã là thủ quỹ, phó CLB hoặc chủ nhiệm ở CLB khác chưa?
+        if (in_array($newPosition, ['leader', 'treasurer', 'vice_president'])) {
+            $existingRole = ClubMember::where('user_id', $userId)
                 ->where('club_id', '!=', $clubId)
                 ->whereIn('status', ['approved', 'active'])
-                ->whereIn('position', ['leader', 'officer', 'vice_president', 'chunhiem'])
+                ->whereIn('position', ['leader', 'treasurer', 'vice_president', 'chunhiem'])
                 ->first();
                 
-            if ($existingLeaderOfficer) {
-                // User đã là cán sự/phó CLB/chủ nhiệm ở CLB khác
-                $existingClub = Club::find($existingLeaderOfficer->club_id);
-                $newPosition = 'member'; // Chỉ được làm thành viên
-                $message = "Cảnh báo: Tài khoản này đã là cán sự/phó CLB/chủ nhiệm ở CLB '{$existingClub->name}'. Ở CLB này chỉ được làm thành viên.";
-                \Log::info("User {$userId} đã là leader/officer/vice_president ở CLB {$existingLeaderOfficer->club_id}, không thể làm {$newPosition} ở CLB {$clubId}");
+            if ($existingRole) {
+                $existingClub = Club::find($existingRole->club_id);
+                $result['error'] = "Tài khoản này đã là thủ quỹ/phó CLB/chủ nhiệm ở CLB '{$existingClub->name}'. Ở CLB này chỉ được làm thành viên.";
+                $result['position'] = 'member';
+                return $result;
             }
         }
         
@@ -380,90 +340,79 @@ class PermissionController extends Controller
                 ->first();
                 
             if ($existingLeader) {
-                // Chuyển Leader cũ thành Officer (sử dụng DB trực tiếp)
+                // Chuyển Leader cũ về thành viên
                 \DB::table('club_members')
                     ->where('user_id', $existingLeader->user_id)
                     ->where('club_id', $clubId)
-                    ->update(['position' => 'officer']);
-                \Log::info("Chuyển Leader cũ {$existingLeader->user_id} thành Officer trong CLB {$clubId} [DIRECT DB UPDATE]");
+                    ->update(['position' => 'member']);
+                
+                // Xóa quyền của leader cũ, chỉ giữ xem_bao_cao
+                $xemBaoCaoPerm = Permission::where('name', 'xem_bao_cao')->first();
+                \DB::table('user_permissions_club')
+                    ->where('user_id', $existingLeader->user_id)
+                    ->where('club_id', $clubId)
+                    ->delete();
+                if ($xemBaoCaoPerm) {
+                    \DB::table('user_permissions_club')->insert([
+                        'user_id' => $existingLeader->user_id,
+                        'club_id' => $clubId,
+                        'permission_id' => $xemBaoCaoPerm->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                \Log::info("Chuyển Leader cũ {$existingLeader->user_id} về thành viên trong CLB {$clubId}");
             }
             
         } elseif ($newPosition === 'vice_president') {
-            // Chỉ được có 1 Vice President
-            $existingVicePresident = ClubMember::where('club_id', $clubId)
+            // Được có 2 Vice President
+            $vicePresidentCount = ClubMember::where('club_id', $clubId)
                 ->where('position', 'vice_president')
-                ->where('user_id', '!=', $userId)
-                ->first();
-                
-            if ($existingVicePresident) {
-                // Nếu đã có Vice President, chuyển về officer nếu có >= 2 quyền, nếu không thì member
-                $permissionCount = \DB::table('user_permissions_club')
-                    ->where('user_id', $userId)
-                    ->where('club_id', $clubId)
-                    ->count();
-                
-                $permissionNames = \DB::table('user_permissions_club')
-                    ->where('user_id', $userId)
-                    ->where('club_id', $clubId)
-                    ->join('permissions', 'user_permissions_club.permission_id', '=', 'permissions.id')
-                    ->pluck('permissions.name')
-                    ->toArray();
-                
-                $hasOtherPermissions = !empty(array_diff($permissionNames, ['xem_bao_cao']));
-                
-                if ($hasOtherPermissions && $permissionCount >= 2 && $permissionCount <= 3) {
-                    $newPosition = 'officer';
-                } else {
-                    $newPosition = 'member';
-                }
-                $message = "CLB này đã có phó CLB. Vai trò đã được điều chỉnh.";
-                \Log::info("CLB {$clubId} đã có vice_president, chuyển user {$userId} về {$newPosition}");
-            }
-            
-        } elseif ($newPosition === 'officer') {
-            // Tối đa 3 Officer (trừ chính user này ra)
-            $currentOfficerCount = ClubMember::where('club_id', $clubId)
-                ->where('position', 'officer')
                 ->where('user_id', '!=', $userId)
                 ->count();
                 
-            if ($currentOfficerCount >= 3) {
-                // Nếu đã có 3 Officer (không tính user hiện tại), chuyển user này thành Member
-                $newPosition = 'member';
-                $message = "CLB này đã có đủ 3 cán sự. Tài khoản này sẽ là thành viên.";
-                \Log::info("CLB {$clubId} đã có đủ 3 Officer, chuyển user {$userId} thành Member do giới hạn");
+            if ($vicePresidentCount >= 2) {
+                // Nếu đã có 2 phó CLB, không cho phép thêm
+                $result['error'] = "CLB này đã có đủ 2 phó CLB. Vui lòng bỏ 1 phó CLB trước khi thêm mới.";
+                $result['position'] = $oldPosition ?: 'member';
+                return $result;
+            }
+            
+        } elseif ($newPosition === 'treasurer') {
+            // Chỉ được có 1 Treasurer
+            $existingTreasurer = ClubMember::where('club_id', $clubId)
+                ->where('position', 'treasurer')
+                ->where('user_id', '!=', $userId)
+                ->first();
+                
+            if ($existingTreasurer) {
+                // Chuyển thủ quỹ cũ về thành viên
+                \DB::table('club_members')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $clubId)
+                    ->update(['position' => 'member']);
+                
+                // Xóa quyền của thủ quỹ cũ, chỉ giữ xem_bao_cao
+                $xemBaoCaoPerm = Permission::where('name', 'xem_bao_cao')->first();
+                \DB::table('user_permissions_club')
+                    ->where('user_id', $existingTreasurer->user_id)
+                    ->where('club_id', $clubId)
+                    ->delete();
+                if ($xemBaoCaoPerm) {
+                    \DB::table('user_permissions_club')->insert([
+                        'user_id' => $existingTreasurer->user_id,
+                        'club_id' => $clubId,
+                        'permission_id' => $xemBaoCaoPerm->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                $result['message'] = "Đã chuyển thủ quỹ cũ về thành viên.";
+                \Log::info("Chuyển thủ quỹ cũ {$existingTreasurer->user_id} về thành viên trong CLB {$clubId}");
             }
         }
         
-        \Log::info("Final position for user {$userId} in club {$clubId}: {$newPosition}");
-        
-        // Cập nhật position trong DB
-        $updated = \DB::table('club_members')
-            ->where('user_id', $userId)
-            ->where('club_id', $clubId)
-            ->update(['position' => $newPosition]);
-        
-        \Log::info("DB update result: " . ($updated ? "SUCCESS (1 row affected)" : "FAILED (0 rows affected)"));
-        
-        // Nếu position mới là 'leader', cập nhật leader_id trong bảng clubs
-        if ($newPosition === 'leader' && $updated) {
-            \DB::table('clubs')
-                ->where('id', $clubId)
-                ->update(['leader_id' => $userId]);
-            \Log::info("Updated leader_id for club {$clubId} to user {$userId}");
-        } elseif ($oldPosition === 'leader' && $newPosition !== 'leader') {
-            // Nếu Leader cũ bị chuyển sang role khác, xóa leader_id
-            \DB::table('clubs')
-                ->where('id', $clubId)
-                ->where('leader_id', $userId)
-                ->update(['leader_id' => null]);
-            \Log::info("Removed leader_id for club {$clubId} (user {$userId} is no longer leader)");
-        }
-        
-        // Log thay đổi
-        \Log::info("User {$userId} trong CLB {$clubId}: {$oldPosition} -> {$newPosition} [DIRECT DB UPDATE]");
-        
-        return $message;
+        return $result;
     }
 
     /**

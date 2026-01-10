@@ -92,12 +92,12 @@
         
         .notification-badge {
             position: absolute;
-            top: 0;
-            right: 0;
+            top: -5px;
+            right: -5px;
             background: #ef4444;
             color: white;
             border-radius: 50%;
-            width: 20px;
+            min-width: 20px;
             height: 20px;
             font-size: 0.7rem;
             font-weight: bold;
@@ -105,6 +105,8 @@
             align-items: center;
             justify-content: center;
             border: 2px solid #14b8a6;
+            padding: 0 4px;
+            z-index: 10;
         }
         
         /* Navigation */
@@ -124,14 +126,15 @@
             text-decoration: none;
         }
         
-        .nav-link:hover {
+        /* .nav-link:hover {
             color: #14b8a6;
             background: #f0fdfa;
-        }
+        } */
         
         .nav-link.active {
-            background: #14b8a6;
-            color: white;
+            background: rgba(255,255,255,0.2) !important;
+            color: white !important;
+            border-radius: 8px;
         }
         
         /* Main Content */
@@ -355,52 +358,77 @@
     @stack('styles')
 </head>
 <body>
-    <!-- Header -->
-    <header class="main-header">
+    <!-- Header với menu bên trong -->
+    <header class="main-header" style="padding: 1rem 0;">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
+            <div class="row align-items-center mb-3">
+                <div class="col-md-3">
                     <h4 class="mb-0 text-white">
                         <i class="fas fa-graduation-cap me-2"></i> UniClubs
                     </h4>
                 </div>
-                <div class="col-md-6 text-end">
+                <div class="col-md-5">
+                    @php
+                        $currentRoute = request()->route()->getName();
+                        $searchRoute = 'student.posts';
+                        $searchPlaceholder = 'Tìm kiếm bài viết, sự kiện, câu lạc bộ...';
+                        
+                        if (str_contains($currentRoute, 'club-management')) {
+                            // Trang quản lý CLB - tìm kiếm trong chính trang đó
+                            $searchRoute = 'student.club-management.index';
+                            $searchPlaceholder = 'Tìm kiếm thành viên, sự kiện, bài viết...';
+                        } elseif (str_contains($currentRoute, 'clubs')) {
+                            $searchRoute = 'student.clubs.index';
+                            $searchPlaceholder = 'Tìm kiếm câu lạc bộ...';
+                        } elseif (str_contains($currentRoute, 'events')) {
+                            $searchRoute = 'student.events.index';
+                            $searchPlaceholder = 'Tìm kiếm sự kiện...';
+                        } elseif (str_contains($currentRoute, 'posts')) {
+                            $searchRoute = 'student.posts';
+                            $searchPlaceholder = 'Tìm kiếm bài viết...';
+                        } elseif (str_contains($currentRoute, 'home')) {
+                            $searchRoute = 'home';
+                            $searchPlaceholder = 'Tìm kiếm câu lạc bộ, sự kiện, bài viết...';
+                        }
+                    @endphp
+                    <form method="GET" action="{{ route($searchRoute) }}" class="d-flex">
+                        <div class="input-group">
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control" 
+                                   placeholder="{{ $searchPlaceholder }}" 
+                                   value="{{ request('search') }}"
+                                   style="border-radius: 8px 0 0 8px;">
+                            <button type="submit" class="btn btn-light border-start-0" style="border-radius: 0 8px 8px 0;">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4 text-end">
                     <div class="d-flex align-items-center justify-content-end">
                         @if(isset($user) && $user)
                         <!-- Notification Bell -->
                         <a href="{{ route('student.notifications.index') }}" class="notification-icon me-3 position-relative text-white text-decoration-none">
                             <i class="fas fa-bell fa-lg"></i>
                             @php
-                                $unreadCount = 0;
+                                $unreadAnnouncementCount = 0;
                                 try {
-                                    $userClubIds = $user->clubs->pluck('id')->toArray();
-                                    $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user, $userClubIds) {
-                                            $query->where(function($q) use ($user, $userClubIds) {
-                                                $q->where(function($subQ) use ($user) {
-                                                    $subQ->where('target_type', 'user')
-                                                         ->where('target_id', $user->id);
-                                                });
-                                                $q->orWhere(function($subQ) {
-                                                    $subQ->where('target_type', 'all');
-                                                });
-                                                if (!empty($userClubIds)) {
-                                                    $q->orWhere(function($subQ) use ($userClubIds) {
-                                                        $subQ->where('target_type', 'club')
-                                                             ->whereIn('target_id', $userClubIds);
-                                                    });
-                                                }
-                                            });
-                                        })
-                                        ->whereDoesntHave('reads', function($query) use ($user) {
-                                            $query->where('user_id', $user->id)->where('is_read', 1);
-                                        })
-                                        ->count();
+                                    // Lấy thông báo có target là user hiện tại và chưa được đọc
+                                    $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $user->id);
+                                    })->whereDoesntHave('reads', function($query) use ($user) {
+                                        $query->where('user_id', $user->id)
+                                              ->where('is_read', true);
+                                    })->count();
+                                    $unreadAnnouncementCount = $unreadCount;
                                 } catch (\Exception $e) {
-                                    $unreadCount = 0;
+                                    $unreadAnnouncementCount = 0;
                                 }
                             @endphp
-                            @if($unreadCount > 0)
-                                <span class="notification-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+                            @if($unreadAnnouncementCount > 0)
+                                <span class="notification-badge">{{ $unreadAnnouncementCount > 99 ? '99+' : $unreadAnnouncementCount }}</span>
                             @endif
                         </a>
                         
@@ -462,59 +490,61 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <div class="container">
-            <ul class="nav justify-content-center">
+            {{-- Navigation menu trong header --}}
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav justify-content-center" style="flex-wrap: wrap;">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}" style="color: white !important;">
                         <i class="fas fa-home me-2"></i> Trang chủ
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.clubs*') ? 'active' : '' }}" href="{{ route('student.clubs.index') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('student.clubs*') ? 'active' : '' }}" href="{{ route('student.clubs.index') }}" style="color: white !important;">
                         <i class="fas fa-users me-2"></i> Câu lạc bộ
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.events*') ? 'active' : '' }}" href="{{ route('student.events.index') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('student.events*') ? 'active' : '' }}" href="{{ route('student.events.index') }}" style="color: white !important;">
                         <i class="fas fa-calendar-alt me-2"></i> Sự kiện
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}" style="color: white !important;">
                         <i class="fas fa-newspaper me-2"></i> Bài viết
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.contact*') ? 'active' : '' }}" href="{{ route('student.contact.index') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('student.contact*') ? 'active' : '' }}" href="{{ route('student.contact.index') }}" style="color: white !important;">
                         <i class="fas fa-phone me-2"></i> Liên hệ
                     </a>
                 </li>
                 @php
                     $hasManagementRole = false;
-                    if (isset($user) && $user) {
-                        // Kiểm tra tất cả clubs mà user là thành viên (với status approved hoặc active)
-                        $clubMemberships = \App\Models\ClubMember::where('user_id', $user->id)
+                            // Lấy user từ session hoặc từ biến $user nếu có
+                            $currentUser = isset($user) ? $user : (session('user_id') ? \App\Models\User::find(session('user_id')) : null);
+                            
+                            if ($currentUser) {
+                                // Chỉ hiển thị menu "Quản lý CLB" nếu user có role quản lý (leader, vice_president, treasurer)
+                                // Không hiển thị nếu user chỉ là member
+                                $hasManagementRole = \App\Models\ClubMember::where('user_id', $currentUser->id)
                             ->whereIn('status', ['approved', 'active'])
-                            ->whereIn('position', ['leader', 'vice_president', 'officer'])
+                                    ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
                             ->exists();
-                        $hasManagementRole = $clubMemberships;
                     }
                 @endphp
                 @if($hasManagementRole)
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('student.club-management*') ? 'active' : '' }}" href="{{ route('student.club-management.index') }}">
+                            <a class="nav-link text-white {{ request()->routeIs('student.club-management*') ? 'active' : '' }}" href="{{ route('student.club-management.index') }}" style="color: white !important;">
                         <i class="fas fa-crown me-2"></i> Quản lý CLB
                     </a>
                 </li>
                 @endif
             </ul>
         </div>
-    </nav>
+            </div>
+        </div>
+    </header>
 
     <!-- Main Content -->
     <main class="main-content">

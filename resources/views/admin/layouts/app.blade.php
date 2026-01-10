@@ -611,106 +611,37 @@
                             aria-expanded="false">
                         <i class="fas fa-bell"></i>
                         @php
-                            $notificationCount = 0;
-                            $recentNotifications = collect();
                             try {
-                                $adminUser = \App\Models\User::find(session('user_id'));
-                                if ($adminUser) {
-                                    $userClubIds = $adminUser->clubs->pluck('id')->toArray();
-                                    $baseQuery = \App\Models\Notification::whereHas('targets', function($query) use ($adminUser, $userClubIds) {
-                                            $query->where(function($q) use ($adminUser, $userClubIds) {
-                                                $q->where(function($subQ) use ($adminUser) {
-                                                    $subQ->where('target_type', 'user')
-                                                         ->where('target_id', $adminUser->id);
-                                                });
-                                                $q->orWhere(function($subQ) {
-                                                    $subQ->where('target_type', 'all');
-                                                });
-                                                if (!empty($userClubIds)) {
-                                                    $q->orWhere(function($subQ) use ($userClubIds) {
-                                                        $subQ->where('target_type', 'club')
-                                                             ->whereIn('target_id', $userClubIds);
-                                                    });
-                                                }
-                                            });
-                                        })
-                                        ->whereNull('deleted_at');
-
-                                    $notificationCount = (clone $baseQuery)
-                                        ->whereDoesntHave('reads', function($query) use ($adminUser) {
-                                            $query->where('user_id', $adminUser->id)
-                                                  ->where('is_read', 1);
-                                        })
-                                        ->count();
-
-                                    $recentNotifications = $baseQuery
-                                        ->with(['sender', 'reads' => function($query) use ($adminUser) {
-                                            $query->where('user_id', $adminUser->id);
-                                        }])
-                                        ->orderBy('created_at', 'desc')
-                                        ->limit(5)
-                                        ->get();
-
-                                    $recentNotifications->transform(function($noti) use ($adminUser) {
-                                        $read = $noti->reads->first();
-                                        $noti->is_read = $read ? (bool)$read->is_read : false;
-                                        return $noti;
-                                    });
+                                $currentUserId = session('user_id');
+                                if ($currentUserId) {
+                                    // Lấy thông báo có target là user hiện tại và chưa được đọc
+                                    $notificationCount = \App\Models\Notification::whereHas('targets', function($query) use ($currentUserId) {
+                                        $query->where('target_type', 'user')
+                                              ->where('target_id', $currentUserId);
+                                    })->whereDoesntHave('reads', function($query) use ($currentUserId) {
+                                        $query->where('user_id', $currentUserId)
+                                              ->where('is_read', true);
+                                    })->count();
+                                } else {
+                                    $notificationCount = 0;
                                 }
-                            } catch (\Exception $e) {
-                                \Log::error('Admin notification badge error: ' . $e->getMessage());
+                            } catch (Exception $e) {
                                 $notificationCount = 0;
-                                $recentNotifications = collect();
                             }
                         @endphp
                         @if($notificationCount > 0)
                             <span class="notification-badge">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
                         @endif
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
-                        <li><h6 class="dropdown-header">🔔 Thông báo 
-                            @if($notificationCount > 0)
-                                <span class="badge bg-danger ms-2">{{ $notificationCount }}</span>
-                            @endif
-                        </h6></li>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                        <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
                         @if($notificationCount > 0)
-                            @foreach($recentNotifications as $notification)
-                                <li>
-                                    <a class="dropdown-item notification-item-dropdown {{ $notification->is_read ? '' : 'fw-bold' }}" 
-                                       href="{{ route('admin.notifications.show', $notification->id) }}">
-                                        <div class="d-flex align-items-start">
-                                            <div class="me-2">
-                                                @if($notification->type === 'event_registration')
-                                                    <i class="fas fa-calendar-check text-primary"></i>
-                                                @elseif($notification->type === 'event_created')
-                                                    <i class="fas fa-calendar-plus text-warning"></i>
-                                                @else
-                                                    <i class="fas fa-bell text-info"></i>
-                                                @endif
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="small text-muted">{{ $notification->title }}</div>
-                                                <div class="small">{{ Str::limit($notification->message, 50) }}</div>
-                                                <div class="small text-muted mt-1">
-                                                    {{ $notification->created_at->diffForHumans() }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </li>
-                                @if(!$loop->last)
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                @endif
-                            @endforeach
+                            <li><a class="dropdown-item" href="{{ route('admin.notifications', ['filter' => 'unread']) }}"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
                         @else
-                            <li><a class="dropdown-item text-muted text-center" href="#">
-                                <i class="fas fa-check-circle text-success"></i> Không có thông báo mới
-                            </a></li>
+                            <li><a class="dropdown-item text-muted" href="{{ route('admin.notifications') }}"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
                         @endif
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">
-                            <i class="fas fa-list me-1"></i> Xem tất cả thông báo
-                        </a></li>
+                        <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">Xem tất cả thông báo</a></li>
                     </ul>
                 </div>
                 
@@ -916,10 +847,23 @@
         @endif
 
         @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+            @php
+                $errorMessage = session('error');
+                $currentRoute = request()->route()->getName() ?? '';
+                $isNotificationsPage = str_contains($currentRoute, 'notifications');
+                $shouldShow = true;
+                // Không hiển thị alert "Không tìm thấy thông báo" trên trang notifications
+                // (sẽ được xử lý trong view notifications.blade.php)
+                if ($isNotificationsPage && str_contains($errorMessage, 'Không tìm thấy thông báo')) {
+                    $shouldShow = false;
+                }
+            @endphp
+            @if($shouldShow)
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ $errorMessage }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
         @endif
 
         @yield('content')

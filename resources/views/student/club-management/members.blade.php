@@ -25,6 +25,20 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         <div class="content-card">
             <div class="table-responsive">
                 @php
@@ -38,7 +52,7 @@
                     $positionLabels = [
                         'leader' => 'Trưởng CLB',
                         'vice_president' => 'Phó CLB',
-                        'officer' => 'Cán sự',
+                        'treasurer' => 'Thủ quỹ',
                         'member' => 'Thành viên',
                         'owner' => 'Chủ nhiệm',
                     ];
@@ -72,7 +86,7 @@
                                     $roleColors = [
                                         'leader' => 'warning',
                                         'vice_president' => 'info',
-                                        'officer' => 'success',
+                                        'treasurer' => 'success',
                                         'member' => 'secondary',
                                         'owner' => 'danger',
                                     ];
@@ -141,37 +155,13 @@
                                                     <i class="fas fa-user-tag me-2"></i>Vai trò
                                                 </label>
                                                 <select name="position" class="form-select">
-                                                    @foreach(['member' => 'Thành viên', 'officer' => 'Cán sự', 'vice_president' => 'Phó CLB'] as $pos => $label)
+                                                    @foreach(['member' => 'Thành viên', 'treasurer' => 'Thủ quỹ', 'vice_president' => 'Phó CLB'] as $pos => $label)
                                                         <option value="{{ $pos }}" {{ $member->position === $pos ? 'selected' : '' }}>
                                                             {{ $label }}
                                                         </option>
                                                     @endforeach
                                                 </select>
-                                                <small class="text-muted">Lưu ý: Chỉ có thể có 1 Trưởng CLB, 1 Phó CLB và tối đa 2 Cán sự</small>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">
-                                                    <i class="fas fa-key me-2"></i>Quyền hạn
-                                                </label>
-                                                <div class="border rounded p-3 bg-light">
-                                                    @foreach($allPermissions as $permission)
-                                                        <div class="form-check mb-2">
-                                                            <input
-                                                                class="form-check-input"
-                                                                type="checkbox"
-                                                                name="permissions[]"
-                                                                id="perm_{{ $member->id }}_{{ $permission->name }}"
-                                                                value="{{ $permission->name }}"
-                                                                {{ in_array($permission->name, $member->permission_names ?? []) ? 'checked' : '' }}
-                                                            >
-                                                            <label class="form-check-label" for="perm_{{ $member->id }}_{{ $permission->name }}">
-                                                                <i class="fas fa-check-circle text-success me-1"></i>
-                                                                {{ $permLabels[$permission->name] ?? \Illuminate\Support\Str::headline(str_replace('_',' ',$permission->name)) }}
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
+                                                <small class="text-muted">Lưu ý: Chỉ có thể có 1 Trưởng CLB, 2 Phó CLB và 1 Thủ quỹ. Quyền sẽ được tự động cấp theo vai trò.</small>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
@@ -244,26 +234,6 @@
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
         
-        // Tự động check "xem báo cáo" khi chuyển về thành viên
-        document.querySelectorAll('select[name="position"]').forEach(function(select) {
-            select.addEventListener('change', function() {
-                // Lấy memberId từ modal id (ví dụ: editMemberModal_123 -> 123)
-                var modal = this.closest('.modal');
-                if (!modal) return;
-                
-                var modalId = modal.id;
-                var memberId = modalId.replace('editMemberModal_', '');
-                if (!memberId) return;
-                
-                var xemBaoCaoCheckbox = document.getElementById('perm_' + memberId + '_xem_bao_cao');
-                if (!xemBaoCaoCheckbox) return;
-                
-                // Nếu chuyển về thành viên, tự động check "xem báo cáo"
-                if (this.value === 'member') {
-                    xemBaoCaoCheckbox.checked = true;
-                }
-            });
-        });
     });
 </script>
 @endpush

@@ -214,7 +214,7 @@
                 @if($post->type !== 'announcement')
                 <hr class="my-4">
 
-                <div class="mt-4">
+                <div class="mt-4" id="comments">
                     <h5 class="mb-3"><i class="far fa-comments me-2"></i>Bình luận</h5>
                     
                     <form method="POST" action="{{ route('student.posts.comment', $post->id) }}" class="mb-4">

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('fields', function (Blueprint $table) {
             $table->id();
             $table->string('name',100);
-            $table->string('slug',255)->uniqid();
+            $table->string('slug',255)->unique();
             $table->text('description');
             $table->timestamps();
         });

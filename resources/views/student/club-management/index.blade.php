@@ -5,7 +5,7 @@
 @section('content')
 <div class="row">
     <!-- Main Content -->
-    <div class="col-lg-8">
+    <div class="col-12">
         <!-- Page Header -->
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -13,7 +13,7 @@
                     <h2 class="mb-1">
                         <i class="fas fa-crown text-warning"></i> Quản lý CLB
                     </h2>
-                    <p class="text-muted mb-0">Công cụ quản lý dành cho trưởng CLB và cán sự</p>
+                    <p class="text-muted mb-0">Công cụ quản lý dành cho trưởng CLB, phó CLB và thủ quỹ</p>
                 </div>
                 <div class="user-role-badge">
                     @if($userPosition === 'leader')
@@ -24,9 +24,9 @@
                         <span class="badge bg-info">
                             <i class="fas fa-user-tie me-1"></i> Phó CLB
                         </span>
-                    @elseif($userPosition === 'officer')
+                    @elseif($userPosition === 'treasurer')
                         <span class="badge bg-success">
-                            <i class="fas fa-user-shield me-1"></i> Cán sự
+                            <i class="fas fa-wallet me-1"></i> Thủ quỹ
                         </span>
                     @elseif($userPosition === 'member')
                         <span class="badge bg-secondary">
@@ -52,6 +52,102 @@
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if(isset($search) && !empty($search))
+            <div class="content-card mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "{{ $search }}"
+                    </h4>
+                    <a href="{{ route('student.club-management.index') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Xóa tìm kiếm
+                    </a>
+                </div>
+
+                @php
+                    $totalResults = ($clubMembers->count() ?? 0) + ($searchEvents->count() ?? 0) + ($searchPosts->count() ?? 0);
+                @endphp
+
+                @if($totalResults > 0)
+                    <div class="row">
+                        @if(isset($clubMembers) && $clubMembers->count() > 0)
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-users me-2"></i> Thành viên ({{ $clubMembers->count() }})
+                                </h6>
+                                <div class="list-group">
+                                    @foreach($clubMembers->take(5) as $member)
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>{{ $member->user->name ?? 'N/A' }}</strong>
+                                                    <span class="badge bg-secondary ms-2">{{ ucfirst($member->position) }}</span>
+                                                </div>
+                                                <a href="{{ route('student.club-management.members', ['club' => $clubId]) }}" class="btn btn-sm btn-outline-primary">
+                                                    Xem chi tiết
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(isset($searchEvents) && $searchEvents->count() > 0)
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-calendar me-2"></i> Sự kiện ({{ $searchEvents->count() }})
+                                </h6>
+                                <div class="list-group">
+                                    @foreach($searchEvents as $event)
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>{{ $event->title }}</strong>
+                                                    <small class="text-muted d-block">{{ $event->start_time ? $event->start_time->format('d/m/Y H:i') : 'N/A' }}</small>
+                                                </div>
+                                                <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-sm btn-outline-primary">
+                                                    Xem chi tiết
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(isset($searchPosts) && $searchPosts->count() > 0)
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-newspaper me-2"></i> Bài viết ({{ $searchPosts->count() }})
+                                </h6>
+                                <div class="list-group">
+                                    @foreach($searchPosts as $post)
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>{{ $post->title }}</strong>
+                                                    <small class="text-muted d-block">{{ $post->created_at->format('d/m/Y H:i') }}</small>
+                                                </div>
+                                                <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-primary">
+                                                    Xem chi tiết
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Không tìm thấy kết quả</h5>
+                        <p class="text-muted">Không có thành viên, sự kiện hoặc bài viết nào phù hợp với từ khóa "{{ $search }}"</p>
+                    </div>
+                @endif
             </div>
         @endif
 
@@ -82,7 +178,7 @@
                     </div>
                 @else
                     <p class="text-muted mb-4">
-                        Chỉ <strong>Trưởng CLB</strong>, <strong>Phó CLB</strong> và <strong>Cán sự</strong> mới có thể quản lý CLB.<br>
+                        Chỉ <strong>Trưởng CLB</strong>, <strong>Phó CLB</strong> và <strong>Thủ quỹ</strong> mới có thể quản lý CLB.<br>
                         Vai trò hiện tại của bạn: <strong>{{ ucfirst($userPosition) }}</strong>
                     </p>
                     <div class="d-flex gap-3 justify-content-center">
@@ -145,14 +241,9 @@
                                 <small>Sắp tới</small>
                             </span>
                         </div>
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('student.events.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i> Tạo mới
+                        <a href="{{ route('student.events.manage') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-arrow-right me-1"></i> Quản lý
                         </a>
-                            <a href="{{ route('student.events.manage') }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-list me-1"></i> Quản lý
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -202,7 +293,7 @@
                                 <small>Sự kiện</small>
                             </span>
                         </div>
-                        <a href="{{ route('student.club-management.reports') }}" class="btn btn-primary btn-sm text-white">
+                        <a href="{{ route('student.club-management.reports', ['club' => $clubId]) }}" class="btn btn-primary btn-sm text-white">
                             <i class="fas fa-chart-line me-1"></i> Xem báo cáo
                         </a>
                     </div>
@@ -210,51 +301,65 @@
             </div>
             @endif
             @php
-                $position = $user->getPositionInClub($clubId);
-                $canViewFund = in_array($position, ['leader', 'vice_president', 'officer']);
+                // Lấy position - ưu tiên từ biến đã được tính sẵn trong controller
+                $currentPosition = $userPosition ?? null;
+                
+                // Nếu chưa có position và có clubId, lấy từ model
+                if (!$currentPosition && $clubId) {
+                    $currentPosition = $user->getPositionInClub($clubId);
+                }
+                
+                // Kiểm tra quyền quản lý quỹ
+                // Leader và Treasurer luôn có quyền quản lý quỹ (theo logic business)
+                // Logic: Chỉ Leader và Treasurer mới có quyền quản lý quỹ
+                $canManageFund = false;
+                if ($clubId && $currentPosition) {
+                    // Leader và Treasurer có quyền quản lý quỹ
+                    $canManageFund = in_array($currentPosition, ['leader', 'treasurer']);
+                }
+                
+                $fundExists = data_get($clubStats, 'fund.exists', false);
             @endphp
-            @if($userClub && $clubId && $canViewFund && data_get($clubStats, 'fund.exists', false))
+            @if($userClub && $clubId && $canManageFund)
             <div class="col-md-6 mb-4">
-                <div class="management-card">
-                    <div class="management-icon">
+                <div class="management-card" style="border-color: #f59e0b;">
+                    <div class="management-icon" style="background: #fef3c7; color: #f59e0b;">
                         <i class="fas fa-wallet"></i>
                     </div>
                     <div class="management-content">
-                        <h5 class="management-title">Quỹ CLB</h5>
-                        <p class="management-description">Quản lý tài chính và giao dịch quỹ CLB</p>
-                        <a href="{{ route('student.club-management.fund-transactions') }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-list me-1"></i> Xem giao dịch
+                        <h5 class="management-title">
+                            <i class="fas fa-wallet me-1"></i> Quản lý quỹ
+                        </h5>
+                        <p class="management-description">
+                            @if($fundExists)
+                                Quản lý quỹ CLB, giao dịch và yêu cầu cấp kinh phí
+                            @else
+                                Tạo và quản lý quỹ CLB, theo dõi giao dịch tài chính
+                            @endif
+                        </p>
+                        @if($fundExists)
+                            <div class="management-stats">
+                                <span class="stat-item">
+                                    <strong>{{ number_format(data_get($clubStats, 'fund.balance', 0), 0, ',', '.') }}</strong>
+                                    <small>VNĐ (Số dư)</small>
+                                </span>
+                                <span class="stat-item">
+                                    <strong>{{ number_format(data_get($clubStats, 'fund.income', 0), 0, ',', '.') }}</strong>
+                                    <small>VNĐ (Thu)</small>
+                                </span>
+                            </div>
+                        @endif
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="{{ route('student.club-management.fund-transactions') }}?club={{ $clubId }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-wallet me-1"></i> 
+                                {{ $fundExists ? 'Giao dịch quỹ' : 'Tạo quỹ CLB' }}
                             </a>
-                    </div>
-                </div>
-            </div>
-            @endif
-            @php
-                $position = $user->getPositionInClub($clubId);
-                $canManageResources = in_array($position, ['leader', 'vice_president', 'officer']);
-            @endphp
-            @if($userClub && $clubId && $canManageResources)
-            <div class="col-md-6 mb-4">
-                <div class="management-card">
-                    <div class="management-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="management-content">
-                        <h5 class="management-title">Quản lý tài nguyên CLB</h5>
-                        <p class="management-description">Quản lý tài liệu, file và tài nguyên của CLB</p>
-                        <div class="management-stats">
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.total', 0) }}</strong>
-                                <small>Tài nguyên</small>
-                            </span>
-                            <span class="stat-item">
-                                <strong>{{ data_get($clubStats, 'resources.files', 0) }}</strong>
-                                <small>File</small>
-                            </span>
+                            @if($fundExists)
+                                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $clubId }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
+                                </a>
+                            @endif
                         </div>
-                        <a href="{{ route('student.club-management.resources', ['club' => $clubId]) }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-arrow-right me-1"></i> Quản lý
-                        </a>
                     </div>
                 </div>
             </div>
@@ -288,90 +393,6 @@
         </div>
 
         {{-- Phân quyền chi tiết đã chuyển sang trang riêng --}}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="sidebar">
-            <h5 class="sidebar-title">
-                <i class="fas fa-shield-alt"></i> Quyền hạn của bạn
-            </h5>
-            <div class="permissions-list">
-                @if($clubId && $user->hasPermission('quan_ly_thanh_vien', $clubId))
-                <div class="permission-item">
-                    <i class="fas fa-users text-success"></i>
-                    <span>
-                        <a href="{{ route('student.club-management.members', ['club' => $clubId]) }}" class="text-decoration-none text-dark">
-                            Quản lý thành viên
-                        </a>
-                    </span>
-                </div>
-                @endif
-                @if($clubId && $user->hasPermission('tao_su_kien', $clubId))
-                <div class="permission-item">
-                    <i class="fas fa-calendar-plus text-success"></i>
-                    <span>
-                        <a href="{{ route('student.events.manage') }}" class="text-decoration-none text-dark">
-                            Quản lý sự kiện
-                        </a>
-                    </span>
-                </div>
-                @endif
-                @if($clubId && $user->hasPermission('dang_thong_bao', $clubId))
-                <div class="permission-item">
-                    <i class="fas fa-bullhorn text-success"></i>
-                    <span>Đăng thông báo</span>
-                </div>
-                @endif
-                @if($clubId && $user->hasPermission('xem_bao_cao', $clubId))
-                <div class="permission-item">
-                    <i class="fas fa-chart-bar text-success"></i>
-                    <span>Xem báo cáo</span>
-                </div>
-                @endif
-                @if($clubId && $user->hasPermission('quan_ly_clb', $clubId))
-                <div class="permission-item">
-                    <i class="fas fa-cogs text-warning"></i>
-                    <span>Quản lý CLB</span>
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <div class="sidebar mt-4">
-            <h5 class="sidebar-title">
-                <i class="fas fa-chart-pie"></i> Thống kê CLB
-            </h5>
-            <div class="club-stats">
-                <div class="stat-item">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div>
-                        <div class="stat-number">{{ data_get($clubStats, 'members.active', 0) }}</div>
-                        <div class="stat-label">Thành viên</div>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-icon">
-                        <i class="fas fa-calendar"></i>
-                    </div>
-                    <div>
-                        <div class="stat-number">{{ data_get($clubStats, 'events.total', 0) }}</div>
-                        <div class="stat-label">Sự kiện</div>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-icon">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
-                    <div>
-                        <div class="stat-number">{{ data_get($clubStats, 'announcements.total', 0) }}</div>
-                        <div class="stat-label">Thông báo</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 

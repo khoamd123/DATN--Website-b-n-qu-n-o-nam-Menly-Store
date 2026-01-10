@@ -13,7 +13,7 @@
                 </h2>
                 <p class="text-muted mb-0">Phân tích hoạt động của CLB: <strong>{{ $club->name }}</strong></p>
             </div>
-            @if($isLeaderOrOfficer)
+            @if($isLeaderOrManager)
                 <a href="{{ route('student.club-management.index') }}" class="btn btn-outline-primary">
                     <i class="fas fa-arrow-left me-2"></i> Quay lại
                 </a>
@@ -65,59 +65,89 @@
         </div>
     </div>
 
-    <!-- Fund Stats - Chỉ hiển thị cho leader/officer hoặc có quyền xem báo cáo -->
-    @if($canViewReports && $isLeaderOrOfficer)
+    <!-- Fund Stats - Hiển thị cho tất cả thành viên (chỉ xem, không có nút tạo giao dịch) -->
+    @if($canViewReports)
     <div class="content-card">
-        <h4 class="mb-4"><i class="fas fa-wallet text-info me-2"></i> Thống kê quỹ</h4>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0"><i class="fas fa-wallet text-info me-2"></i> Thống kê quỹ</h4>
+        </div>
         @if($stats['fund']['balance'] > 0 || $stats['fund']['totalIncome'] > 0 || $stats['fund']['totalExpense'] > 0)
             <div class="row">
                 <div class="col-md-4 mb-4">
-                    <a href="{{ route('student.club-management.fund-transactions', ['type' => 'income']) }}" class="text-decoration-none">
                     <div class="stat-card h-100 fund-stat-card border-success">
                         <div class="stat-icon bg-success"><i class="fas fa-arrow-down"></i></div>
                         <div class="stat-info">
                             <div class="stat-number text-success">{{ number_format($stats['fund']['totalIncome'], 0, ',', '.') }} VNĐ</div>
                             <div class="stat-label">Tổng thu</div>
+                            <div class="stat-sub-label text-muted small mt-1">
+                                <i class="fas fa-info-circle me-1"></i> Tổng số tiền đã thu
+                            </div>
                         </div>
                     </div>
-                    </a>
                 </div>
                 <div class="col-md-4 mb-4">
-                    <a href="{{ route('student.club-management.fund-transactions', ['type' => 'expense']) }}" class="text-decoration-none">
                     <div class="stat-card h-100 fund-stat-card border-danger">
                         <div class="stat-icon bg-danger"><i class="fas fa-arrow-up"></i></div>
                         <div class="stat-info">
                             <div class="stat-number text-danger">{{ number_format($stats['fund']['totalExpense'], 0, ',', '.') }} VNĐ</div>
                             <div class="stat-label">Tổng chi</div>
+                            <div class="stat-sub-label text-muted small mt-1">
+                                <i class="fas fa-info-circle me-1"></i> Tổng số tiền đã chi
+                            </div>
                         </div>
                     </div>
-                    </a>
                 </div>
                 <div class="col-md-4 mb-4">
-                    <a href="{{ route('student.club-management.fund-transactions') }}" class="text-decoration-none">
                     <div class="stat-card h-100 fund-stat-card border-primary">
                         <div class="stat-icon bg-primary"><i class="fas fa-balance-scale"></i></div>
                         <div class="stat-info">
                             <div class="stat-number text-primary">{{ number_format($stats['fund']['balance'], 0, ',', '.') }} VNĐ</div>
-                            <div class="stat-label">Số dư</div>
+                            <div class="stat-label">Số dư hiện tại</div>
+                            <div class="stat-sub-label text-muted small mt-1">
+                                <i class="fas fa-info-circle me-1"></i> Số tiền còn lại trong quỹ
+                            </div>
                         </div>
                     </div>
-                    </a>
                 </div>
             </div>
-            @if(!empty($stats['fund']['expenseByCategory']))
-            <div class="mt-4">
-                <h5 class="mb-3"><i class="fas fa-tags text-muted me-2"></i> Phân loại chi tiêu</h5>
-                <div class="expense-category-list">
-                    @foreach($stats['fund']['expenseByCategory'] as $category => $total)
-                        <div class="expense-category-item">
-                            <span class="category-name">{{ ucfirst(str_replace('_', ' ', $category)) }}</span>
-                            <span class="category-amount">{{ number_format($total, 0, ',', '.') }} VNĐ</span>
+            
+            <!-- Thống kê chi tiết -->
+            <div class="row mt-4">
+                <div class="col-md-6 mb-3">
+                    <div class="stat-detail-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-detail-icon bg-success-light">
+                                <i class="fas fa-chart-line text-success"></i>
+                            </div>
+                            <div class="ms-3">
+                                <div class="stat-detail-label">Tỷ lệ thu/chi</div>
+                                <div class="stat-detail-value">
+                                    @if($stats['fund']['totalExpense'] > 0)
+                                        {{ number_format(($stats['fund']['totalIncome'] / $stats['fund']['totalExpense']) * 100, 1) }}%
+                                    @else
+                                        N/A
+                                    @endif
+                                </div>
+                            </div>
                         </div>
-                    @endforeach
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="stat-detail-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-detail-icon bg-info-light">
+                                <i class="fas fa-exchange-alt text-info"></i>
+                            </div>
+                            <div class="ms-3">
+                                <div class="stat-detail-label">Số giao dịch</div>
+                                <div class="stat-detail-value">
+                                    {{ ($stats['fund']['totalTransactions'] ?? 0) }} giao dịch
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            @endif
         @else
             <div class="text-center py-4">
                 <i class="fas fa-info-circle text-muted fa-2x mb-3"></i>
@@ -146,9 +176,6 @@
                         <tr>
                             <td>
                                 <strong>{{ $expense->description ?? $expense->title ?? 'Không có mô tả' }}</strong>
-                                @if($expense->category)
-                                    <br><small class="text-muted">Danh mục: {{ ucfirst(str_replace('_', ' ', $expense->category)) }}</small>
-                                @endif
                             </td>
                             <td class="text-danger fw-bold">
                                 {{ number_format($expense->amount, 0, ',', '.') }} VNĐ
@@ -181,7 +208,7 @@
             </div>
             <div class="alert alert-info mt-3">
                 <i class="fas fa-info-circle me-2"></i>
-                Đây là danh sách các khoản chi đã được duyệt. Thông tin số dư và chi tiết tài chính chỉ dành cho Trưởng CLB, Phó CLB và Cán sự.
+                Đây là danh sách các khoản chi đã được duyệt. Thông tin số dư và chi tiết tài chính chỉ dành cho Trưởng CLB, Phó CLB và Thủ quỹ.
             </div>
         @else
             <div class="text-center py-4">
@@ -189,6 +216,51 @@
                 <p class="text-muted">Chưa có khoản chi nào được ghi nhận.</p>
             </div>
         @endif
+    </div>
+    @endif
+
+    <!-- Resources Management Section -->
+    @php
+        $position = $user->getPositionInClub($club->id);
+        $canViewResources = $position !== null; // Tất cả thành viên đều có thể xem
+        $canManageResources = in_array($position, ['leader', 'vice_president']); // Chỉ leader và vice_president mới có thể quản lý
+    @endphp
+    @if($canViewResources)
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0"><i class="fas fa-folder-open text-teal me-2"></i> Tài nguyên CLB</h4>
+            <a href="{{ route('student.club-management.resources', ['club' => $club->id]) }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-arrow-right me-1"></i> Xem tài nguyên
+            </a>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="stat-card h-100">
+                    <div class="stat-icon bg-info"><i class="fas fa-folder"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ $stats['resources']['total'] ?? 0 }}</div>
+                        <div class="stat-label">Tổng tài nguyên</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="stat-card h-100">
+                    <div class="stat-icon bg-warning"><i class="fas fa-file"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ $stats['resources']['files'] ?? 0 }}</div>
+                        <div class="stat-label">Tổng file</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            @if($canManageResources)
+                Quản lý tài liệu, file và tài nguyên của CLB. Bạn có thể tạo, chỉnh sửa và xóa tài nguyên.
+            @else
+                Xem tài liệu, file và tài nguyên của CLB. Chỉ Trưởng CLB và Phó CLB mới có quyền tạo và chỉnh sửa tài nguyên.
+            @endif
+        </div>
     </div>
     @endif
 
@@ -278,27 +350,40 @@
     .stat-number.text-danger { color: #dc3545 !important; }
     .stat-number.text-primary { color: #0d6efd !important; }
 
-    .expense-category-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
+    .stat-sub-label {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
     }
-    .expense-category-item {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .stat-detail-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
         border: 1px solid #e9ecef;
     }
-    .category-name {
-        font-weight: 500;
-        color: #495057;
+    .stat-detail-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
     }
-    .category-amount {
-        font-weight: bold;
-        color: #dc3545;
+    .bg-success-light {
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    .bg-info-light {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    .stat-detail-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    .stat-detail-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
     }
 
     .chart-container {

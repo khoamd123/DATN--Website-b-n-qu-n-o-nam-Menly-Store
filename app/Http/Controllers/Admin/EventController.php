@@ -52,7 +52,7 @@ class EventController extends Controller
 
     public function approve(Request $request, $event)
     {
-        return $this->oldController->eventsApprove($event);
+        return $this->oldController->eventsApprove($request, $event);
     }
 
     public function cancel(Request $request, $event)

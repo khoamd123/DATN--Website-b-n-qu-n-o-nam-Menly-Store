@@ -5,7 +5,7 @@
 @section('content')
 <div class="row">
     <!-- Main Content -->
-    <div class="col-lg-8">
+    <div class="col-12">
         <!-- Page Header -->
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -152,58 +152,6 @@
                     <a href="mailto:ykien.poly@fpt.edu.vn" class="btn btn-primary">
                         <i class="fas fa-envelope me-2"></i> Gửi ý kiến
                     </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="sidebar">
-            <h5 class="sidebar-title">
-                <i class="fas fa-clock"></i> Giờ làm việc
-            </h5>
-            <div class="working-hours">
-                <div class="hours-item">
-                    <strong>Thứ 2 - Thứ 6:</strong>
-                    <span>8:00 - 17:00</span>
-                </div>
-                <div class="hours-item">
-                    <strong>Thứ 7:</strong>
-                    <span>8:00 - 12:00</span>
-                </div>
-                <div class="hours-item">
-                    <strong>Chủ nhật:</strong>
-                    <span>Nghỉ</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar mt-4">
-            <h5 class="sidebar-title">
-                <i class="fas fa-headset"></i> Hỗ trợ nhanh
-            </h5>
-            <div class="quick-support">
-                <div class="support-item">
-                    <i class="fas fa-phone text-teal"></i>
-                    <div>
-                        <strong>Hotline</strong>
-                        <div class="support-detail">1900996686</div>
-                    </div>
-                </div>
-                <div class="support-item">
-                    <i class="fas fa-envelope text-teal"></i>
-                    <div>
-                        <strong>Email hỗ trợ</strong>
-                        <div class="support-detail">dvsvpoly.hn@poly.edu.vn</div>
-                    </div>
-                </div>
-                <div class="support-item">
-                    <i class="fas fa-comments text-teal"></i>
-                    <div>
-                        <strong>Chat trực tuyến</strong>
-                        <div class="support-detail">Có sẵn 24/7</div>
-                    </div>
                 </div>
             </div>
         </div>

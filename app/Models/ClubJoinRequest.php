@@ -15,7 +15,8 @@ class ClubJoinRequest extends Model
         'message',
         'status',
         'reviewed_by',
-        'reviewed_at'
+        'reviewed_at',
+        'rejection_reason'
     ];
 
     protected $casts = [
@@ -153,12 +154,13 @@ class ClubJoinRequest extends Model
     /**
      * Reject the request
      */
-    public function reject($reviewedBy)
+    public function reject($reviewedBy, $rejectionReason = null)
     {
         $this->update([
             'status' => 'rejected',
             'reviewed_by' => $reviewedBy,
-            'reviewed_at' => now()
+            'reviewed_at' => now(),
+            'rejection_reason' => $rejectionReason
         ]);
     }
 }

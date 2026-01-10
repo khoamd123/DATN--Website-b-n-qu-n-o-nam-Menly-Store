@@ -111,13 +111,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is officer of a specific club (vice_president or officer)
+     * Check if user is officer/manager of a specific club (vice_president or treasurer)
      */
     public function isOfficerOf($clubId)
     {
         return $this->clubMembers()
             ->where('club_id', $clubId)
-            ->whereIn('position', ['vice_president', 'officer'])
+            ->whereIn('position', ['vice_president', 'treasurer'])
             ->whereIn('status', ['active', 'approved'])
             ->exists();
     }
@@ -188,17 +188,20 @@ class User extends Authenticatable
                 return true;
             }
             
-            // Vice President có hầu hết quyền
+            // Vice President có hầu hết quyền (trừ quan_ly_clb)
             if ($position === 'vice_president') {
                 $restrictedPermissions = ['quan_ly_clb'];
                 if (!in_array($permission, $restrictedPermissions)) {
+                    // Phó CLB có tất cả quyền trừ quan_ly_clb
+                    // Log để debug nếu cần
+                    \Log::debug("Vice President has permission: {$permission} for club {$clubId}");
                     return true;
                 }
             }
             
-            // Officer có quyền hạn chế
-            if ($position === 'officer') {
-                $allowedPermissions = ['tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+            // Treasurer có quyền quản lý quỹ
+            if ($position === 'treasurer') {
+                $allowedPermissions = ['quan_ly_quy', 'xem_bao_cao'];
                 if (in_array($permission, $allowedPermissions)) {
                     return true;
                 }
@@ -340,8 +343,8 @@ class User extends Authenticatable
                     case 'vice_president':
                         $permissions = ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
                         break;
-                    case 'officer':
-                        $permissions = ['tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+                    case 'treasurer':
+                        $permissions = ['quan_ly_quy', 'xem_bao_cao'];
                         break;
                     case 'member':
                         $permissions = ['xem_bao_cao'];

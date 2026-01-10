@@ -19,16 +19,6 @@ class NotificationController extends Controller
     {
         return $this->oldController->notifications($request);
     }
-
-    public function show($id)
-    {
-        return $this->oldController->showNotification($id);
-    }
-
-    public function markAllRead()
-    {
-        return $this->oldController->markAllRead();
-    }
 }
 
 

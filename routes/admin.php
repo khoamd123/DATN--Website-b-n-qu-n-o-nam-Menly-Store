@@ -130,8 +130,6 @@ Route::prefix('admin')->name('admin.')->middleware([\App\Http\Middleware\SimpleA
     
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('/notifications/{id}', [NotificationController::class, 'show'])->name('notifications.show');
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     
     // Search
     Route::get('/search', [DashboardController::class, 'search'])->name('search');

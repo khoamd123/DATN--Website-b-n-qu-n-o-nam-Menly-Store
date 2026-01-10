@@ -7,9 +7,9 @@
 <div class="content-card mb-3 d-flex justify-content-between align-items-center">
     <div>
         <h5 class="mb-0">{{ $club->name }}</h5>
-        <small class="text-muted">Chỉ Trưởng/Phó/Cán sự có thể tạo giao dịch</small>
+        <small class="text-muted">Chỉ Trưởng/Phó/Thủ quỹ có thể tạo giao dịch</small>
     </div>
-    <a href="{{ route('student.club-management.fund-transactions') }}" class="btn btn-outline-secondary btn-sm">
+    <a href="{{ route('student.club-management.fund-transactions', ['club' => $club->id]) }}" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-arrow-left me-1"></i> Danh sách giao dịch
     </a>
 </div>

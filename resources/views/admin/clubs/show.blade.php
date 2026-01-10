@@ -261,71 +261,65 @@
                 </div>
             </div>
 
-            @php
-                $pendingMembers = $club->clubMembers->filter(function($member) {
-                    return $member->status === 'pending';
-                });
-            @endphp
-
-            @if($pendingMembers->isNotEmpty())
+            @if($pendingJoinRequests->isNotEmpty())
             <div class="card mb-4 border-warning">
                 <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Yêu cầu tham gia ({{ $pendingMembers->count() }})</h5>
-                    <div>
-                        <button class="btn btn-sm btn-success" onclick="handleBulkAction('approve')"><i class="fas fa-check-double me-1"></i>Duyệt mục đã chọn</button>
-                        <button class="btn btn-sm btn-danger" onclick="handleBulkAction('reject')"><i class="fas fa-times-circle me-1"></i>Từ chối mục đã chọn</button>
-                    </div>
+                    <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Yêu cầu tham gia CLB ({{ $pendingJoinRequests->count() }})</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th style="width: 5%;"><input type="checkbox" id="selectAllCheckbox" title="Chọn tất cả"></th>
                                     <th style="width: 50%;">Thành viên</th>
-                                    <th style="width: 25%;">Ngày gửi yêu cầu</th>
-                                    <th style="width: 20%;" class="text-center">Hành động</th>
+                                    <th style="width: 20%;">Ngày gửi yêu cầu</th>
+                                    <th style="width: 30%;" class="text-center">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($pendingMembers as $member)
+                                @foreach($pendingJoinRequests as $request)
                                     <tr>
-                                        <td><input type="checkbox" class="member-checkbox" value="{{ $member->id }}"></td>
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                @if($member->user->avatar && file_exists(public_path('uploads/avatars/' . basename($member->user->avatar))))
-                                                    <img src="{{ asset('uploads/avatars/' . basename($member->user->avatar)) }}" 
-                                                         alt="{{ $member->user->name }}" 
+                                                @if($request->user->avatar && file_exists(public_path($request->user->avatar)))
+                                                    <img src="{{ asset($request->user->avatar) }}" 
+                                                         alt="{{ $request->user->name }}" 
                                                          class="rounded-circle me-2" 
                                                          width="40" height="40"
                                                          style="object-fit: cover;">
                                                 @else
                                                     <div class="rounded-circle me-2 bg-primary text-white d-flex align-items-center justify-content-center" 
                                                          style="width: 40px; height: 40px; font-size: 16px; font-weight: bold;">
-                                                        {{ strtoupper(substr($member->user->name, 0, 1)) }}
+                                                        {{ strtoupper(substr($request->user->name, 0, 1)) }}
                                                     </div>
                                                 @endif
                                                 <div style="min-width: 0;">
-                                                    <strong class="text-truncate d-block">{{ $member->user->name }}</strong>
-                                                    <small class="text-muted text-truncate d-block">{{ $member->user->email }}</small>
+                                                    <strong class="text-truncate d-block">{{ $request->user->name }}</strong>
+                                                    <small class="text-muted text-truncate d-block">{{ $request->user->email }}</small>
+                                                    @if($request->message)
+                                                        <small class="text-muted d-block mt-1">
+                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($request->message, 50) }}
+                                                        </small>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </td>
-                                        <td>{{ $member->created_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ $request->created_at->format('d/m/Y H:i') }}</td>
                                         <td class="text-center">
                                             <div class="btn-group" role="group">
-                                                <form action="{{ route('admin.clubs.members.approve', ['club' => $club->id, 'member' => $member->id]) }}" method="POST" class="d-inline">
+                                                <form action="{{ route('admin.join-requests.approve', $request->id) }}" method="POST" class="d-inline">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-sm btn-success" title="Duyệt"><i class="fas fa-check"></i></button>
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Duyệt" onclick="return confirm('Bạn có chắc chắn muốn duyệt yêu cầu này?')">
+                                                        <i class="fas fa-check me-1"></i> Duyệt
+                                                    </button>
                                                 </form>
                                                 
-                                                <button type="button" class="btn btn-sm btn-danger" title="Từ chối"
-                                                        data-bs-toggle="modal" data-bs-target="#rejectMemberModal"
-                                                        data-member-id="{{ $member->id }}"
-                                                        data-member-name="{{ $member->user->name }}"
-                                                        data-action-url="{{ route('admin.clubs.members.reject', ['club' => $club->id, 'member' => $member->id]) }}">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
+                                                <form action="{{ route('admin.join-requests.reject', $request->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Từ chối" onclick="return confirm('Bạn có chắc chắn muốn từ chối yêu cầu này?')">
+                                                        <i class="fas fa-times me-1"></i> Từ chối
+                                                    </button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>
@@ -333,6 +327,13 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+            @else
+            <div class="card mb-4">
+                <div class="card-body text-center text-muted">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <p class="mb-0">Không có yêu cầu tham gia nào đang chờ duyệt.</p>
                 </div>
             </div>
             @endif
@@ -359,8 +360,8 @@
                             <span class="badge bg-success rounded-pill">{{ $club->events?->count() ?? 0 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Chờ duyệt
-                            <span class="badge bg-warning rounded-pill">{{ $pendingMembers->count() }}</span>
+                            Yêu cầu tham gia chờ duyệt
+                            <span class="badge bg-warning rounded-pill">{{ $pendingJoinRequests->count() }}</span>
                         </li>
                     </ul>
                 </div>
@@ -427,9 +428,9 @@
                                                 } elseif($role === 'vice_president') {
                                                     $badgeColor = 'warning';
                                                     $roleLabel = 'Phó CLB';
-                                                } elseif($role === 'officer') {
+                                                } elseif($role === 'treasurer') {
                                                     $badgeColor = 'info';
-                                                    $roleLabel = 'Cán sự';
+                                                    $roleLabel = 'Thủ quỹ';
                                                 } elseif($role === 'member' || $role === 'thanhvien') {
                                                     $badgeColor = 'success';
                                                     $roleLabel = 'Thành viên';
@@ -523,7 +524,7 @@
             <label for="position" class="form-label">Vai trò trong CLB <span class="text-danger">*</span></label>
             <select class="form-select" id="position" name="position" required>
                 <option value="member" selected>Thành viên</option>
-                <option value="officer">Cán sự</option>
+                <option value="treasurer">Thủ quỹ</option>
                 <option value="vice_president">Phó CLB</option>
                 <option value="leader">Trưởng CLB</option>
             </select>
@@ -609,12 +610,12 @@
             <label for="newPosition" class="form-label">Vai trò mới <span class="text-danger">*</span></label>
             <select class="form-select" id="newPosition" name="position" required>
               <option value="member">Thành viên</option>
-              <option value="officer">Cán sự</option>
+              <option value="treasurer">Thủ quỹ</option>
               <option value="vice_president">Phó CLB</option>
               <option value="leader">Trưởng CLB</option>
             </select>
             <small class="form-text text-muted">
-              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 1 phó CLB và tối đa 3 cán sự.
+              <strong>Lưu ý:</strong> Mỗi CLB chỉ có 1 trưởng, 2 phó CLB và 1 thủ quỹ.
             </small>
           </div>
         </div>

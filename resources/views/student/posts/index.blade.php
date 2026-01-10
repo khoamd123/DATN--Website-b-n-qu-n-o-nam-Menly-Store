@@ -15,21 +15,21 @@
                         <p class="text-muted mb-0">Khám phá các bài viết và thông báo mới nhất từ các câu lạc bộ</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="btn-group" role="group">
+                        <div class="btn-group btn-group-sm" role="group">
                             @php
                                 $currentFilter = request('filter', 'all');
                                 $queryParams = request()->except('filter', 'page');
                             @endphp
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'all'])) }}" 
-                               class="btn {{ $currentFilter == 'all' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'all' ? 'active' : '' }}">
                                 Tất cả
                             </a>
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'latest'])) }}" 
-                               class="btn {{ $currentFilter == 'latest' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'latest' ? 'active' : '' }}">
                                 Mới nhất
                             </a>
                             <a href="{{ route('student.posts', array_merge($queryParams, ['filter' => 'popular'])) }}" 
-                               class="btn {{ $currentFilter == 'popular' ? 'btn-primary' : 'btn-outline-primary' }}">
+                               class="btn btn-outline-primary {{ $currentFilter == 'popular' ? 'active' : '' }}">
                                 Phổ biến
                             </a>
                 </div>
@@ -38,63 +38,22 @@
             </div>
 
             <div class="content-card">
-                <form method="GET" action="{{ route('student.posts') }}" class="mb-3">
-                    @if(request('filter'))
-                        <input type="hidden" name="filter" value="{{ request('filter') }}">
-                    @endif
-                    <div class="row g-3">
-                    <div class="col-md-4">
-                            <label class="form-label small text-muted mb-1">Tìm kiếm</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white">
-                                    <i class="fas fa-search text-muted"></i>
-                                </span>
-                                <input type="text" name="search" value="{{ request('search') }}" 
-                                       class="form-control" 
-                                       placeholder="Tìm kiếm bài viết...">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">Câu lạc bộ</label>
-                        <select name="club_id" class="form-select">
-                            <option value="">Tất cả CLB</option>
-                            @foreach($clubs as $club)
-                                <option value="{{ $club->id }}" {{ (string)request('club_id') === (string)$club->id ? 'selected' : '' }}>
-                                    {{ $club->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">Loại bài viết</label>
-                            <select name="type" class="form-select">
-                                <option value="">Tất cả loại</option>
-                                <option value="post" {{ request('type') == 'post' ? 'selected' : '' }}>Bài viết thường</option>
-                                <option value="announcement" {{ request('type') == 'announcement' ? 'selected' : '' }}>Thông báo</option>
-                                <option value="document" {{ request('type') == 'document' ? 'selected' : '' }}>Tài liệu</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-teal w-100" style="background-color: #14b8a6; color: white;">
-                                <i class="fas fa-filter me-1"></i> Lọc
-                        </button>
-                        </div>
-                    </div>
-                    @if(request('search') || request('club_id') || request('type'))
-                        <div class="mt-2">
-                            <a href="{{ route('student.posts', ['filter' => request('filter')]) }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> Xóa bộ lọc
-                            </a>
-                        </div>
-                    @endif
-                </form>
-
                 <div class="row">
                     <!-- Cột bài viết (chiếm toàn bộ) -->
                     <div class="col-12">
-                        <h5 class="mb-3">
-                            <i class="fas fa-newspaper text-teal me-2"></i>Bài viết
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-newspaper text-teal me-2"></i>
+                                @if(isset($search) && !empty($search))
+                                    Kết quả tìm kiếm cho "{{ $search }}"
+                                @else
+                                    Bài viết
+                                @endif
+                            </h5>
+                            @if(isset($search) && !empty($search))
+                                <span class="text-muted small">{{ $posts->total() }} kết quả</span>
+                            @endif
+                        </div>
                 @forelse($posts as $post)
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="row g-0">
@@ -278,13 +237,27 @@
                     </div>
                 @empty
                     <div class="text-center py-5">
-                        <i class="far fa-newspaper fa-2x text-muted mb-3"></i>
-                        <p class="text-muted mb-0">Chưa có bài viết nào.</p>
+                        @if(isset($search) && !empty($search))
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Không tìm thấy bài viết nào</h5>
+                            <p class="text-muted">Không có kết quả cho từ khóa "<strong>{{ $search }}</strong>"</p>
+                            <a href="{{ route('student.posts') }}" class="btn btn-outline-primary mt-2">Xem tất cả bài viết</a>
+                        @else
+                            <i class="far fa-newspaper fa-2x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">Chưa có bài viết nào.</p>
+                        @endif
                     </div>
                 @endforelse
 
                         @if($posts->hasPages())
-                            <div class="mt-4 d-flex justify-content-center">
+                            <div class="pagination-wrapper mt-4" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap; gap: 1rem;">
+                                <div class="pagination-info" style="display: flex; align-items: center; gap: 0.5rem; color: #495057; font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle" style="color: #6c757d;"></i>
+                                    <span>
+                                        Hiển thị <strong>{{ $posts->firstItem() }}</strong> - <strong>{{ $posts->lastItem() }}</strong> 
+                                        trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                                    </span>
+                                </div>
                                 <nav aria-label="Page navigation">
                                     <ul class="pagination pagination-sm mb-0">
                                         @php
@@ -308,17 +281,14 @@
                                         @endif
 
                                         {{-- Pagination Elements --}}
-                                        @foreach ($posts->getUrlRange(1, $posts->lastPage()) as $page => $url)
-                                            @php
-                                                $pageUrl = $page == $posts->currentPage() ? '#' : $posts->appends($queryParams)->url($page);
-                                            @endphp
+                                        @foreach ($posts->appends($queryParams)->getUrlRange(1, $posts->lastPage()) as $page => $url)
                                             @if ($page == $posts->currentPage())
                                                 <li class="page-item active">
                                                     <span class="page-link">{{ $page }}</span>
                                                 </li>
                                             @else
                                                 <li class="page-item">
-                                                    <a class="page-link" href="{{ $pageUrl }}">{{ $page }}</a>
+                                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
                                                 </li>
                                             @endif
                                         @endforeach
@@ -340,10 +310,13 @@
                                     </ul>
                                 </nav>
                             </div>
-                            <div class="text-center mt-2">
-                                <small class="text-muted">
-                                    Hiển thị {{ $posts->firstItem() }} đến {{ $posts->lastItem() }} trong tổng số {{ $posts->total() }} kết quả
-                                </small>
+                        @else
+                            <div class="pagination-info mt-3" style="display: flex; align-items: center; gap: 0.5rem; color: #495057; font-size: 0.9rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                <i class="fas fa-info-circle" style="color: #6c757d;"></i>
+                                <span>
+                                    Hiển thị <strong>{{ $posts->firstItem() ?? 0 }}</strong> - <strong>{{ $posts->lastItem() ?? 0 }}</strong> 
+                                    trong tổng <strong>{{ $posts->total() }}</strong> kết quả
+                                </span>
                             </div>
                         @endif
                     </div>
@@ -352,11 +325,16 @@
         </div>
     </div>
 
-    {{-- Modal thông báo đã được ẩn --}}
 @endsection
 
 @push('styles')
 <style>
+    /* Filter buttons - smaller size */
+    .btn-group[role="group"] .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
     .pagination {
         gap: 0.25rem;
     }
@@ -408,5 +386,4 @@
 @endpush
 
 @push('scripts')
-{{-- Script modal thông báo đã được ẩn --}}
 @endpush

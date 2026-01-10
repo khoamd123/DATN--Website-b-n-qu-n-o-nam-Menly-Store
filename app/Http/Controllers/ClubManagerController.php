@@ -200,3 +200,4 @@ class ClubManagerController extends Controller
         return redirect()->back()->with('success', 'Cập nhật quyền thành viên thành công!');
     }
 }
+

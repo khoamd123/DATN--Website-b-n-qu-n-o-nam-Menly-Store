@@ -10,17 +10,19 @@
         <small class="text-muted">Tổng thu: {{ number_format($summary['income'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Tổng chi: {{ number_format($summary['expense'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Số dư: {{ number_format($summary['balance'], 0, ',', '.') }} VNĐ</small>
     </div>
     <div class="d-flex gap-2">
-        @if(isset($position) && $position === 'leader')
-            <a href="{{ route('student.club-management.fund-requests') }}" class="btn btn-success btn-sm text-white">
+        @if(isset($position) && in_array($position, ['leader', 'treasurer']))
+            <a href="{{ route('student.club-management.fund-requests.create') }}" class="btn btn-success btn-sm text-white">
                 <i class="fas fa-plus me-1"></i> Yêu cầu cấp kinh phí
             </a>
             <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled" class="btn btn-info btn-sm text-white">
                 <i class="fas fa-calculator me-1"></i> Xem quyết toán
             </a>
         @endif
-        <a href="{{ route('student.club-management.fund-transactions.create') }}" class="btn btn-primary btn-sm text-white">
-            <i class="fas fa-plus me-1"></i> Tạo giao dịch
-        </a>
+        @if(isset($position) && in_array($position, ['leader', 'vice_president', 'treasurer']))
+            <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-primary btn-sm text-white">
+                <i class="fas fa-plus me-1"></i> Tạo giao dịch
+            </a>
+        @endif
         <a href="{{ route('student.club-management.index') }}" class="btn btn-secondary btn-sm text-white">
             <i class="fas fa-arrow-left me-1"></i> Quay lại
         </a>
@@ -28,7 +30,8 @@
     </div>
 
 <div class="content-card mb-3">
-    <form method="GET" action="{{ route('student.club-management.fund-transactions') }}" class="row g-2 align-items-end">
+    <form method="GET" action="{{ route('student.club-management.fund-transactions', ['club' => $club->id]) }}" class="row g-2 align-items-end">
+        <input type="hidden" name="club" value="{{ $club->id }}">
         <div class="col-md-3">
             <label class="form-label">Loại</label>
             <select class="form-select" name="type">

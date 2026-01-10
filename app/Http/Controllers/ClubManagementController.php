@@ -89,11 +89,22 @@ class ClubManagementController extends Controller
     public function manageMembers($clubId)
     {
         // Kiểm tra quyền truy cập CLB
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
-
-        if (!session('is_admin') && !in_array($userRole, ['owner', 'executive_board'])) {
-            return redirect()->back()->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
+        if (!session('is_admin')) {
+            $userId = session('user_id');
+            if (!$userId) {
+                return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
+            }
+            
+            $user = User::find($userId);
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+            
+            $userRole = $user->getPositionInClub($clubId);
+            
+            if (!in_array($userRole, ['leader', 'vice_president', 'owner'])) {
+                return redirect()->back()->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
+            }
         }
 
         $club = Club::with(['owner', 'members.user'])->findOrFail($clubId);
@@ -114,7 +125,7 @@ class ClubManagementController extends Controller
         $request->validate([
             'user_id' => 'required|array',
             'user_id.*' => 'exists:users,id',
-            'position' => 'required|in:member,officer,leader'
+            'position' => 'required|in:member,treasurer,vice_president,leader'
         ]);
 
         // Kiểm tra quyền (chỉ admin mới được thêm)
@@ -137,11 +148,11 @@ class ClubManagementController extends Controller
                 continue;
             }
 
-            // Nếu thêm làm leader/officer, kiểm tra giới hạn
-            if (in_array($request->position, ['leader', 'officer'])) {
+            // Nếu thêm làm leader/treasurer/vice_president, kiểm tra giới hạn
+            if (in_array($request->position, ['leader', 'treasurer', 'vice_president'])) {
                 $alreadyLeaderOfficer = ClubMember::where('user_id', $userId)
                     ->whereIn('status', ['approved', 'active'])
-                    ->whereIn('position', ['leader', 'officer'])
+                    ->whereIn('position', ['leader', 'treasurer', 'vice_president'])
                     ->whereHas('club', function($query) {
                         $query->whereNull('deleted_at');
                     })
@@ -149,7 +160,7 @@ class ClubManagementController extends Controller
                     
                 if ($alreadyLeaderOfficer) {
                     $club = Club::find($alreadyLeaderOfficer->club_id);
-                    $errors[] = "Người này đã là cán sự/trưởng ở CLB '{$club->name}'.";
+                    $errors[] = "Người này đã là thủ quỹ/phó CLB/trưởng ở CLB '{$club->name}'.";
                     continue;
                 }
             }
@@ -222,11 +233,22 @@ class ClubManagementController extends Controller
     public function removeMember(Request $request, $clubId, $userId)
     {
         // Kiểm tra quyền
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
-
-        if (!session('is_admin') && !in_array($userRole, ['owner', 'executive_board'])) {
-            return redirect()->back()->with('error', 'Bạn không có quyền xóa thành viên.');
+        if (!session('is_admin')) {
+            $currentUserId = session('user_id');
+            if (!$currentUserId) {
+                return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
+            }
+            
+            $user = User::find($currentUserId);
+            if (!$user) {
+                return redirect()->route('simple.login')->with('error', 'Không tìm thấy thông tin người dùng.');
+            }
+            
+            $userRole = $user->getPositionInClub($clubId);
+            
+            if (!in_array($userRole, ['leader', 'vice_president', 'owner'])) {
+                return redirect()->back()->with('error', 'Bạn không có quyền xóa thành viên.');
+            }
         }
 
         $member = ClubMember::where('user_id', $userId)

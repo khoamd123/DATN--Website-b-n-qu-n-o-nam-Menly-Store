@@ -27,9 +27,9 @@
                         <span class="badge bg-info">
                             <i class="fas fa-user-tie me-1"></i> Phó CLB {{ $clubName }}
                         </span>
-                    @elseif($position === 'officer')
+                    @elseif($position === 'treasurer')
                         <span class="badge bg-success">
-                            <i class="fas fa-user-shield me-1"></i> Cán sự {{ $clubName }}
+                            <i class="fas fa-wallet me-1"></i> Thủ quỹ {{ $clubName }}
                         </span>
                     @else
                         <span class="badge bg-secondary">
@@ -99,13 +99,13 @@
             @endif
         </div>
 
-        <!-- Club Management Section (for leaders/officers) -->
+        <!-- Club Management Section (for leaders/treasurers) -->
         @php
             $hasManagementRole = false;
             if ($user->clubs->count() > 0) {
                 $clubId = $user->clubs->first()->id;
                 $position = $user->getPositionInClub($clubId);
-                $hasManagementRole = in_array($position, ['leader', 'vice_president', 'officer']);
+                $hasManagementRole = in_array($position, ['leader', 'vice_president', 'treasurer']);
             }
         @endphp
         @if($hasManagementRole)
@@ -325,6 +325,148 @@
         font-size: 1.5rem;
         margin: 0 auto;
     }
+    
+    /* Modal Announcement Styles */
+    #announcementModal .modal-content {
+        animation: modalFadeIn 0.3s ease-out;
+    }
+    
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    #announcementModal .modal-dialog {
+        max-width: 85%;
+        width: 85%;
+        margin: auto;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    #announcementModal .modal-content {
+        max-height: 90vh;
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+    }
+    
+    #announcementModal .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 2.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        #announcementModal .modal-dialog {
+            max-width: 95%;
+            width: 95%;
+            margin: 0;
+        }
+    }
+    
+    #announcementModal .announcement-content {
+        color: #333;
+    }
+    
+    #announcementModal .announcement-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0;
+        margin: 1rem 0;
+    }
+    
+    #announcementModal .announcement-content p {
+        margin-bottom: 1rem;
+    }
+    
+    #announcementModal .announcement-content ul,
+    #announcementModal .announcement-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+    
+    #announcementModal .announcement-content li {
+        margin-bottom: 0.5rem;
+    }
 </style>
+@endpush
+
+{{-- Debug: Kiểm tra biến --}}
+{{-- @if(isset($latestAnnouncement)) --}}
+{{-- Latest Announcement: {{ $latestAnnouncement ? $latestAnnouncement->id : 'null' }} --}}
+{{-- Should Show Modal: {{ isset($shouldShowModal) ? ($shouldShowModal ? 'true' : 'false') : 'not set' }} --}}
+{{-- @endif --}}
+
+{{-- Modal Thông báo --}}
+@if(isset($latestAnnouncement) && $latestAnnouncement)
+<div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 0; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid #e0e0e0; padding: 1.5rem 2rem; position: relative; background: #fff;">
+                <div class="w-100 text-center">
+                    <h1 class="modal-title fw-bold m-0" id="announcementModalLabel" style="font-size: 1.2rem; color: #333; text-transform: uppercase; letter-spacing: 1px;">
+                        THÔNG BÁO
+                    </h1>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.2rem; opacity: 0.7;"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem 2.5rem; background: #fff;">
+                <h2 class="mb-4" style="font-size: 1.3rem; color: #333; font-weight: 700; line-height: 1.4;">
+                    {{ $latestAnnouncement->title }}
+                </h2>
+                <div class="announcement-content" style="line-height: 1.8; color: #333; font-size: 1rem;">
+                    {!! $latestAnnouncement->content !!}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@push('scripts')
+@if(isset($latestAnnouncement) && $latestAnnouncement)
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Chỉ hiển thị modal khi có thông báo mới
+        var modalElement = document.getElementById('announcementModal');
+        if (modalElement) {
+            // Thêm delay nhỏ để đảm bảo Bootstrap đã load
+            setTimeout(function() {
+                var modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+                
+                // Đánh dấu đã xem khi đóng modal
+                modalElement.addEventListener('hidden.bs.modal', function() {
+                    if ({{ $latestAnnouncement->id ?? 0 }}) {
+                        fetch('{{ route("student.posts.mark-announcement-viewed") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                announcement_id: {{ $latestAnnouncement->id ?? 0 }}
+                            })
+                        });
+                    }
+                });
+            }, 100);
+        }
+    });
+</script>
+@endif
 @endpush
 @endsection

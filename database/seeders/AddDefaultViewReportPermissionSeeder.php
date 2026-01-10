@@ -71,3 +71,4 @@ class AddDefaultViewReportPermissionSeeder extends Seeder
 
 
 
+

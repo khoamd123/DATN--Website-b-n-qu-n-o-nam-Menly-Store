@@ -46,8 +46,8 @@
                                     @case('vice_president')
                                         <span class="badge bg-warning">Phó CLB</span>
                                         @break
-                                    @case('officer')
-                                        <span class="badge bg-info">Cán sự</span>
+                                    @case('treasurer')
+                                        <span class="badge bg-info">Thủ quỹ</span>
                                         @break
                                     @case('member')
                                         <span class="badge bg-success">Thành viên</span>

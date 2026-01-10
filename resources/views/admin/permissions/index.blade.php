@@ -247,7 +247,6 @@
         </div>
     </div>
 </div>
-@endsection
 
 <style>
 /* Pagination styling */
@@ -284,5 +283,4 @@
     border-color: #dee2e6;
 }
 </style>
->>>>>>> 81a815595f5f88780cc6d1c175df8cfc1a1de085
 @endsection
