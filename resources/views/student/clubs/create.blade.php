@@ -24,7 +24,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('student.clubs.store') }}" method="POST" enctype="multipart/form-data" id="createClubForm">
+            <form action="{{ route('student.clubs.store') }}" method="POST" enctype="multipart/form-data" id="createClubForm" novalidate>
                 @csrf
 
                 <div class="row">
@@ -247,20 +247,91 @@ document.addEventListener('DOMContentLoaded', function() {
     const createClubForm = document.getElementById('createClubForm');
     if (createClubForm) {
         createClubForm.addEventListener('submit', function(e) {
-            // Sync description editor
-            if (descriptionEditor) {
-                const descriptionData = descriptionEditor.getData();
-                // Lấy text thuần (không có HTML) để kiểm tra độ dài
-                const descriptionText = descriptionData.replace(/<[^>]*>/g, '').trim();
-                if (descriptionText.length > 255) {
-                    e.preventDefault();
-                    alert('Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' + descriptionText.length + ' ký tự.');
-                    return false;
-                }
-                descriptionEditor.updateSourceElement();
+            console.log('Form submit event triggered');
+            
+            // Kiểm tra tên CLB
+            const nameInput = document.getElementById('name');
+            if (!nameInput || !nameInput.value.trim()) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('Vui lòng nhập tên câu lạc bộ.');
+                if (nameInput) nameInput.focus();
+                return false;
             }
             
-            // Sync introduction editor
+            // Sync description editor - BẮT BUỘC phải có
+            let descriptionText = '';
+            const descriptionTextarea = document.getElementById('description');
+            
+            // Luôn kiểm tra textarea gốc để đảm bảo có dữ liệu
+            if (descriptionEditor && typeof descriptionEditor.getData === 'function') {
+                try {
+                    const descriptionData = descriptionEditor.getData();
+                    // Lấy text thuần (không có HTML) để kiểm tra
+                    descriptionText = descriptionData.replace(/<[^>]*>/g, '').trim();
+                    
+                    if (descriptionText.length === 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('Vui lòng nhập mô tả ngắn về câu lạc bộ.');
+                        if (descriptionEditor.focus) {
+                            descriptionEditor.focus();
+                        }
+                        return false;
+                    }
+                    
+                    if (descriptionText.length > 255) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' + descriptionText.length + ' ký tự.');
+                        if (descriptionEditor.focus) {
+                            descriptionEditor.focus();
+                        }
+                        return false;
+                    }
+                    
+                    // Sync dữ liệu vào textarea TRƯỚC KHI submit
+                    if (descriptionTextarea) {
+                        descriptionTextarea.value = descriptionData;
+                    }
+                    // Cũng dùng updateSourceElement nếu có
+                    if (typeof descriptionEditor.updateSourceElement === 'function') {
+                        descriptionEditor.updateSourceElement();
+                    }
+                } catch (error) {
+                    console.error('Lỗi khi sync description editor:', error);
+                    // Nếu có lỗi, fallback về textarea gốc
+                    if (descriptionTextarea) {
+                        descriptionText = descriptionTextarea.value.replace(/<[^>]*>/g, '').trim();
+                    }
+                }
+            } else if (descriptionTextarea) {
+                // Nếu không có editor, kiểm tra textarea gốc
+                descriptionText = descriptionTextarea.value.replace(/<[^>]*>/g, '').trim();
+            }
+            
+            // Validate description text cuối cùng
+            if (!descriptionText || descriptionText.length === 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('Vui lòng nhập mô tả ngắn về câu lạc bộ.');
+                if (descriptionTextarea) {
+                    descriptionTextarea.focus();
+                }
+                return false;
+            }
+            
+            if (descriptionText.length > 255) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('Mô tả ngắn không được vượt quá 255 ký tự. Hiện tại: ' + descriptionText.length + ' ký tự.');
+                if (descriptionTextarea) {
+                    descriptionTextarea.focus();
+                }
+                return false;
+            }
+            
+            // Sync introduction editor (optional)
             if (introductionEditor) {
                 introductionEditor.updateSourceElement();
             }
@@ -269,22 +340,58 @@ document.addEventListener('DOMContentLoaded', function() {
             const hiddenInput = createClubForm.querySelector('input[name="new_field_name"]');
             const fieldSelect = document.getElementById('field_id');
             
-            if (hiddenInput && hiddenInput.value) {
-                // Có lĩnh vực mới, xóa field_id hoặc set về rỗng
+            // Kiểm tra xem có lĩnh vực mới được tạo không
+            const hasNewField = hiddenInput && hiddenInput.value && hiddenInput.value.trim();
+            let hasValidField = false;
+            
+            if (hasNewField) {
+                // Có lĩnh vực mới - OK
+                hasValidField = true;
+                // Xóa field_id để server biết dùng new_field_name
                 if (fieldSelect) {
-                    // Tìm và xóa option tạm thời
                     const tempOptions = fieldSelect.querySelectorAll('option[value^="new_"]');
                     tempOptions.forEach(opt => opt.remove());
-                    // Set field_id về rỗng để validation không kiểm tra
                     fieldSelect.value = '';
-                    fieldSelect.removeAttribute('required');
                 }
-            } else if (fieldSelect && fieldSelect.value && fieldSelect.value.startsWith('new_')) {
-                // Nếu field_id là giá trị tạm thời nhưng không có new_field_name, báo lỗi
+            } else if (fieldSelect && fieldSelect.value && fieldSelect.value !== '' && !fieldSelect.value.startsWith('new_')) {
+                // Có field_id hợp lệ - OK
+                hasValidField = true;
+                // Xóa option tạm thời nếu có
+                const tempOptions = fieldSelect.querySelectorAll('option[value^="new_"]');
+                tempOptions.forEach(opt => opt.remove());
+            }
+            
+            // Kiểm tra validation cuối cùng
+            if (!hasValidField) {
                 e.preventDefault();
+                e.stopPropagation();
                 alert('Vui lòng chọn lĩnh vực từ danh sách hoặc tạo lĩnh vực mới.');
+                if (fieldSelect) {
+                    fieldSelect.focus();
+                }
                 return false;
             }
+            
+            // Nếu đến đây, tất cả validation đã pass - cho phép submit
+            console.log('✓ Form validation passed. All checks OK.');
+            console.log('- Tên CLB:', nameInput ? nameInput.value : 'N/A');
+            console.log('- Mô tả:', descriptionText ? descriptionText.substring(0, 50) + '...' : 'N/A');
+            console.log('- Lĩnh vực:', hasNewField ? 'New: ' + (hiddenInput ? hiddenInput.value : '') : (fieldSelect ? fieldSelect.value : 'N/A'));
+            
+            // Đảm bảo không có gì chặn submit
+            // Không preventDefault, form sẽ submit tự nhiên
+            return true;
+        }, false); // Sử dụng capture phase để đảm bảo chạy trước các listener khác
+    } else {
+        console.error('❌ Không tìm thấy form createClubForm');
+    }
+    
+    // Fallback: Đảm bảo button có thể submit form
+    const submitButton = document.querySelector('#createClubForm button[type="submit"]');
+    if (submitButton) {
+        submitButton.addEventListener('click', function(e) {
+            console.log('Submit button clicked');
+            // Không preventDefault, để form submit tự nhiên
         });
     }
     

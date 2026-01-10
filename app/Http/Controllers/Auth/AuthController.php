@@ -46,9 +46,9 @@ class AuthController extends Controller
                 ])->onlyInput('email');
             }
             
-            // Lấy club roles của user
+            // Lấy club roles của user (bao gồm cả approved và active)
             $clubRoles = [];
-            $clubMemberships = $user->clubMembers()->where('status', 'active')->get();
+            $clubMemberships = $user->clubMembers()->whereIn('status', ['approved', 'active'])->get();
             
             foreach ($clubMemberships as $membership) {
                 $clubRoles[$membership->club_id] = $membership->position;

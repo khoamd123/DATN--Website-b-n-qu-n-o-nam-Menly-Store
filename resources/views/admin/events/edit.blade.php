@@ -152,6 +152,29 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Chế độ hiển thị <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="visibility" id="visibilitySelect" required onchange="updateVisibilityDescription()">
+                                        <option value="public" {{ old('visibility', $event->visibility ?? 'public') == 'public' ? 'selected' : '' }}>Công khai</option>
+                                        <option value="internal" {{ old('visibility', $event->visibility ?? 'public') == 'internal' ? 'selected' : '' }}>Chỉ nội bộ CLB</option>
+                                    </select>
+                                    <small class="text-muted" id="visibilityDescription">
+                                        @php
+                                            $eventClub = \App\Models\Club::find($event->club_id);
+                                            $clubName = $eventClub ? $eventClub->name : 'CLB';
+                                        @endphp
+                                        @if(($event->visibility ?? 'public') === 'internal')
+                                            Chỉ nội bộ CLB: Chỉ thành viên của {{ $clubName }} mới có thể xem sự kiện này.
+                                        @else
+                                            Công khai: Tất cả mọi người có thể xem sự kiện này.
+                                        @endif
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <hr class="my-4">
                         <h5 class="mb-3"><i class="fas fa-users"></i> Thông tin tổ chức</h5>
 
@@ -465,6 +488,39 @@ function toggleGuestOtherInfo() {
         }
     }
 }
+
+// Cập nhật mô tả chế độ hiển thị
+function updateVisibilityDescription() {
+    const select = document.getElementById('visibilitySelect');
+    const description = document.getElementById('visibilityDescription');
+    const clubSelect = document.querySelector('select[name="club_id"]');
+    
+    if (select && description) {
+        let clubName = 'CLB';
+        if (clubSelect && clubSelect.options[clubSelect.selectedIndex]) {
+            clubName = clubSelect.options[clubSelect.selectedIndex].text;
+        }
+        
+        if (select.value === 'internal') {
+            description.textContent = `Chỉ nội bộ CLB: Chỉ thành viên của ${clubName} mới có thể xem sự kiện này.`;
+        } else {
+            description.textContent = 'Công khai: Tất cả mọi người có thể xem sự kiện này.';
+        }
+    }
+}
+
+// Khởi tạo mô tả khi trang load và khi thay đổi CLB
+document.addEventListener('DOMContentLoaded', function() {
+    updateVisibilityDescription();
+    
+    // Cập nhật lại khi thay đổi CLB
+    const clubSelect = document.querySelector('select[name="club_id"]');
+    if (clubSelect) {
+        clubSelect.addEventListener('change', function() {
+            updateVisibilityDescription();
+        });
+    }
+});
 </script>
 @endpush
 @endsection

@@ -29,9 +29,9 @@ class SimpleLoginController extends Controller
         $user = User::where('email', $request->email)->first();
         
         if ($user && Hash::check($request->password, $user->password)) {
-            // Lấy club roles của user
+            // Lấy club roles của user (bao gồm cả approved và active)
             $clubRoles = [];
-            $clubMemberships = $user->clubMembers()->where('status', 'active')->get();
+            $clubMemberships = $user->clubMembers()->whereIn('status', ['approved', 'active'])->get();
             
             foreach ($clubMemberships as $membership) {
                 $clubRoles[$membership->club_id] = $membership->position;

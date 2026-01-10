@@ -11,3 +11,7 @@ ALTER TABLE `event_comments`
 ADD COLUMN `deletion_reason` TEXT NULL AFTER `status`,
 ADD COLUMN `deleted_at` TIMESTAMP NULL AFTER `deletion_reason`;
 
+
+
+
+
