@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\FundController;
 use App\Http\Controllers\Admin\FundTransactionController;
 use App\Http\Controllers\Admin\FundRequestController;
-use App\Http\Controllers\Admin\FundSettlementController;
 use App\Http\Controllers\Admin\ClubResourceController;
 use App\Http\Controllers\Admin\TrashController;
 use App\Http\Controllers\Admin\NotificationController;
@@ -106,12 +105,6 @@ Route::prefix('admin')->name('admin.')->middleware([\App\Http\Middleware\SimpleA
     Route::get('/fund-requests/{fundRequest}/reset-status', [FundRequestController::class, 'resetStatus'])->name('fund-requests.reset-status');
     Route::get('/fund-requests/batch-approval', [FundRequestController::class, 'batchApproval'])->name('fund-requests.batch-approval');
     Route::post('/fund-requests/batch-approval/process', [FundRequestController::class, 'processBatchApproval'])->name('fund-requests.batch-approval.process');
-    
-    // Fund Settlements
-    Route::get('/fund-settlements', [FundSettlementController::class, 'index'])->name('fund-settlements.index');
-    Route::get('/fund-settlements/{fundRequest}/create', [FundSettlementController::class, 'create'])->name('fund-settlements.create');
-    Route::post('/fund-settlements/{fundRequest}', [FundSettlementController::class, 'store'])->name('fund-settlements.store');
-    Route::get('/fund-settlements/{fundRequest}/show', [FundSettlementController::class, 'show'])->name('fund-settlements.show');
     
     // Club Resources
     Route::resource('club-resources', ClubResourceController::class);

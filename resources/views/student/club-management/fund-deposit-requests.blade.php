@@ -31,29 +31,31 @@
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-md-3 mb-3">
-        <div class="content-card text-center">
-            <h6 class="text-muted mb-2">Chờ duyệt</h6>
-            <h3 class="text-warning mb-0">{{ $stats['pending'] }}</h3>
-            <small class="text-muted">{{ number_format($stats['total_pending_amount'], 0, ',', '.') }} VNĐ</small>
+        <div class="content-card text-center stat-card">
+            <h6 class="text-muted mb-2 fw-semibold">Chờ duyệt</h6>
+            <h3 class="text-warning mb-2 fw-bold">{{ $stats['pending'] }}</h3>
+            <small class="text-muted d-block">{{ number_format($stats['total_pending_amount'], 0, ',', '.') }} VNĐ</small>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="content-card text-center">
-            <h6 class="text-muted mb-2">Đã duyệt</h6>
-            <h3 class="text-success mb-0">{{ $stats['approved'] }}</h3>
+        <div class="content-card text-center stat-card">
+            <h6 class="text-muted mb-2 fw-semibold">Đã duyệt</h6>
+            <h3 class="text-success mb-2 fw-bold">{{ $stats['approved'] }}</h3>
+            <small class="text-muted d-block">&nbsp;</small>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="content-card text-center">
-            <h6 class="text-muted mb-2">Đã từ chối</h6>
-            <h3 class="text-danger mb-0">{{ $stats['rejected'] }}</h3>
+        <div class="content-card text-center stat-card">
+            <h6 class="text-muted mb-2 fw-semibold">Đã từ chối</h6>
+            <h3 class="text-danger mb-2 fw-bold">{{ $stats['rejected'] }}</h3>
+            <small class="text-muted d-block">&nbsp;</small>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="content-card text-center">
-            <h6 class="text-muted mb-2">Số dư quỹ</h6>
-            <h3 class="text-primary mb-0">{{ number_format($fund->current_amount, 0, ',', '.') }}</h3>
-            <small class="text-muted">VNĐ</small>
+        <div class="content-card text-center stat-card">
+            <h6 class="text-muted mb-2 fw-semibold">Số dư quỹ</h6>
+            <h3 class="text-primary mb-2 fw-bold">{{ number_format($fund->current_amount, 0, ',', '.') }}</h3>
+            <small class="text-muted d-block">VNĐ</small>
         </div>
     </div>
 </div>
@@ -228,6 +230,84 @@
         </div>
     @endif
 </div>
+
+@push('styles')
+<style>
+    .stat-card {
+        min-height: 140px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 1.5rem;
+    }
+    
+    .stat-card h6 {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .stat-card h3 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.2;
+        font-weight: 700;
+    }
+    
+    .stat-card small {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        min-height: 1.2rem;
+        display: block;
+    }
+    
+    .stat-card .text-warning {
+        color: #f59e0b !important;
+    }
+    
+    .stat-card .text-success {
+        color: #10b981 !important;
+    }
+    
+    .stat-card .text-danger {
+        color: #ef4444 !important;
+    }
+    
+    .stat-card .text-primary {
+        color: #3b82f6 !important;
+    }
+    
+    /* Nav tabs styling */
+    .content-card .nav-tabs {
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .content-card .nav-tabs .nav-link {
+        color: #374151;
+        font-weight: 500;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.75rem 1.25rem;
+        transition: all 0.2s ease;
+        background: transparent;
+    }
+    
+    .content-card .nav-tabs .nav-link:hover {
+        color: #14b8a6;
+        background-color: #f0fdfa;
+        border-bottom-color: #a7f3d0;
+    }
+    
+    .content-card .nav-tabs .nav-link.active {
+        color: #14b8a6 !important;
+        background-color: transparent !important;
+        border-bottom-color: #14b8a6;
+        font-weight: 600;
+    }
+</style>
+@endpush
 @endsection
 
 

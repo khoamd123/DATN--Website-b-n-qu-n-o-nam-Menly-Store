@@ -21,9 +21,13 @@ use App\Http\Controllers\Student\ClubManagementController;
 
 Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\SimpleAuth::class])->group(function () {
     
-    // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    // Dashboard - redirect to home
+    Route::get('/', function() {
+        return redirect()->route('home');
+    })->name('dashboard');
+    Route::get('/dashboard', function() {
+        return redirect()->route('home');
+    });
     
     // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
@@ -74,6 +78,7 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
     // Notifications
     // Notifications (prefix student. tự động được thêm từ line 22)
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/settings', [DashboardController::class, 'saveNotificationSettings'])->name('notifications.settings');
     
@@ -99,6 +104,7 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
         
         // Members
         Route::get('/{club}/members', [ClubManagementController::class, 'manageMembers'])->name('members');
+        Route::get('/{club}/members/{member}/show', [ClubManagementController::class, 'showMember'])->name('members.show');
         Route::post('/{club}/members/{member}/permissions', [ClubManagementController::class, 'updateMemberPermissions'])->name('permissions.update');
         Route::delete('/{club}/members/{member}', [ClubManagementController::class, 'removeMember'])->name('members.remove');
         

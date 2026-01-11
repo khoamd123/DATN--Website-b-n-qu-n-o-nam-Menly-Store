@@ -15,14 +15,17 @@
                     @php
                         $logoUrl = null;
                         $hasLogo = false;
-                        if ($club->logo) {
-                            $logoPath = $club->logo;
+                        if ($club->logo && !empty(trim($club->logo))) {
+                            $logoPath = trim($club->logo);
+                            // Kiểm tra nếu là URL đầy đủ (http/https)
                             if (str_starts_with($logoPath, 'http://') || str_starts_with($logoPath, 'https://')) {
                                 $logoUrl = $logoPath;
                                 $hasLogo = true;
                             } else {
+                                // Loại bỏ dấu / ở đầu nếu có
+                                $logoPath = ltrim($logoPath, '/');
                                 $fullPath = public_path($logoPath);
-                                if (file_exists($fullPath)) {
+                                if (file_exists($fullPath) && is_file($fullPath)) {
                                     $logoUrl = asset($logoPath);
                                     $hasLogo = true;
                                 }
@@ -30,11 +33,11 @@
                         }
                     @endphp
                     @if($hasLogo && $logoUrl)
-                        <img src="{{ $logoUrl }}" alt="{{ $club->name }} Logo" class="img-fluid rounded-circle club-logo-img-large" 
+                        <img src="{{ $logoUrl }}" alt="{{ $club->name }} Logo" class="club-logo-img-large" 
                              onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="club-logo-fallback-large" style="display: none;">{{ substr($club->name, 0, 2) }}</span>
+                        <span class="club-logo-fallback-large" style="display: none;">{{ mb_substr($club->name, 0, 2, 'UTF-8') }}</span>
                     @else
-                        <span class="club-logo-fallback-large">{{ substr($club->name, 0, 2) }}</span>
+                        <span class="club-logo-fallback-large">{{ mb_substr($club->name, 0, 2, 'UTF-8') }}</span>
                     @endif
                 </div>
                 <div class="flex-grow-1">
@@ -211,13 +214,15 @@
                         </a>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <div class="content-card text-center stat-card">
-                            <div class="stat-icon-large bg-info mb-2">
-                                <i class="fas fa-bullhorn"></i>
+                        <a href="javascript:void(0);" onclick="document.getElementById('announcements-tab').click();" class="text-decoration-none text-dark d-block">
+                            <div class="content-card text-center stat-card h-100">
+                                <div class="stat-icon-large bg-info mb-2">
+                                    <i class="fas fa-bullhorn"></i>
+                                </div>
+                                <h4 class="mb-1">{{ $announcementsCount ?? 0 }}</h4>
+                                <p class="text-muted mb-0">Thông báo</p>
                             </div>
-                            <h4 class="mb-1">{{ $announcementsCount ?? 0 }}</h4>
-                            <p class="text-muted mb-0">Thông báo</p>
-                        </div>
+                        </a>
                     </div>
                 </div>
 
@@ -321,7 +326,15 @@
                         @if(isset($announcements) && $announcements->count() > 0)
                             <div class="list-group list-group-flush">
                                 @foreach($announcements as $announcement)
-                                    <a href="{{ route('student.posts.show', $announcement->id) }}" class="list-group-item list-group-item-action px-0 border-0 border-bottom">
+                                    <button type="button" class="list-group-item list-group-item-action px-0 border-0 border-bottom announcement-item" 
+                                            data-announcement-id="{{ $announcement->id }}"
+                                            data-announcement-title="{{ $announcement->title }}"
+                                            data-announcement-content="{{ $announcement->content }}"
+                                            data-announcement-author="{{ $announcement->user->name ?? 'Ban chủ nhiệm' }}"
+                                            data-announcement-date="{{ $announcement->created_at->diffForHumans() }}"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#announcementModal"
+                                            style="text-align: left; cursor: pointer;">
                                         <div class="d-flex w-100 justify-content-between align-items-start">
                                             <div class="flex-grow-1">
                                                 <h6 class="mb-1 fw-bold">{{ $announcement->title }}</h6>
@@ -343,7 +356,7 @@
                                             </div>
                                             <i class="fas fa-chevron-right text-muted ms-2"></i>
                                         </div>
-                                    </a>
+                                    </button>
                                 @endforeach
                             </div>
                         @else
@@ -398,9 +411,46 @@
                                         </div>
                                     </div>
                                     <div class="ms-3">
-                                        @if($post->image)
-                                        <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" 
-                                             class="rounded" style="width: 80px; height: 80px; object-fit: cover;">
+                                        @php
+                                            $imageUrl = null;
+                                            if ($post->image) {
+                                                $imageField = $post->image;
+                                                // Kiểm tra nếu là URL đầy đủ
+                                                if (str_starts_with($imageField, 'http://') || str_starts_with($imageField, 'https://')) {
+                                                    $imageUrl = $imageField;
+                                                } elseif (str_starts_with($imageField, '/storage/') || str_starts_with($imageField, 'storage/')) {
+                                                    $imagePath = ltrim($imageField, '/');
+                                                    $fullPath = public_path($imagePath);
+                                                    if (file_exists($fullPath)) {
+                                                        $imageUrl = asset($imagePath);
+                                                    }
+                                                } elseif (str_starts_with($imageField, '/uploads/') || str_starts_with($imageField, 'uploads/')) {
+                                                    $imagePath = ltrim($imageField, '/');
+                                                    $fullPath = public_path($imagePath);
+                                                    if (file_exists($fullPath)) {
+                                                        $imageUrl = asset($imagePath);
+                                                    }
+                                                } else {
+                                                    // Thử với storage
+                                                    $imagePath = 'storage/' . ltrim($imageField, '/');
+                                                    $fullPath = public_path($imagePath);
+                                                    if (file_exists($fullPath)) {
+                                                        $imageUrl = asset($imagePath);
+                                                    } else {
+                                                        // Thử với uploads
+                                                        $imagePath = 'uploads/posts/' . ltrim($imageField, '/');
+                                                        $fullPath = public_path($imagePath);
+                                                        if (file_exists($fullPath)) {
+                                                            $imageUrl = asset($imagePath);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        @endphp
+                                        @if($imageUrl)
+                                        <img src="{{ $imageUrl }}" alt="{{ $post->title }}" 
+                                             class="rounded" style="width: 80px; height: 80px; object-fit: cover;"
+                                             onerror="this.style.display='none';">
                                         @endif
                                     </div>
                                 </div>
@@ -449,6 +499,34 @@
     <!-- Sidebar removed -->
 </div>
 
+<!-- Announcement Detail Modal -->
+<div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="announcementModalLabel">Thông báo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4 class="mb-3 fw-bold" id="announcementModalTitle"></h4>
+                <div class="mb-3 d-flex align-items-center gap-3 text-muted">
+                    <small>
+                        <i class="fas fa-user me-1"></i> <span id="announcementModalAuthor"></span>
+                    </small>
+                    <small>
+                        <i class="far fa-clock me-1"></i> <span id="announcementModalDate"></span>
+                    </small>
+                </div>
+                <hr>
+                <div id="announcementModalContent" class="announcement-content" style="line-height: 1.8; color: #495057;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Leave Club Confirmation Modal -->
 <div class="modal fade" id="leaveClubModal" tabindex="-1" aria-labelledby="leaveClubModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -479,6 +557,7 @@
     .club-logo-large {
         width: 100px;
         height: 100px;
+        min-width: 100px;
         border-radius: 50%;
         background: #14b8a6;
         color: white;
@@ -489,12 +568,15 @@
         font-weight: bold;
         overflow: hidden;
         position: relative;
+        flex-shrink: 0;
     }
     
     .club-logo-img-large {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        border-radius: 50%;
+        display: block;
     }
     
     .club-logo-fallback-large {
@@ -503,6 +585,7 @@
         justify-content: center;
         width: 100%;
         height: 100%;
+        text-transform: uppercase;
     }
     .text-teal {
         color: #14b8a6 !important;
@@ -589,6 +672,17 @@
         line-height: 1.8;
         color: #495057;
     }
+    
+    /* Đảm bảo các nút action có kích thước đều nhau */
+    .content-card .d-flex.gap-2 .btn,
+    .content-card .d-flex.gap-2 a.btn {
+        min-width: 140px;
+        white-space: nowrap;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 @endpush
 
@@ -628,6 +722,26 @@
                         }
                     }
                 }
+            });
+        }
+
+        // Announcement Modal Handler
+        const announcementModal = document.getElementById('announcementModal');
+        if (announcementModal) {
+            const announcementItems = document.querySelectorAll('.announcement-item');
+            announcementItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    const title = this.getAttribute('data-announcement-title');
+                    const content = this.getAttribute('data-announcement-content');
+                    const author = this.getAttribute('data-announcement-author');
+                    const date = this.getAttribute('data-announcement-date');
+
+                    document.getElementById('announcementModalTitle').textContent = title;
+                    document.getElementById('announcementModalAuthor').textContent = author;
+                    document.getElementById('announcementModalDate').textContent = date;
+                    // Hiển thị HTML content (đã được escape trong data attribute)
+                    document.getElementById('announcementModalContent').innerHTML = content;
+                });
             });
         }
     });

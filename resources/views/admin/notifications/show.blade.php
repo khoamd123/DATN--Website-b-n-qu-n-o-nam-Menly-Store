@@ -23,7 +23,7 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-lg-8">
+        <div class="col-lg-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Nội dung thông báo</h5>
@@ -100,38 +100,6 @@
                             <span class="badge bg-primary"><i class="fas fa-envelope me-1"></i>Chưa đọc</span>
                         @endif
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-id-badge me-2"></i>ID thông báo</span>
-                            <strong>#{{ $notification->id }}</strong>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-calendar me-2"></i>Ngày tạo</span>
-                            <small>{{ $notification->created_at->format('d/m/Y') }}</small>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-clock me-2"></i>Giờ tạo</span>
-                            <small>{{ $notification->created_at->format('H:i:s') }}</small>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-check-circle me-2"></i>Trạng thái</span>
-                            @if($notification->is_read)
-                                <span class="badge bg-success">Đã đọc</span>
-                            @else
-                                <span class="badge bg-primary">Chưa đọc</span>
-                            @endif
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>

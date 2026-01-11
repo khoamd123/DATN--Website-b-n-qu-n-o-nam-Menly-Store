@@ -88,7 +88,11 @@
                                     @endphp
                                     <img src="{{ asset($avatar) }}" alt="{{ $member->user->name ?? 'User' }}" class="rounded-circle me-3" width="50" height="50" style="object-fit: cover;">
                                     <div>
-                                        <div class="fw-semibold mb-1">{{ $member->user->name }}</div>
+                                        <a href="{{ route('student.club-management.members.show', ['club' => $clubId, 'member' => $member->id]) }}" 
+                                           class="fw-semibold mb-1 text-decoration-none" 
+                                           style="color: inherit;">
+                                            {{ $member->user->name }}
+                                        </a>
                                         <small class="text-muted d-block" style="font-size: 0.85rem;">{{ $member->user->email }}</small>
                                     </div>
                                 </div>

@@ -15,9 +15,6 @@
                 <a href="{{ route('student.club-management.fund-requests') }}?club={{ $club->id }}" class="btn btn-success btn-sm text-white">
                     <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
                 </a>
-                <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled&club={{ $club->id }}" class="btn btn-success btn-sm text-white">
-                    <i class="fas fa-calculator me-1"></i> Xem quyết toán
-                </a>
             @endif
             @if(isset($position) && in_array($position, ['leader', 'vice_president', 'treasurer']))
                 <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-success btn-sm text-white">

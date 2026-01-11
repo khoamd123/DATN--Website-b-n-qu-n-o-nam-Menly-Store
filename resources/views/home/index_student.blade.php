@@ -273,28 +273,117 @@
                         Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
                     </a>
                 </div>
-                <div class="post-list">
-                    @foreach($recentPosts->take(3) as $post)
+                <div class="row g-4">
+                    {{-- Bài viết mới nhất - 2/3 --}}
+                    <div class="col-lg-8">
                         @php
-                            $imageUrl = null;
-                            // Lấy ảnh từ trường image
-                            if (!empty($post->image)) {
-                                $imageField = $post->image;
-                                if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
-                                    $imageUrl = $imageField;
-                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
-                                    $imageUrl = asset(ltrim($imageField, '/'));
-                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
-                                    $imageUrl = asset(ltrim($imageField, '/'));
-                                } else {
-                                    $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                            $latestPost = $recentPosts->first();
+                        @endphp
+                        @if($latestPost)
+                            @php
+                                $imageUrl = null;
+                                // Lấy ảnh từ trường image
+                                if (!empty($latestPost->image)) {
+                                    $imageField = $latestPost->image;
+                                    if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                        $imageUrl = $imageField;
+                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                    } else {
+                                        $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                    }
                                 }
-                            }
-                            // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
-                            if (empty($imageUrl) && !empty($post->content)) {
-                                if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
-                                    $imageField = $m[1] ?? null;
-                                    if (!empty($imageField)) {
+                                // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
+                                if (empty($imageUrl) && !empty($latestPost->content)) {
+                                    if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $latestPost->content, $m)) {
+                                        $imageField = $m[1] ?? null;
+                                        if (!empty($imageField)) {
+                                            if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                $imageUrl = $imageField;
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } else {
+                                                $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                $raw = html_entity_decode($latestPost->content ?? '', ENT_QUOTES, 'UTF-8');
+                                $text = strip_tags($raw);
+                                $text = str_replace("\xc2\xa0", ' ', $text);
+                                $text = preg_replace('/\s+/u', ' ', $text);
+                                $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
+                                $postExcerpt = trim($text);
+                            @endphp
+                            <div class="post-item-card-featured rounded overflow-hidden h-100" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $latestPost->id) }}'">
+                                {{-- Image --}}
+                                @if($imageUrl)
+                                    <div class="post-image-container-featured" style="width: 100%; height: 400px; overflow: hidden; background: #f0f0f0;">
+                                        <img src="{{ $imageUrl }}" alt="{{ $latestPost->title }}" class="w-100 h-100" style="object-fit: cover; display: block;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\'width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-4x\'></i></div>';">
+                                    </div>
+                                @else
+                                    <div class="post-icon-featured" style="width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-newspaper text-white fa-4x"></i>
+                                    </div>
+                                @endif
+                                
+                                {{-- Content --}}
+                                <div class="p-4">
+                                    {{-- Header --}}
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="flex-shrink-0 me-2">
+                                            <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-users text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold text-dark">{{ $latestPost->club->name ?? 'UniClubs' }}</div>
+                                            <div class="text-muted" style="font-size: 0.8rem;">
+                                                <i class="fas fa-user-circle me-1"></i>{{ $latestPost->user->name ?? 'Ban quản trị' }}
+                                                <span class="mx-1">•</span>
+                                                <i class="far fa-clock me-1"></i>{{ $latestPost->created_at->diffForHumans() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {{-- Title --}}
+                                    <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem; line-height: 1.3;">{{ $latestPost->title }}</h4>
+                                    
+                                    {{-- Excerpt --}}
+                                    <p class="text-muted mb-3" style="font-size: 1rem; line-height: 1.6;">{{ Str::words($postExcerpt, 50, '...') }}</p>
+                                    
+                                    {{-- Engagement Bar --}}
+                                    <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                                        <div class="d-flex align-items-center text-muted" style="font-size: 0.9rem;">
+                                            @if(isset($latestPost->comments_count) && $latestPost->comments_count > 0)
+                                                <i class="far fa-comments me-1"></i>
+                                                <span>{{ $latestPost->comments_count }} bình luận</span>
+                                            @endif
+                                        </div>
+                                        <a href="{{ route('student.posts.show', $latestPost->id) }}#comments" class="btn btn-sm btn-outline-teal text-decoration-none" onclick="event.stopPropagation();">
+                                            <i class="far fa-comment me-1"></i>
+                                            Bình luận
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    {{-- Các bài viết khác - 1/3 --}}
+                    <div class="col-lg-4">
+                        <div class="d-flex flex-column gap-3">
+                            @foreach($recentPosts->skip(1)->take(4) as $post)
+                                @php
+                                    $imageUrl = null;
+                                    // Lấy ảnh từ trường image
+                                    if (!empty($post->image)) {
+                                        $imageField = $post->image;
                                         if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
                                             $imageUrl = $imageField;
                                         } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
@@ -305,70 +394,65 @@
                                             $imageUrl = asset('storage/' . ltrim($imageField, '/'));
                                         }
                                     }
-                                }
-                            }
-                            
-                            $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
-                            $text = strip_tags($raw);
-                            $text = str_replace("\xc2\xa0", ' ', $text);
-                            $text = preg_replace('/\s+/u', ' ', $text);
-                            $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
-                            $postExcerpt = trim($text);
-                        @endphp
-                        <div class="post-item-card mb-4 rounded overflow-hidden" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease;" onclick="window.location.href='{{ route('student.posts.show', $post->id) }}'">
-                            {{-- Header --}}
-                            <div class="px-3 pt-3 pb-2">
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="flex-shrink-0 me-2">
-                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
-                                            <i class="fas fa-users text-white"></i>
+                                    // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
+                                    if (empty($imageUrl) && !empty($post->content)) {
+                                        if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
+                                            $imageField = $m[1] ?? null;
+                                            if (!empty($imageField)) {
+                                                if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                    $imageUrl = $imageField;
+                                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                    $imageUrl = asset(ltrim($imageField, '/'));
+                                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                    $imageUrl = asset(ltrim($imageField, '/'));
+                                                } else {
+                                                    $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
+                                    $text = strip_tags($raw);
+                                    $text = str_replace("\xc2\xa0", ' ', $text);
+                                    $text = preg_replace('/\s+/u', ' ', $text);
+                                    $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
+                                    $postExcerpt = trim($text);
+                                @endphp
+                                <div class="post-item-card-small rounded overflow-hidden" style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $post->id) }}'">
+                                    <div class="d-flex">
+                                        {{-- Image --}}
+                                        <div class="flex-shrink-0" style="width: 120px; height: 120px; overflow: hidden; background: #f0f0f0;">
+                                            @if($imageUrl)
+                                                <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 h-100" style="object-fit: cover;" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<div style=\'width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-2x\'></i></div>';">
+                                            @else
+                                                <div style="width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-newspaper text-white fa-2x"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        
+                                        {{-- Content --}}
+                                        <div class="flex-grow-1 p-3 d-flex flex-column">
+                                            <div class="mb-2">
+                                                <div class="fw-semibold text-dark small mb-1">{{ $post->club->name ?? 'UniClubs' }}</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">
+                                                    <i class="far fa-clock me-1"></i>{{ $post->created_at->diffForHumans() }}
+                                                </div>
+                                            </div>
+                                            <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.9rem; line-height: 1.3; flex-grow: 1;">{{ Str::limit($post->title, 60) }}</h6>
+                                            @if(isset($post->comments_count) && $post->comments_count > 0)
+                                                <div class="text-muted small mt-auto">
+                                                    <i class="far fa-comments me-1"></i>
+                                                    <span>{{ $post->comments_count }}</span>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold text-dark">{{ $post->club->name ?? 'UniClubs' }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">
-                                            <i class="fas fa-user-circle me-1"></i>{{ $post->user->name ?? 'Ban quản trị' }}
-                                            <span class="mx-1">•</span>
-                                            <i class="far fa-clock me-1"></i>{{ $post->created_at->diffForHumans() }}
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-                            
-                            {{-- Content --}}
-                            <div class="px-3 pb-2">
-                                <h6 class="fw-bold mb-2 text-dark">{{ $post->title }}</h6>
-                                <p class="text-muted mb-0" style="font-size: 0.9rem;">{{ Str::words($postExcerpt, 30, '...') }}</p>
-                            </div>
-                            
-                            {{-- Image --}}
-                            @if($imageUrl)
-                                <div class="post-image-container" style="width: 100%; max-height: 500px; overflow: hidden; background: #f0f0f0;">
-                                    <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100" style="object-fit: cover; display: block;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\'width: 100%; height: 300px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-4x\'></i></div>';">
-                                </div>
-                            @else
-                                <div class="post-icon" style="width: 100%; height: 300px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-newspaper text-white fa-4x"></i>
-                                </div>
-                            @endif
-                            
-                            {{-- Engagement Bar --}}
-                            <div class="px-3 py-2 border-top" style="background: #f8f9fa;">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center text-muted" style="font-size: 0.85rem;">
-                                        @if($post->comments_count > 0)
-                                            <i class="far fa-comments me-1"></i>
-                                            <span>{{ $post->comments_count }} bình luận</span>
-                                        @endif
-                                    </div>
-                                    <a href="{{ route('student.posts.show', $post->id) }}#comments" class="btn btn-sm btn-outline-teal text-decoration-none" onclick="event.stopPropagation();">
-                                        <i class="far fa-comment me-1"></i>
-                                        Bình luận
-                                    </a>
-                                </div>
-                            </div>
+                            @endforeach
                         </div>
-                    @endforeach
+                    </div>
                 </div>
             </div>
         </div>
@@ -486,6 +570,61 @@
     @endif
 
     {{-- Bỏ Lĩnh vực hoạt động --}}
+
+{{-- Modal Thông báo công khai --}}
+@if(isset($latestAnnouncement) && $latestAnnouncement)
+<div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 0; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid #e0e0e0; padding: 1.5rem 2rem; position: relative; background: #fff;">
+                <div class="w-100 text-center">
+                    <h1 class="modal-title fw-bold m-0" id="announcementModalLabel" style="font-size: 1.5rem; color: #333; text-transform: uppercase; letter-spacing: 1px;">
+                        THÔNG BÁO
+                    </h1>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.2rem; opacity: 0.7;"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem 2.5rem; background: #fff; max-height: 70vh; overflow-y: auto;">
+                <h2 class="mb-4" style="font-size: 1.25rem; color: #333; font-weight: 600; line-height: 1.4;">
+                    {{ $latestAnnouncement->title }}
+                </h2>
+                <div class="announcement-content" style="line-height: 1.8; color: #333; font-size: 1rem;">
+                    {!! $latestAnnouncement->content !!}
+                </div>
+                @if($latestAnnouncement->club)
+                <div class="mt-3 text-muted small">
+                    <i class="fas fa-users me-1"></i> {{ $latestAnnouncement->club->name }}
+                </div>
+                @endif
+                <div class="mt-2 text-muted small">
+                    <i class="fas fa-calendar me-1"></i> {{ $latestAnnouncement->created_at->format('d/m/Y') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@push('scripts')
+@if(isset($latestAnnouncement) && $latestAnnouncement)
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modalElement = document.getElementById('announcementModal');
+        if (modalElement) {
+            // Thêm delay nhỏ để đảm bảo Bootstrap đã load
+            setTimeout(function() {
+                var modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+            }, 100);
+        }
+    });
+</script>
+@endif
+@endpush
+
 @endsection
 
 @push('styles')
@@ -724,35 +863,54 @@
     }
     
     /* Post Item Styles (similar to announcement) */
-    /* Facebook-style Post Card */
-    .post-item-card {
+    /* Featured Post Card (2/3) */
+    .post-item-card-featured {
         transition: all 0.3s ease;
         cursor: pointer;
     }
     
-    .post-item-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        transform: translateY(-2px);
+    .post-item-card-featured:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+        transform: translateY(-4px);
     }
     
-    .post-item-card .post-image-container {
+    .post-item-card-featured .post-image-container-featured {
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    .post-item-card:hover .post-image-container img {
-        transform: scale(1.02);
+    .post-item-card-featured:hover .post-image-container-featured img {
+        transform: scale(1.05);
     }
     
-    .post-item-card img {
+    .post-item-card-featured img {
         transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    .post-item-card .post-icon {
+    .post-item-card-featured .post-icon-featured {
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    .post-item-card:hover .post-icon {
+    .post-item-card-featured:hover .post-icon-featured {
         transform: scale(1.02);
+    }
+    
+    /* Small Post Card (1/3) */
+    .post-item-card-small {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .post-item-card-small:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        transform: translateY(-2px);
+    }
+    
+    .post-item-card-small img {
+        transition: transform 0.3s ease;
+    }
+    
+    .post-item-card-small:hover img {
+        transform: scale(1.1);
     }
     
     /* Event Item Styles (similar to announcement) */

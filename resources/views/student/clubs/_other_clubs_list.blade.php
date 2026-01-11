@@ -40,7 +40,7 @@
                         <div class="flex-grow-1">
                             <h5 class="card-title mb-1 fw-bold">{{ $club->name }}</h5>
                             <small class="text-muted d-flex align-items-center">
-                                <i class="fas fa-user-friends me-1"></i> {{ $club->members_count }} thành viên
+                                <i class="fas fa-user-friends me-1"></i> {{ $club->active_members_count ?? $club->members_count }} thành viên
                             </small>
                         </div>
                     </div>

@@ -729,14 +729,14 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }} {{ request()->routeIs('admin.fund-requests*') ? 'active' : '' }} {{ request()->routeIs('admin.fund-settlements*') ? 'active' : '' }}" 
+                    <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }} {{ request()->routeIs('admin.fund-requests*') ? 'active' : '' }}" 
                        href="#" 
                        onclick="event.preventDefault(); toggleSubmenu('fund-menu'); return false;">
                         <i class="fas fa-coins"></i>
                         Quản lý quỹ
                         <i class="fas fa-chevron-down float-end" id="fund-menu-icon" style="font-size: 0.75rem; transition: transform 0.3s;"></i>
                     </a>
-                    <ul class="submenu" id="fund-menu" style="display: {{ (request()->routeIs('admin.funds*') || request()->routeIs('admin.fund-requests*') || request()->routeIs('admin.fund-settlements*')) ? 'block' : 'none' }};">
+                    <ul class="submenu" id="fund-menu" style="display: {{ (request()->routeIs('admin.funds*') || request()->routeIs('admin.fund-requests*')) ? 'block' : 'none' }};">
                         <li>
                             <a class="nav-link {{ request()->routeIs('admin.funds*') ? 'active' : '' }}" href="{{ route('admin.funds') }}" style="padding-left: 3rem;">
                                 <i class="fas fa-wallet"></i>
@@ -747,12 +747,6 @@
                             <a class="nav-link {{ request()->routeIs('admin.fund-requests*') ? 'active' : '' }}" href="{{ route('admin.fund-requests') }}" style="padding-left: 3rem;">
                                 <i class="fas fa-file-invoice-dollar"></i>
                                 Yêu cầu cấp kinh phí
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-link {{ request()->routeIs('admin.fund-settlements*') ? 'active' : '' }}" href="{{ route('admin.fund-settlements') }}" style="padding-left: 3rem;">
-                                <i class="fas fa-calculator"></i>
-                                Quyết toán kinh phí
                             </a>
                         </li>
                     </ul>

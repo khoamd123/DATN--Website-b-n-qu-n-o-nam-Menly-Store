@@ -49,64 +49,56 @@
                 <h4 class="mb-0">
                     <i class="fas fa-star text-warning me-2"></i> CLB của tôi
                 </h4>
-                @if(isset($search) && !empty($search))
-                    <span class="text-muted small">{{ $myClubs->count() }} kết quả</span>
+                @if($myClubs->count() > 0)
+                    <span class="badge bg-warning">
+                        <i class="fas fa-users me-1"></i> {{ $myClubs->count() }} CLB
+                    </span>
                 @endif
             </div>
             
             @if($myClubs->count() > 0)
                 <div class="row">
                     @foreach($myClubs as $club)
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100 border-0 shadow-sm club-card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    @php
-                                        $logoUrl = null;
-                                        $hasLogo = false;
-                                        if ($club->logo) {
-                                            $logoPath = $club->logo;
-                                            if (str_starts_with($logoPath, 'http://') || str_starts_with($logoPath, 'https://')) {
-                                                $logoUrl = $logoPath;
-                                                $hasLogo = true;
-                                            } else {
-                                                $fullPath = public_path($logoPath);
-                                                if (file_exists($fullPath)) {
-                                                    $logoUrl = asset($logoPath);
-                                                    $hasLogo = true;
-                                                }
-                                            }
-                                        }
-                                    @endphp
-                                    <div class="club-logo me-3">
-                                        @if($hasLogo && $logoUrl)
-                                            <img src="{{ $logoUrl }}" alt="{{ $club->name }}" class="club-logo-img" 
-                                                 onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                            <span class="club-logo-fallback" style="display: none;">{{ substr($club->name, 0, 2) }}</span>
-                                        @else
-                                            <span class="club-logo-fallback">{{ substr($club->name, 0, 2) }}</span>
-                                        @endif
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h5 class="card-title mb-1 fw-bold">{{ $club->name }}</h5>
-                                        <small class="text-muted d-flex align-items-center">
-                                            <i class="fas fa-user-friends me-1"></i> {{ $club->members_count ?? $club->members->count() }} thành viên
-                                        </small>
-                                    </div>
-                                </div>
-                                <p class="card-text text-muted mb-3">{{ Str::limit(strip_tags(html_entity_decode($club->description ?? '', ENT_QUOTES, 'UTF-8')), 100) }}</p>
+                        @php
+                            $isOwner = $club->owner_id == $user->id;
+                            $isLeader = $club->leader_id == $user->id;
+                            $roleText = $isOwner ? 'Chủ nhiệm' : ($isLeader ? 'Trưởng CLB' : 'Quản lý');
+                            $badge = '<span class="badge bg-warning rounded-pill"><i class="fas fa-crown me-1"></i> ' . $roleText . '</span>';
+                            $button = '<a href="' . route('student.clubs.show', $club->id) . '" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye me-1"></i> Xem chi tiết</a>';
+                        @endphp
+                        @include('student.clubs._club_card', ['club' => $club, 'badge' => $badge, 'button' => $button])
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-5">
+                    <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Bạn chưa có câu lạc bộ nào</h5>
+                    <p class="text-muted">Tạo CLB mới hoặc tham gia các CLB khác để bắt đầu!</p>
+                </div>
+            @endif
+        </div>
 
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-teal rounded-pill">
-                                        <i class="fas fa-check-circle me-1"></i> Đã tham gia
-                                    </span>
-                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-eye me-1"></i> Xem chi tiết
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Joined Clubs -->
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-check-circle text-success me-2"></i> CLB đã tham gia
+                </h4>
+                @if(isset($joinedClubs) && $joinedClubs->count() > 0)
+                    <span class="badge bg-success">
+                        <i class="fas fa-users me-1"></i> {{ $joinedClubs->count() }} CLB
+                    </span>
+                @endif
+            </div>
+            
+            @if(isset($joinedClubs) && $joinedClubs->count() > 0)
+                <div class="row">
+                    @foreach($joinedClubs as $club)
+                        @php
+                            $badge = '<span class="badge bg-success rounded-pill"><i class="fas fa-check-circle me-1"></i> Đã tham gia</span>';
+                            $button = '<a href="' . route('student.clubs.show', $club->id) . '" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye me-1"></i> Xem chi tiết</a>';
+                        @endphp
+                        @include('student.clubs._club_card', ['club' => $club, 'badge' => $badge, 'button' => $button])
                     @endforeach
                 </div>
             @else
@@ -125,11 +117,11 @@
                 @if(isset($search) && !empty($search))
                     <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
                 @else
-                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                    <i class="fas fa-compass text-info me-2"></i> CLB khác
                 @endif
             </h4>
                 @if(isset($otherClubs) && $otherClubs->count() > 0)
-                    <span class="badge bg-primary">
+                    <span class="badge bg-info">
                         <i class="fas fa-users me-1"></i> {{ $otherClubs->count() }} CLB
                     </span>
                 @endif
@@ -317,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (query) {
             titleContainer.innerHTML = `<i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm cho "${query}"`;
         } else {
-            titleContainer.innerHTML = `<i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác`;
+            titleContainer.innerHTML = `<i class="fas fa-compass text-info me-2"></i> CLB khác`;
         }
 
         // Gửi yêu cầu AJAX đến route chuyên dụng, chỉ lấy phần HTML cần thiết

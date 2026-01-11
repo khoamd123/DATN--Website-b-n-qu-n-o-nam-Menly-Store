@@ -107,6 +107,11 @@ class HomeController extends Controller
 
         // Newest clubs for student homepage
         $newestClubs = Club::with(['field'])
+            ->withCount([
+                'clubMembers as active_members_count' => function ($query) {
+                    $query->whereIn('status', ['approved', 'active']);
+                },
+            ])
             ->where('status', 'active')
             ->orderByDesc('created_at')
             ->limit(4)
@@ -120,16 +125,13 @@ class HomeController extends Controller
         if ($isLoggedIn) {
             $user = User::with('clubs')->find(session('user_id'));
             
-            // Lấy thông báo mới nhất từ các CLB mà user tham gia
-            if ($user && $user->clubs->count() > 0) {
-                $userClubIds = $user->clubs->pluck('id')->toArray();
-                $latestAnnouncement = Post::with(['club', 'user'])
-                    ->where('type', 'announcement')
-                    ->where('status', '!=', 'deleted')
-                    ->whereIn('club_id', $userClubIds)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-            }
+            // Lấy thông báo mới nhất (công khai - published)
+            $latestAnnouncement = Post::with(['club', 'user'])
+                ->where('type', 'announcement')
+                ->where('status', 'published')
+                ->whereNull('deleted_at')
+                ->orderBy('created_at', 'desc')
+                ->first();
         }
 
         // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
@@ -180,6 +182,11 @@ class HomeController extends Controller
 
         // Newest clubs for student homepage
         $newestClubs = Club::with(['field'])
+            ->withCount([
+                'clubMembers as active_members_count' => function ($query) {
+                    $query->whereIn('status', ['approved', 'active']);
+                },
+            ])
             ->where('status', 'active')
             ->orderByDesc('created_at')
             ->limit(4)

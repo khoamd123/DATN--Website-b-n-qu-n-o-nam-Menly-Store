@@ -3400,11 +3400,24 @@ class AdminController extends Controller
         
         // Gửi thông báo cho người dùng về việc đơn được duyệt
         try {
-            $notification = \App\Models\Notification::create([
+            $notificationData = [
                 'sender_id' => $adminId,
                 'title' => 'Đơn tham gia CLB đã được duyệt',
                 'message' => "Đơn tham gia CLB \"{$req->club->name}\" của bạn đã được duyệt. Chúc mừng bạn đã trở thành thành viên của CLB!",
-            ]);
+            ];
+            
+            // Thêm related_id và related_type nếu cột tồn tại
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type')) {
+                $notificationData['type'] = 'club';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id')) {
+                $notificationData['related_id'] = $req->id;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type')) {
+                $notificationData['related_type'] = 'ClubJoinRequest';
+            }
+            
+            $notification = \App\Models\Notification::create($notificationData);
             
             \App\Models\NotificationTarget::create([
                 'notification_id' => $notification->id,
@@ -3526,11 +3539,24 @@ class AdminController extends Controller
                 
                 // Gửi thông báo cho người dùng về việc đơn được duyệt
                 try {
-                    $notification = \App\Models\Notification::create([
+                    $notificationData = [
                         'sender_id' => $reviewer,
                         'title' => 'Đơn tham gia CLB đã được duyệt',
                         'message' => "Đơn tham gia CLB \"{$req->club->name}\" của bạn đã được duyệt. Chúc mừng bạn đã trở thành thành viên của CLB!",
-                    ]);
+                    ];
+                    
+                    // Thêm related_id và related_type nếu cột tồn tại
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type')) {
+                        $notificationData['type'] = 'club';
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id')) {
+                        $notificationData['related_id'] = $req->id;
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type')) {
+                        $notificationData['related_type'] = 'ClubJoinRequest';
+                    }
+                    
+                    $notification = \App\Models\Notification::create($notificationData);
                     
                     \App\Models\NotificationTarget::create([
                         'notification_id' => $notification->id,

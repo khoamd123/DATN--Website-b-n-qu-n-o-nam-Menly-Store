@@ -34,6 +34,43 @@
         border-radius: 6px;
         font-weight: 500;
     }
+    
+    /* Nav tabs styling */
+    .content-card .nav-tabs {
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .content-card .nav-tabs .nav-link {
+        color: #374151;
+        font-weight: 500;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.75rem 1.25rem;
+        transition: all 0.2s ease;
+        background: transparent;
+    }
+    
+    .content-card .nav-tabs .nav-link:hover {
+        color: #14b8a6 !important;
+        background-color: #f0fdfa;
+        border-bottom-color: #a7f3d0;
+    }
+    
+    .content-card .nav-tabs .nav-link.active,
+    .content-card .nav-tabs .nav-link.active:hover,
+    .content-card .nav-tabs .nav-link.active:focus,
+    .content-card .nav-tabs .nav-link:focus,
+    .content-card .nav-tabs .nav-link:active {
+        color: #14b8a6 !important;
+        background-color: transparent !important;
+        border-bottom-color: #14b8a6;
+        font-weight: 600;
+    }
+    
+    .content-card .nav-tabs .nav-link.active:hover {
+        background-color: #f0fdfa !important;
+        border-bottom-color: #14b8a6 !important;
+    }
 </style>
 @endpush
 

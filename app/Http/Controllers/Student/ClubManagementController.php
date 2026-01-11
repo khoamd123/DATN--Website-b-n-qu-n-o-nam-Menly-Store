@@ -45,6 +45,11 @@ class ClubManagementController extends Controller
         return $this->oldController->manageMembers($club);
     }
 
+    public function showMember($club, $member)
+    {
+        return $this->oldController->showMember($club, $member);
+    }
+
     public function updateMemberPermissions(Request $request, $club, $member)
     {
         return $this->oldController->updateMemberPermissions($request, $club, $member);

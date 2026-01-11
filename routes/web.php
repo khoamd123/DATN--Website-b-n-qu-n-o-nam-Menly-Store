@@ -414,12 +414,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/fund-requests/batch-approval', [App\Http\Controllers\FundRequestController::class, 'batchApproval'])->name('admin.fund-requests.batch-approval');
         Route::post('/fund-requests/batch-approval/process', [App\Http\Controllers\FundRequestController::class, 'processBatchApproval'])->name('admin.fund-requests.batch-approval.process');
         
-        // Quyết toán kinh phí
-        Route::get('/fund-settlements', [App\Http\Controllers\FundSettlementController::class, 'index'])->name('admin.fund-settlements');
-        Route::get('/fund-settlements/{fundRequest}/create', [App\Http\Controllers\FundSettlementController::class, 'create'])->name('admin.fund-settlements.create');
-        Route::post('/fund-settlements/{fundRequest}', [App\Http\Controllers\FundSettlementController::class, 'store'])->name('admin.fund-settlements.store');
-        Route::get('/fund-settlements/{fundRequest}/show', [App\Http\Controllers\FundSettlementController::class, 'show'])->name('admin.fund-settlements.show');
-        
         // Test route để debug
         Route::get('/test-auth', function() {
             return [

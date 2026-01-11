@@ -33,6 +33,59 @@
     .section-title { font-weight: 700; font-size: 1.125rem; margin: 0; }
     .nav-link.active { background: rgba(255,255,255,0.2) !important; border-radius: 8px; }
     .bg-teal { background-color: #0f766e !important; }
+    
+    /* Post and Event Styles */
+    .post-item:last-child {
+        border-bottom: none !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .post-image {
+        transition: transform 0.3s ease;
+    }
+    
+    .post-image:hover {
+        transform: scale(1.02);
+    }
+    
+    .post-title {
+        transition: color 0.2s ease;
+    }
+    
+    .post-title:hover {
+        color: #14b8a6 !important;
+    }
+    
+    .event-item {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .event-item:hover {
+        background: #f0fdfa !important;
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(20, 184, 166, 0.1);
+    }
+    
+    .border-teal {
+        border-color: #14b8a6 !important;
+    }
+    
+    .text-teal {
+        color: #14b8a6 !important;
+    }
+    
+    .btn-outline-teal {
+        border-color: #14b8a6;
+        color: #14b8a6;
+    }
+    
+    .btn-outline-teal:hover {
+        background-color: #14b8a6;
+        border-color: #14b8a6;
+        color: white;
+    }
 </style>
 @endpush
 
@@ -203,14 +256,18 @@
                 {{-- Bài viết mới (đổi sang bên trái) --}}
                 <div class="col-lg-7" id="posts">
                     <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4 class="section-title mb-0">Bài viết mới</h4>
-                                <a href="{{ route('student.posts') }}" class="text-teal text-decoration-none fw-semibold">Xem thêm</a>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="section-title mb-0 fw-bold">
+                                    <i class="fas fa-newspaper text-teal me-2"></i>Bài viết mới
+                                </h4>
+                                <a href="{{ route('student.posts') }}" class="text-teal text-decoration-none fw-semibold">
+                                    Xem thêm <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                             @if($recentPosts->count())
-                                <div class="list-group list-group-flush">
-                                    @foreach($recentPosts as $post)
+                                <div class="posts-list">
+                                    @foreach($recentPosts->take(3) as $post)
                                         @php
                                             // Lấy ảnh của bài viết
                                             $imageUrl = null;
@@ -247,38 +304,34 @@
                                             
                                             $commentCount = $post->comments_count ?? $post->comments->count() ?? 0;
                                         @endphp
-                                        <div class="list-group-item border-0 px-0 py-3 border-bottom">
+                                        <div class="post-item mb-4 pb-4 border-bottom">
                                             @if($imageUrl)
                                                 <div class="mb-3">
-                                                    <a href="{{ route('student.posts.show', $post->id) }}">
-                                                        <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 rounded" style="height: 250px; object-fit: cover;">
+                                                    <a href="{{ route('student.posts.show', $post->id) }}" class="d-block">
+                                                        <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 rounded post-image" style="height: 200px; object-fit: cover;">
                                                     </a>
                                                 </div>
                                             @endif
-                                            <h6 class="fw-bold mb-1">
-                                                <a href="{{ route('student.posts.show', $post->id) }}" class="text-dark text-decoration-none">{{ $post->title }}</a>
+                                            <h6 class="fw-bold mb-2">
+                                                <a href="{{ route('student.posts.show', $post->id) }}" class="text-dark text-decoration-none post-title">{{ $post->title }}</a>
                                             </h6>
-                                            <div class="text-muted small mb-2">
-                                                <i class="fas fa-users me-1 text-teal"></i>{{ $post->club->name ?? 'Cộng đồng UniClubs' }}
-                                                <span class="mx-2">•</span>
-                                                <i class="fas fa-user-circle me-1 text-teal"></i>{{ $post->user->name ?? 'Ban quản trị' }}
+                                            <div class="text-muted small mb-2 d-flex align-items-center flex-wrap gap-2">
+                                                <span>
+                                                    <i class="fas fa-users text-teal me-1"></i>{{ $post->club->name ?? 'Cộng đồng UniClubs' }}
+                                                </span>
+                                                <span class="text-muted">•</span>
+                                                <span>
+                                                    <i class="fas fa-user-circle text-teal me-1"></i>{{ $post->user->name ?? 'Ban quản trị' }}
+                                                </span>
+                                                <span class="text-muted">•</span>
+                                                <span>
+                                                    <i class="far fa-clock text-muted me-1"></i>{{ $post->created_at->diffForHumans() }}
+                                                </span>
                                             </div>
-                                            <p class="text-muted small mb-2">{{ Str::words($postExcerpt, 25, '...') }}</p>
-                                            
-                                            {{-- Hiển thị 1 bình luận đầu tiên --}}
-                                            @if($post->comments->count() > 0)
-                                                @php $firstComment = $post->comments->first(); @endphp
-                                                <div class="bg-light rounded p-2 mb-2">
-                                                    <div class="d-flex align-items-center mb-1">
-                                                        <strong class="small me-2">{{ $firstComment->user->name ?? 'Người dùng' }}</strong>
-                                                        <small class="text-muted">{{ $firstComment->created_at->diffForHumans() }}</small>
-                                                    </div>
-                                                    <p class="small text-muted mb-0">{{ Str::words($firstComment->content, 30, '...') }}</p>
-                                                </div>
+                                            @if($postExcerpt)
+                                                <p class="text-muted small mb-3">{{ Str::words($postExcerpt, 20, '...') }}</p>
                                             @endif
-                                            
-                                            {{-- Nút thích và bình luận --}}
-                                            <div class="d-flex gap-2 mt-2">
+                                            <div class="d-flex gap-2">
                                                 <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-teal">
                                                     <i class="far fa-heart me-1"></i>Thích
                                                 </a>
@@ -293,7 +346,10 @@
                                     @endforeach
                                 </div>
                             @else
-                                <p class="text-muted">Chưa có bài viết công khai.</p>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-newspaper fa-3x text-muted mb-3 opacity-50"></i>
+                                    <p class="text-muted mb-0">Chưa có bài viết công khai.</p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -302,25 +358,47 @@
                 {{-- Sự kiện sắp diễn ra (đổi sang bên phải) --}}
                 <div class="col-lg-5">
                     <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4 class="section-title mb-0">Sự kiện</h4>
-                                <a href="{{ route('student.events.index') }}" class="text-teal text-decoration-none fw-semibold">Xem tất cả</a>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="section-title mb-0 fw-bold">
+                                    <i class="fas fa-calendar-alt text-teal me-2"></i>Sự kiện
+                                </h4>
+                                <a href="{{ route('student.events.index') }}" class="text-teal text-decoration-none fw-semibold">
+                                    Xem tất cả <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                             @if($upcomingEvents->count())
-                                <div class="list-group list-group-flush">
+                                <div class="events-list">
                                     @foreach($upcomingEvents->take(3) as $event)
-                                        <div class="list-group-item border-0 px-0 py-2">
-                                            <div class="fw-semibold">{{ $event->title }}</div>
-                                            <small class="text-muted">
-                                                {{ $event->club->name ?? 'CLB' }} • {{ optional($event->start_time)->format('H:i d/m/Y') }}
-                                                @if($event->location) • {{ $event->location }} @endif
-                                            </small>
+                                        <div class="event-item mb-3 p-3 bg-light rounded border-start border-3 border-teal">
+                                            <h6 class="fw-bold mb-2 text-dark">{{ $event->title }}</h6>
+                                            <div class="d-flex flex-column gap-1 small text-muted">
+                                                <div>
+                                                    <i class="fas fa-users text-teal me-1"></i>
+                                                    <span>{{ $event->club->name ?? 'CLB' }}</span>
+                                                </div>
+                                                <div>
+                                                    <i class="far fa-calendar text-teal me-1"></i>
+                                                    <span>{{ optional($event->start_time)->format('d/m/Y') }}</span>
+                                                    <span class="mx-1">•</span>
+                                                    <i class="far fa-clock text-teal me-1"></i>
+                                                    <span>{{ optional($event->start_time)->format('H:i') }}</span>
+                                                </div>
+                                                @if($event->location)
+                                                <div>
+                                                    <i class="fas fa-map-marker-alt text-teal me-1"></i>
+                                                    <span>{{ $event->location }}</span>
+                                                </div>
+                                                @endif
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
                             @else
-                                <p class="text-muted">Hiện chưa có sự kiện nào.</p>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-calendar-alt fa-3x text-muted mb-3 opacity-50"></i>
+                                    <p class="text-muted mb-0">Hiện chưa có sự kiện nào.</p>
+                                </div>
                             @endif
                         </div>
                     </div>
