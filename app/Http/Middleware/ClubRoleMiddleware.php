@@ -20,21 +20,50 @@ class ClubRoleMiddleware
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập.');
         }
 
-        // Lấy club_id từ route
-        $clubId = $request->route('club');
-        
-        if (!$clubId) {
-            return redirect()->back()->with('error', 'Không tìm thấy thông tin câu lạc bộ.');
-        }
-
         // Kiểm tra quyền admin (admin có quyền truy cập mọi CLB)
         if (session('is_admin')) {
             return $next($request);
         }
 
-        // Lấy vai trò của user trong CLB này
-        $clubRoles = session('club_roles', []);
-        $userRole = $clubRoles[$clubId] ?? null;
+        // Lấy club_id từ route hoặc từ query parameter
+        $clubId = $request->route('club') ?? $request->input('club');
+        
+        // Nếu vẫn không có club_id, thử lấy từ user's first club
+        if (!$clubId) {
+            $userId = session('user_id');
+            if ($userId) {
+                try {
+                    $user = \App\Models\User::find($userId);
+                    if ($user && $user->clubs->count() > 0) {
+                        $clubId = $user->clubs->first()->id;
+                    }
+                } catch (\Exception $e) {
+                    // Ignore error
+                }
+            }
+        }
+
+        if (!$clubId) {
+            return redirect()->back()->with('error', 'Không tìm thấy thông tin câu lạc bộ.');
+        }
+
+        // Lấy vai trò của user trong CLB này từ database (đảm bảo dữ liệu mới nhất)
+        try {
+            $userId = session('user_id');
+            $user = \App\Models\User::find($userId);
+            
+            if ($user) {
+                $userRole = $user->getPositionInClub($clubId);
+            } else {
+                // Fallback: lấy từ session
+                $clubRoles = session('club_roles', []);
+                $userRole = $clubRoles[$clubId] ?? null;
+            }
+        } catch (\Exception $e) {
+            // Fallback: lấy từ session nếu có lỗi
+            $clubRoles = session('club_roles', []);
+            $userRole = $clubRoles[$clubId] ?? null;
+        }
 
         // Kiểm tra xem user có vai trò được phép không
         if (!$userRole || !in_array($userRole, $roles)) {

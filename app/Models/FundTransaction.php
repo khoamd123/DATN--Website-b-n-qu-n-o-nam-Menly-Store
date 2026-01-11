@@ -27,7 +27,22 @@ class FundTransaction extends Model
         'approved_at',
         'event_id',
         'expense_category_id',
-        'source'
+        'source',
+        'payment_method',
+        'transaction_code',
+        'payer_name',
+        'payer_phone'
+    ];
+
+    /**
+     * Phương thức thanh toán
+     */
+    public static $paymentMethods = [
+        'VietQR' => 'VietQR',
+        'Momo' => 'MoMo',
+        'ZaloPay' => 'ZaloPay',
+        'BankTransfer' => 'Chuyển khoản ngân hàng',
+        'Cash' => 'Tiền mặt',
     ];
 
     protected $casts = [

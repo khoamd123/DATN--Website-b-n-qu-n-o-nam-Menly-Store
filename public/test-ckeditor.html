@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CKEditor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test CKEditor</h1>
+        <p>Nếu CKEditor hoạt động, bạn sẽ thấy toolbar thay vì textarea thông thường:</p>
+        
+        <label for="description">Mô tả sự kiện:</label>
+        <textarea id="description" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+        
+        <div id="status"></div>
+    </div>
+
+    <!-- CKEditor 5 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ckeditor5/40.1.0/classic/ckeditor.js" 
+            onload="console.log('CKEditor script loaded successfully')" 
+            onerror="console.error('Failed to load CKEditor script')"></script>
+    
+    <script>
+        function initCKEditor() {
+            console.log('Attempting to initialize CKEditor...');
+            
+            if (typeof ClassicEditor === 'undefined') {
+                console.error('ClassicEditor is not defined!');
+                document.getElementById('status').innerHTML = '<p style="color: red;">❌ CKEditor script không load được!</p>';
+                return false;
+            }
+            
+            const textarea = document.querySelector('#description');
+            if (!textarea) {
+                console.error('Textarea #description not found!');
+                return false;
+            }
+            
+            console.log('Creating CKEditor instance...');
+            
+            ClassicEditor
+                .create(textarea, {
+                    toolbar: {
+                        items: [
+                            'heading', '|',
+                            'bold', 'italic', 'underline', '|',
+                            'bulletedList', 'numberedList', '|',
+                            'outdent', 'indent', '|',
+                            'blockQuote', 'insertTable', '|',
+                            'undo', 'redo', '|',
+                            'link', '|',
+                            'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                            'alignment', '|',
+                            'horizontalLine', 'specialCharacters'
+                        ]
+                    },
+                    language: 'vi'
+                })
+                .then(editor => {
+                    console.log('✅ CKEditor created successfully!', editor);
+                    document.getElementById('status').innerHTML = '<p style="color: green;">✅ CKEditor đã được khởi tạo thành công!</p>';
+                })
+                .catch(error => {
+                    console.error('❌ Error creating CKEditor:', error);
+                    document.getElementById('status').innerHTML = '<p style="color: red;">❌ Lỗi khi tạo CKEditor: ' + error.message + '</p>';
+                });
+            
+            return true;
+        }
+
+        // Thử khởi tạo ngay lập tức
+        if (!initCKEditor()) {
+            // Nếu không thành công, thử lại sau 1 giây
+            setTimeout(() => {
+                console.log('Retrying CKEditor initialization...');
+                if (!initCKEditor()) {
+                    // Nếu vẫn không thành công, thử lại sau 2 giây nữa
+                    setTimeout(() => {
+                        console.log('Final retry for CKEditor initialization...');
+                        initCKEditor();
+                    }, 2000);
+                }
+            }, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

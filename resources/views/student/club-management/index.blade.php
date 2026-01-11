@@ -365,11 +365,6 @@
                                 <i class="fas fa-wallet me-1"></i> 
                                 {{ $fundExists ? 'Giao dịch quỹ' : 'Tạo quỹ CLB' }}
                             </a>
-                            @if($fundExists)
-                                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $clubId }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
-                                </a>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -394,9 +389,14 @@
                                 <small>Thành viên</small>
                             </span>
                         </div>
-                        <a href="{{ $clubId ? route('student.club-management.settings', ['club' => $clubId]) : '#' }}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-edit me-1"></i> Cài đặt
-                        </a>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="{{ $clubId ? route('student.club-management.settings', ['club' => $clubId]) : '#' }}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit me-1"></i> Cài đặt
+                            </a>
+                            <a href="{{ route('student.club-management.payment-qr', ['club' => $clubId]) }}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-qrcode me-1"></i> Quản lý QR Code
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

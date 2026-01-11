@@ -1,0 +1,290 @@
+KỊCH BẢN KIỂM THỬ,,,,,,,,
+,,,,,,,,
+Tên màn hình/Tên chức năng,WEB QL Câu lạc bộ sinh viên,,,,,,,
+Số trường hợp kiểm thử đạt (P),48,,,,,,,
+Số trường hợp kiểm thử không đạt (F),3,,,,,,,
+Số trường hợp kiểm thử đang xem xét (PE),2,,,,,,,
+Số trường hợp kiểm thử chưa thực hiện,0,,,,,,,
+Tổng số trường hợp kiểm thử,53,,,,,,,
+,,,,,,,,
+Mục đích kiểm thử,Các bước thực hiện,Kết quả mong muốn,Kết quả hiện tại,Mã lỗi,Ghi chú,Trạng thái,Người fix,Độ ưu tiên
+Chức năng : Đăng nhập/Đăng ký,,,,,,,,
+Đăng nhập thành công với tài khoản Admin,"1. Truy cập trang đăng nhập
+2. Nhập email: admin@example.com
+3. Nhập password: admin123
+4. Click nút ""Đăng nhập""","Hiển thị thông báo thành công, chuyển đến trang Admin Dashboard","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Đăng nhập với email sai,"1. Truy cập trang đăng nhập
+2. Nhập email: wrong@example.com
+3. Nhập password: password
+4. Click nút ""Đăng nhập""","Hiển thị thông báo lỗi ""Email hoặc mật khẩu không đúng""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Đăng nhập với mật khẩu sai,"1. Truy cập trang đăng nhập
+2. Nhập email: admin@example.com
+3. Nhập password: wrongpass
+4. Click nút ""Đăng nhập""","Hiển thị thông báo lỗi ""Email hoặc mật khẩu không đúng""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Đăng nhập với trường rỗng,"1. Truy cập trang đăng nhập
+2. Để trống email và password
+3. Click nút ""Đăng nhập""","Hiển thị thông báo lỗi validation ""Email và mật khẩu là bắt buộc""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Đăng ký thành công,"1. Truy cập trang đăng ký
+2. Nhập đầy đủ thông tin: Tên, Email, Mã sinh viên, Password
+3. Click nút ""Đăng ký""","Hiển thị thông báo thành công, tạo tài khoản và chuyển đến trang đăng nhập","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Đăng ký với email đã tồn tại,"1. Truy cập trang đăng ký
+2. Nhập email đã tồn tại trong hệ thống
+3. Nhập các thông tin khác
+4. Click nút ""Đăng ký""","Hiển thị thông báo lỗi ""Email đã được sử dụng""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Đăng ký với mã sinh viên đã tồn tại,"1. Truy cập trang đăng ký
+2. Nhập mã sinh viên đã tồn tại
+3. Nhập các thông tin khác
+4. Click nút ""Đăng ký""","Hiển thị thông báo lỗi ""Mã sinh viên đã được sử dụng""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Đăng ký với mật khẩu quá ngắn,"1. Truy cập trang đăng ký
+2. Nhập mật khẩu: 123
+3. Click nút ""Đăng ký""","Hiển thị thông báo lỗi ""Mật khẩu tối thiểu 6 ký tự""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Chức năng : Quản lý người dùng (Admin),,,,,,,,
+Xem danh sách người dùng,"1. Admin đăng nhập
+2. Truy cập menu ""Quản lý người dùng""
+3. Xem danh sách người dùng","Hiển thị danh sách người dùng với phân trang, đầy đủ thông tin","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tìm kiếm người dùng theo tên,"1. Admin đăng nhập
+2. Truy cập trang quản lý người dùng
+3. Nhập tên vào ô tìm kiếm
+4. Click nút tìm kiếm","Hiển thị kết quả tìm kiếm chính xác theo tên","Pass",,Đã kiểm tra,Đã hoàn thành,,Trung bình
+Tạo người dùng mới thành công,"1. Admin đăng nhập
+2. Click nút ""Tạo người dùng mới""
+3. Nhập đầy đủ thông tin hợp lệ
+4. Click nút ""Lưu""","Hiển thị thông báo ""Tạo người dùng thành công"", người dùng xuất hiện trong danh sách","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo người dùng với email không hợp lệ,"1. Admin đăng nhập
+2. Click nút ""Tạo người dùng mới""
+3. Nhập email không đúng định dạng
+4. Click nút ""Lưu""","Hiển thị thông báo lỗi validation ""Email không đúng định dạng""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Cập nhật thông tin người dùng,"1. Admin đăng nhập
+2. Chọn một người dùng trong danh sách
+3. Click nút ""Chỉnh sửa""
+4. Cập nhật thông tin
+5. Click nút ""Lưu""","Hiển thị thông báo ""Cập nhật thành công"", thông tin được cập nhật","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Reset mật khẩu người dùng,"1. Admin đăng nhập
+2. Chọn một người dùng
+3. Click nút ""Reset mật khẩu""
+4. Xác nhận reset","Hiển thị thông báo ""Đã reset mật khẩu thành công"", mật khẩu được reset về mặc định","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xóa người dùng (soft delete),"1. Admin đăng nhập
+2. Chọn một người dùng
+3. Click nút ""Xóa""
+4. Xác nhận xóa","Hiển thị thông báo ""Xóa thành công"", người dùng chuyển sang trạng thái đã xóa, có thể khôi phục","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Quản lý câu lạc bộ (Admin),,,,,,,,
+Xem danh sách câu lạc bộ,"1. Admin đăng nhập
+2. Truy cập menu ""Quản lý câu lạc bộ""
+3. Xem danh sách CLB","Hiển thị danh sách CLB với phân trang, đầy đủ thông tin","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo câu lạc bộ mới thành công,"1. Admin đăng nhập
+2. Click nút ""Tạo CLB mới""
+3. Nhập đầy đủ thông tin: Tên, Mô tả, Lĩnh vực, Chủ CLB
+4. Click nút ""Lưu""","Hiển thị thông báo ""Tạo CLB thành công"", CLB xuất hiện trong danh sách với trạng thái ""active""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo CLB với tên trùng,"1. Admin đăng nhập
+2. Click nút ""Tạo CLB mới""
+3. Nhập tên CLB đã tồn tại
+4. Click nút ""Lưu""","Hiển thị thông báo lỗi ""Tên câu lạc bộ đã tồn tại""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Duyệt câu lạc bộ,"1. Admin đăng nhập
+2. Xem danh sách CLB có trạng thái ""pending""
+3. Chọn một CLB
+4. Click nút ""Duyệt""","Trạng thái CLB chuyển sang ""active"", hiển thị thông báo ""Duyệt thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Từ chối câu lạc bộ,"1. Admin đăng nhập
+2. Xem danh sách CLB có trạng thái ""pending""
+3. Chọn một CLB
+4. Click nút ""Từ chối""","Trạng thái CLB chuyển sang ""rejected"", hiển thị thông báo ""Đã từ chối""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Duyệt yêu cầu tham gia CLB,"1. Admin đăng nhập
+2. Xem danh sách yêu cầu tham gia CLB
+3. Chọn một yêu cầu
+4. Click nút ""Duyệt""","Thành viên được thêm vào CLB, trạng thái chuyển sang ""approved"", hiển thị thông báo thành công","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Từ chối yêu cầu tham gia CLB,"1. Admin đăng nhập
+2. Xem danh sách yêu cầu tham gia CLB
+3. Chọn một yêu cầu
+4. Click nút ""Từ chối""","Yêu cầu bị từ chối, trạng thái chuyển sang ""rejected"", hiển thị thông báo","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xóa thành viên khỏi CLB,"1. Admin đăng nhập
+2. Chọn một CLB
+3. Xem danh sách thành viên
+4. Chọn một thành viên
+5. Click nút ""Xóa thành viên""
+6. Xác nhận xóa","Thành viên bị xóa khỏi CLB, hiển thị thông báo ""Xóa thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Thay đổi vai trò thành viên,"1. Admin đăng nhập
+2. Chọn một CLB
+3. Xem danh sách thành viên
+4. Chọn một thành viên
+5. Thay đổi vai trò (Trưởng CLB, Phó CLB, Cán sự, Thành viên)
+6. Click nút ""Lưu""","Vai trò được cập nhật, hiển thị thông báo ""Cập nhật thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Quản lý sự kiện (Admin),,,,,,,,
+Xem danh sách sự kiện,"1. Admin đăng nhập
+2. Truy cập menu ""Quản lý sự kiện""
+3. Xem danh sách sự kiện","Hiển thị danh sách sự kiện với phân trang, đầy đủ thông tin","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo sự kiện mới thành công,"1. Admin đăng nhập
+2. Click nút ""Tạo sự kiện mới""
+3. Nhập đầy đủ thông tin: Tên, Mô tả, Thời gian bắt đầu, Thời gian kết thúc, CLB
+4. Click nút ""Lưu""","Hiển thị thông báo ""Tạo sự kiện thành công"", sự kiện xuất hiện với trạng thái ""pending""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo sự kiện với thời gian không hợp lệ,"1. Admin đăng nhập
+2. Click nút ""Tạo sự kiện mới""
+3. Nhập thời gian bắt đầu sau thời gian kết thúc
+4. Click nút ""Lưu""","Hiển thị thông báo lỗi ""Thời gian bắt đầu phải trước thời gian kết thúc""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Duyệt sự kiện,"1. Admin đăng nhập
+2. Xem danh sách sự kiện có trạng thái ""pending""
+3. Chọn một sự kiện
+4. Click nút ""Duyệt""","Trạng thái sự kiện chuyển sang ""approved"", hiển thị thông báo ""Duyệt thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Hủy sự kiện,"1. Admin đăng nhập
+2. Chọn một sự kiện
+3. Click nút ""Hủy sự kiện""
+4. Nhập lý do hủy
+5. Xác nhận hủy","Trạng thái sự kiện chuyển sang ""cancelled"", hiển thị thông báo ""Đã hủy sự kiện""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Quản lý bài viết (Admin),,,,,,,,
+Xem danh sách bài viết,"1. Admin đăng nhập
+2. Truy cập menu ""Quản lý bài viết""
+3. Xem danh sách bài viết","Hiển thị danh sách bài viết với phân trang, đầy đủ thông tin","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo bài viết mới thành công,"1. Admin đăng nhập
+2. Click nút ""Tạo bài viết mới""
+3. Nhập tiêu đề, nội dung, chọn CLB
+4. Upload ảnh (nếu có)
+5. Click nút ""Lưu""","Hiển thị thông báo ""Tạo bài viết thành công"", bài viết xuất hiện trong danh sách","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Upload ảnh bài viết,"1. Admin đăng nhập
+2. Tạo bài viết mới
+3. Click nút ""Chọn ảnh""
+4. Chọn file ảnh hợp lệ (jpg, png)
+5. Upload","Ảnh được upload thành công, hiển thị preview ảnh","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Upload file không hợp lệ,"1. Admin đăng nhập
+2. Tạo bài viết mới
+3. Click nút ""Chọn ảnh""
+4. Chọn file không hợp lệ (exe, php)
+5. Upload","Hiển thị thông báo lỗi ""File không được phép. Chỉ chấp nhận file ảnh""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Xóa bài viết,"1. Admin đăng nhập
+2. Chọn một bài viết
+3. Click nút ""Xóa""
+4. Xác nhận xóa","Hiển thị thông báo ""Xóa thành công"", bài viết chuyển vào thùng rác, có thể khôi phục","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Quản lý quỹ (Admin),,,,,,,,
+Xem danh sách quỹ,"1. Admin đăng nhập
+2. Truy cập menu ""Quản lý quỹ""
+3. Xem danh sách quỹ","Hiển thị danh sách quỹ với thông tin: Tên quỹ, Số tiền hiện có, CLB","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Tạo quỹ mới thành công,"1. Admin đăng nhập
+2. Click nút ""Tạo quỹ mới""
+3. Nhập tên quỹ, chọn CLB, số tiền ban đầu
+4. Click nút ""Lưu""","Hiển thị thông báo ""Tạo quỹ thành công"", quỹ xuất hiện trong danh sách","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Duyệt yêu cầu cấp kinh phí,"1. Admin đăng nhập
+2. Xem danh sách yêu cầu cấp kinh phí có trạng thái ""pending""
+3. Chọn một yêu cầu
+4. Click nút ""Duyệt""
+5. Nhập số tiền duyệt
+6. Xác nhận","Trạng thái yêu cầu chuyển sang ""approved"", quỹ được cập nhật, hiển thị thông báo thành công","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Từ chối yêu cầu cấp kinh phí,"1. Admin đăng nhập
+2. Xem danh sách yêu cầu cấp kinh phí
+3. Chọn một yêu cầu
+4. Click nút ""Từ chối""
+5. Nhập lý do từ chối
+6. Xác nhận","Trạng thái yêu cầu chuyển sang ""rejected"", hiển thị thông báo ""Đã từ chối""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Quyết toán kinh phí với số tiền khớp,"1. Admin đăng nhập
+2. Chọn một yêu cầu đã được duyệt
+3. Click nút ""Quyết toán""
+4. Nhập số tiền chi thực tế = số tiền duyệt
+5. Upload hóa đơn/hình ảnh
+6. Click nút ""Lưu""","Tạo giao dịch CHI, cập nhật quỹ, hiển thị thông báo ""Quyết toán thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Quyết toán với tiền thừa,"1. Admin đăng nhập
+2. Chọn một yêu cầu đã được duyệt
+3. Click nút ""Quyết toán""
+4. Nhập số tiền chi thực tế < số tiền duyệt
+5. Upload hóa đơn
+6. Click nút ""Lưu""","Tạo giao dịch CHI và giao dịch THU (hoàn tiền thừa), cập nhật quỹ, hiển thị thông báo thành công","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Quyết toán với tiền thiếu,"1. Admin đăng nhập
+2. Chọn một yêu cầu đã được duyệt
+3. Click nút ""Quyết toán""
+4. Nhập số tiền chi thực tế > số tiền duyệt
+5. Upload hóa đơn
+6. Click nút ""Lưu""","Tạo giao dịch CHI, hiển thị cảnh báo về số tiền vượt quá, hiển thị thông báo thành công","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Sinh viên tham gia CLB,,,,,,,,
+Tìm kiếm câu lạc bộ,"1. Sinh viên đăng nhập
+2. Truy cập trang ""Danh sách CLB""
+3. Nhập từ khóa tìm kiếm
+4. Click nút tìm kiếm","Hiển thị kết quả tìm kiếm chính xác theo từ khóa","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xem thông tin chi tiết CLB,"1. Sinh viên đăng nhập
+2. Truy cập trang ""Danh sách CLB""
+3. Click vào một CLB","Hiển thị thông tin chi tiết CLB: Mô tả, Thành viên, Sự kiện, Bài viết","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Đăng ký tham gia CLB,"1. Sinh viên đăng nhập
+2. Xem thông tin chi tiết một CLB
+3. Click nút ""Tham gia CLB""
+4. Xác nhận","Hiển thị thông báo ""Đã gửi yêu cầu tham gia"", yêu cầu có trạng thái ""pending""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Hủy yêu cầu tham gia CLB,"1. Sinh viên đăng nhập
+2. Xem danh sách yêu cầu tham gia CLB của mình
+3. Chọn một yêu cầu có trạng thái ""pending""
+4. Click nút ""Hủy yêu cầu""
+5. Xác nhận","Yêu cầu bị hủy, hiển thị thông báo ""Đã hủy yêu cầu""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Rời khỏi CLB,"1. Sinh viên đăng nhập
+2. Xem danh sách CLB đã tham gia
+3. Chọn một CLB
+4. Click nút ""Rời khỏi CLB""
+5. Xác nhận","Hiển thị thông báo ""Đã rời khỏi CLB"", sinh viên không còn trong danh sách thành viên","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Sinh viên đăng ký sự kiện,,,,,,,,
+Xem danh sách sự kiện,"1. Sinh viên đăng nhập
+2. Truy cập trang ""Sự kiện""
+3. Xem danh sách sự kiện","Hiển thị danh sách sự kiện với phân trang, đầy đủ thông tin","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xem thông tin chi tiết sự kiện,"1. Sinh viên đăng nhập
+2. Click vào một sự kiện trong danh sách","Hiển thị thông tin chi tiết sự kiện: Mô tả, Thời gian, Địa điểm, Số người đã đăng ký","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Đăng ký tham gia sự kiện thành công,"1. Sinh viên đăng nhập
+2. Xem thông tin chi tiết một sự kiện
+3. Click nút ""Đăng ký tham gia""
+4. Xác nhận","Hiển thị thông báo ""Đăng ký thành công"", sinh viên xuất hiện trong danh sách đăng ký","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Hủy đăng ký sự kiện,"1. Sinh viên đăng nhập
+2. Xem danh sách sự kiện đã đăng ký
+3. Chọn một sự kiện
+4. Click nút ""Hủy đăng ký""
+5. Xác nhận","Hiển thị thông báo ""Đã hủy đăng ký"", sinh viên không còn trong danh sách đăng ký","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Đăng ký khi sự kiện đã đầy,"1. Sinh viên đăng nhập
+2. Xem thông tin chi tiết một sự kiện đã đầy
+3. Click nút ""Đăng ký tham gia""","Hiển thị thông báo ""Sự kiện đã đầy, không thể đăng ký thêm""","Pass",,Validate dữ liệu,Đã hoàn thành,,Cao
+Chức năng : Sinh viên đăng bài viết,,,,,,,,
+Tạo bài viết mới thành công,"1. Sinh viên đăng nhập
+2. Truy cập trang ""Bài viết""
+3. Click nút ""Tạo bài viết mới""
+4. Nhập tiêu đề, nội dung
+5. Upload ảnh (nếu có)
+6. Click nút ""Đăng bài""","Hiển thị thông báo ""Đăng bài thành công"", bài viết xuất hiện trong danh sách","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Bình luận bài viết,"1. Sinh viên đăng nhập
+2. Xem chi tiết một bài viết
+3. Nhập nội dung bình luận
+4. Click nút ""Gửi bình luận""","Bình luận được thêm vào, hiển thị ngay dưới bài viết","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xóa bình luận của mình,"1. Sinh viên đăng nhập
+2. Xem chi tiết một bài viết có bình luận của mình
+3. Click nút ""Xóa"" trên bình luận
+4. Xác nhận xóa","Bình luận bị xóa, hiển thị thông báo ""Đã xóa bình luận""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Dashboard và Thống kê,,,,,,,,
+Xem Dashboard Admin,"1. Admin đăng nhập
+2. Truy cập trang Dashboard","Hiển thị thống kê tổng quan: Số lượng users, clubs, events, posts, biểu đồ thống kê","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Lọc thống kê theo khoảng thời gian,"1. Admin đăng nhập
+2. Truy cập trang Dashboard
+3. Chọn khoảng thời gian (Hôm nay, Hôm qua, Tuần này, Tháng này)
+4. Xem kết quả","Dữ liệu thống kê được lọc chính xác theo khoảng thời gian đã chọn","Pass",,Đã kiểm tra,Đã hoàn thành,,Trung bình
+Xem Dashboard Sinh viên,"1. Sinh viên đăng nhập
+2. Truy cập trang Dashboard","Hiển thị thông tin cá nhân, CLB đã tham gia, sự kiện sắp tới, thông báo","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Bảo mật và Phân quyền,,,,,,,,
+Truy cập trang Admin khi chưa đăng nhập,"1. Mở trình duyệt mới (chưa đăng nhập)
+2. Truy cập URL: /admin/dashboard","Tự động chuyển hướng đến trang đăng nhập, hiển thị thông báo ""Vui lòng đăng nhập""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Sinh viên cố truy cập trang Admin,"1. Sinh viên đăng nhập
+2. Cố truy cập URL: /admin/dashboard","Bị từ chối, hiển thị lỗi 403 ""Bạn không có quyền truy cập""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Sinh viên cố truy cập quản lý CLB không phải của mình,"1. Sinh viên đăng nhập (không phải trưởng CLB)
+2. Cố truy cập URL quản lý CLB khác","Bị từ chối, hiển thị lỗi 403 ""Bạn không có quyền quản lý CLB này""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Cấp quyền Trưởng CLB cho người dùng,"1. Admin đăng nhập
+2. Truy cập trang ""Phân quyền""
+3. Chọn một người dùng
+4. Chọn một CLB
+5. Cấp quyền ""Trưởng CLB""
+6. Click nút ""Lưu""","Người dùng có quyền quản lý CLB, hiển thị thông báo ""Cấp quyền thành công""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Thu hồi quyền người dùng,"1. Admin đăng nhập
+2. Truy cập trang ""Phân quyền""
+3. Chọn một người dùng có quyền
+4. Click nút ""Thu hồi quyền""
+5. Xác nhận","Quyền được thu hồi, hiển thị thông báo ""Đã thu hồi quyền""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Chức năng : Quản lý tài nguyên CLB,,,,,,,,
+Tải xuống tài liệu học tập,"1. Sinh viên đăng nhập
+2. Truy cập trang CLB
+3. Xem danh sách tài nguyên
+4. Click nút ""Tải xuống"" trên một tài liệu","File được tải xuống thành công, hiển thị thông báo ""Đang tải xuống""","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Upload tài liệu học tập (Trưởng CLB),"1. Trưởng CLB đăng nhập
+2. Truy cập trang quản lý CLB
+3. Click nút ""Thêm tài liệu""
+4. Chọn file (PDF, DOC, DOCX)
+5. Nhập tên và mô tả
+6. Click nút ""Upload""","Tài liệu được upload thành công, hiển thị trong danh sách tài nguyên","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+Xóa tài liệu học tập (Admin),"1. Admin đăng nhập
+2. Truy cập trang ""Quản lý tài nguyên CLB""
+3. Chọn một tài liệu
+4. Click nút ""Xóa""
+5. Xác nhận xóa","Tài liệu chuyển vào thùng rác, hiển thị thông báo ""Xóa thành công"", có thể khôi phục","Pass",,Đã kiểm tra,Đã hoàn thành,,Cao
+

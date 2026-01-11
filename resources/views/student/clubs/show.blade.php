@@ -82,6 +82,9 @@
                         </small>
                     </div>
                     <div class="d-flex gap-2">
+                        <a href="{{ route('student.club-management.fund-deposit', ['club' => $club->id]) }}" class="btn btn-success btn-sm">
+                            <i class="fas fa-wallet me-1"></i> Nộp quỹ
+                        </a>
                         @if(in_array($clubMember->position ?? '', ['leader', 'vice_president', 'treasurer']))
                             <a href="{{ route('student.club-management.index') }}?club={{ $club->id }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-cog me-1"></i> Quản lý CLB

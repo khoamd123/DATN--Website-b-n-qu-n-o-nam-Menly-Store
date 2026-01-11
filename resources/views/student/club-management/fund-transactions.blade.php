@@ -4,30 +4,46 @@
 @section('page_title', 'Giao dịch quỹ')
 
 @section('content')
-<div class="content-card mb-3 d-flex justify-content-between align-items-center">
-    <div>
+<div class="content-card mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">{{ $club->name }}</h5>
-        <small class="text-muted">Tổng thu: {{ number_format($summary['income'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Tổng chi: {{ number_format($summary['expense'], 0, ',', '.') }} VNĐ &nbsp;&middot;&nbsp; Số dư: {{ number_format($summary['balance'], 0, ',', '.') }} VNĐ</small>
-    </div>
-    <div class="d-flex gap-2">
-        @if(isset($position) && in_array($position, ['leader', 'treasurer']))
-            <a href="{{ route('student.club-management.fund-requests.create') }}" class="btn btn-success btn-sm text-white">
-                <i class="fas fa-plus me-1"></i> Yêu cầu cấp kinh phí
+        <div class="d-flex gap-2">
+            @if(isset($position) && in_array($position, ['leader', 'treasurer']))
+                <a href="{{ route('student.club-management.fund-deposit-requests') }}?club={{ $club->id }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-money-bill-wave me-1"></i> Yêu cầu nộp quỹ
+                </a>
+                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $club->id }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
+                </a>
+                <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled&club={{ $club->id }}" class="btn btn-info btn-sm text-white">
+                    <i class="fas fa-calculator me-1"></i> Xem quyết toán
+                </a>
+            @endif
+            @if(isset($position) && in_array($position, ['leader', 'vice_president', 'treasurer']))
+                <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-primary btn-sm text-white">
+                    <i class="fas fa-plus me-1"></i> Tạo giao dịch
+                </a>
+            @endif
+            <a href="{{ route('student.club-management.index') }}" class="btn btn-secondary btn-sm text-white">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
             </a>
-            <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled" class="btn btn-info btn-sm text-white">
-                <i class="fas fa-calculator me-1"></i> Xem quyết toán
-            </a>
-        @endif
-        @if(isset($position) && in_array($position, ['leader', 'vice_president', 'treasurer']))
-            <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-primary btn-sm text-white">
-                <i class="fas fa-plus me-1"></i> Tạo giao dịch
-            </a>
-        @endif
-        <a href="{{ route('student.club-management.index') }}" class="btn btn-secondary btn-sm text-white">
-            <i class="fas fa-arrow-left me-1"></i> Quay lại
-        </a>
+        </div>
     </div>
+    <div class="fund-summary-stats">
+        <div class="fund-stat-item">
+            <span class="fund-stat-label">Tổng thu:</span>
+            <span class="fund-stat-value text-success">{{ number_format($summary['income'], 0, ',', '.') }} VNĐ</span>
+        </div>
+        <div class="fund-stat-item">
+            <span class="fund-stat-label">Tổng chi:</span>
+            <span class="fund-stat-value text-danger">{{ number_format($summary['expense'], 0, ',', '.') }} VNĐ</span>
+        </div>
+        <div class="fund-stat-item">
+            <span class="fund-stat-label">Số dư:</span>
+            <span class="fund-stat-value text-primary">{{ number_format($summary['balance'], 0, ',', '.') }} VNĐ</span>
+        </div>
     </div>
+</div>
 
 <div class="content-card mb-3">
     <form method="GET" action="{{ route('student.club-management.fund-transactions', ['club' => $club->id]) }}" class="row g-2 align-items-end">
@@ -144,5 +160,63 @@
         <p class="mb-0 text-muted">Chưa có giao dịch phù hợp.</p>
     @endif
 </div>
+
+@push('styles')
+<style>
+    .fund-summary-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+    
+    .fund-stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .fund-stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .fund-stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1.2;
+    }
+    
+    .fund-stat-value.text-success {
+        color: #198754 !important;
+    }
+    
+    .fund-stat-value.text-danger {
+        color: #dc3545 !important;
+    }
+    
+    .fund-stat-value.text-primary {
+        color: #0d6efd !important;
+    }
+    
+    @media (max-width: 768px) {
+        .fund-summary-stats {
+            gap: 1.5rem;
+        }
+        
+        .fund-stat-value {
+            font-size: 1.25rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .fund-summary-stats {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>
+@endpush
 @endsection
 

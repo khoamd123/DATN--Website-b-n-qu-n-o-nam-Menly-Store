@@ -19,6 +19,7 @@ use App\Models\FundRequest;
 use App\Models\Notification;
 use App\Models\NotificationTarget;
 use App\Models\NotificationRead;
+use App\Models\ClubPaymentQr;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -1430,10 +1431,15 @@ class StudentController extends Controller
                 }
             }
             
-            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành hoặc đã bị hủy
+            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành, đang diễn ra hoặc đã bị hủy
             if ($event->status === 'completed') {
                 return redirect()->route('student.events.show', $event->id)
                     ->with('error', 'Không thể chỉnh sửa sự kiện đã hoàn thành.');
+            }
+            
+            if ($event->status === 'ongoing') {
+                return redirect()->route('student.events.show', $event->id)
+                    ->with('error', 'Không thể chỉnh sửa sự kiện đang diễn ra.');
             }
             
             // Lấy CLB của user để hiển thị trong form
@@ -1477,9 +1483,13 @@ class StudentController extends Controller
                 }
             }
             
-            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành
+            // Ngăn chặn chỉnh sửa nếu sự kiện đã hoàn thành hoặc đang diễn ra
             if ($event->status === 'completed') {
                 return back()->with('error', 'Không thể chỉnh sửa sự kiện đã hoàn thành.');
+            }
+            
+            if ($event->status === 'ongoing') {
+                return back()->with('error', 'Không thể chỉnh sửa sự kiện đang diễn ra.');
             }
             
             $request->validate([
@@ -3737,40 +3747,44 @@ class StudentController extends Controller
         if ($tx->status !== 'pending') {
             return redirect()->back()->with('error', 'Giao dịch không ở trạng thái chờ duyệt.');
         }
+        
+        // Duyệt giao dịch
         $tx->status = 'approved';
         $tx->approved_by = $user->id;
         $tx->approved_at = now();
         $tx->save();
         
+        // Cộng tiền vào quỹ nếu là thu nhập (nộp quỹ)
+        if ($tx->type === 'income') {
+            $fund->updateCurrentAmount();
+        }
+        
         // Tạo thông báo cho người tạo giao dịch
         try {
-            $typeText = $tx->type === 'income' ? 'thu' : 'chi';
-            $notificationData = [
-                'sender_id' => $user->id,
-                'title' => "Giao dịch quỹ ({$typeText}) đã được duyệt",
-                'message' => "Giao dịch quỹ \"{$tx->title}\" của bạn đã được duyệt bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " {$club->name}. Số tiền: " . number_format($tx->amount, 0, ',', '.') . " VNĐ.",
-            ];
-            
-            // Thêm các trường mới nếu cột tồn tại
-            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'type')) {
-                $notificationData['type'] = 'fund_transaction';
-            }
-            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_id')) {
-                $notificationData['related_id'] = $tx->id;
-            }
-            if (\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'related_type')) {
-                $notificationData['related_type'] = 'FundTransaction';
-            }
-            
-            $notification = \App\Models\Notification::create($notificationData);
-            
-            if ($notification) {
-                \App\Models\NotificationTarget::create([
-                    'notification_id' => $notification->id,
-                    'target_type' => 'user',
-                    'target_id' => $tx->created_by,
+            if ($tx->type === 'income') {
+                // Thông báo cho người nộp quỹ khi được duyệt
+                $notification = Notification::create([
+                    'title' => 'Yêu cầu thanh toán quỹ đã được duyệt',
+                    'message' => "Yêu cầu nộp quỹ của bạn với số tiền " . number_format($tx->amount, 0, ',', '.') . " VNĐ đã được duyệt bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " của CLB {$club->name}. Số tiền đã được cộng vào quỹ CLB.",
+                    'type' => 'success',
+                    'sender_id' => $user->id,
+                ]);
+            } else {
+                // Thông báo cho giao dịch chi
+                $notification = Notification::create([
+                    'title' => 'Giao dịch quỹ đã được duyệt',
+                    'message' => "Giao dịch quỹ \"{$tx->title}\" của bạn đã được duyệt bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " {$club->name}. Số tiền: " . number_format($tx->amount, 0, ',', '.') . " VNĐ.",
+                    'type' => 'success',
+                    'sender_id' => $user->id,
                 ]);
             }
+            
+            // Gán notification cho người tạo giao dịch
+            NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_id' => $tx->created_by,
+                'target_type' => 'user',
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error creating notification for approved fund transaction: ' . $e->getMessage());
         }
@@ -3817,21 +3831,27 @@ class StudentController extends Controller
         
         // Tạo thông báo cho người tạo giao dịch
         try {
-            $typeText = $tx->type === 'income' ? 'thu' : 'chi';
             $rejectionReason = $request->input('rejection_reason', 'Bị từ chối bởi Trưởng CLB');
-            $notification = \App\Models\Notification::create([
-                'sender_id' => $user->id,
-                'type' => 'fund_transaction',
-                'title' => "Giao dịch quỹ ({$typeText}) đã bị từ chối",
-                'message' => "Giao dịch quỹ \"{$tx->title}\" của bạn đã bị từ chối bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " {$club->name}. Lý do: {$rejectionReason}",
-                'related_id' => $tx->id,
-                'related_type' => 'FundTransaction',
-            ]);
+            if ($tx->type === 'income') {
+                $notification = Notification::create([
+                    'title' => 'Yêu cầu thanh toán quỹ đã bị từ chối',
+                    'message' => "Yêu cầu nộp quỹ của bạn với số tiền " . number_format($tx->amount, 0, ',', '.') . " VNĐ đã bị từ chối bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " của CLB {$club->name}. Lý do: {$rejectionReason}",
+                    'type' => 'error',
+                    'sender_id' => $user->id,
+                ]);
+            } else {
+                $notification = Notification::create([
+                    'title' => 'Giao dịch quỹ đã bị từ chối',
+                    'message' => "Giao dịch quỹ \"{$tx->title}\" của bạn đã bị từ chối bởi " . ($position === 'treasurer' ? 'Thủ quỹ' : 'Trưởng CLB') . " {$club->name}. Lý do: {$rejectionReason}",
+                    'type' => 'error',
+                    'sender_id' => $user->id,
+                ]);
+            }
             
-            \App\Models\NotificationTarget::create([
+            NotificationTarget::create([
                 'notification_id' => $notification->id,
-                'target_type' => 'user',
                 'target_id' => $tx->created_by,
+                'target_type' => 'user',
             ]);
         } catch (\Exception $e) {
             \Log::error('Error creating notification for rejected fund transaction: ' . $e->getMessage());
@@ -3872,6 +3892,532 @@ class StudentController extends Controller
             'club' => $club,
             'tx' => $tx,
         ]);
+    }
+
+    /**
+     * Show fund deposit form (trang nộp quỹ)
+     */
+    public function showFundDeposit(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Kiểm tra club_id
+        $clubId = $request->input('club');
+        if (!$clubId) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Vui lòng chọn CLB để nộp quỹ.');
+        }
+
+        // Kiểm tra user là thành viên của CLB
+        $club = $user->clubs()->where('clubs.id', $clubId)->first();
+        if (!$club) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        // Lấy QR code primary của CLB
+        $paymentQr = ClubPaymentQr::where('club_id', $club->id)
+            ->where('is_primary', true)
+            ->where('is_active', true)
+            ->first();
+
+        // Nếu chưa có QR primary, lấy QR đầu tiên đang active
+        if (!$paymentQr) {
+            $paymentQr = ClubPaymentQr::where('club_id', $club->id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        // Lấy số tiền từ request (nếu có)
+        $amount = $request->input('amount', 50000); // Mặc định 50,000 VNĐ
+
+        // Generate QR code URL nếu có payment QR
+        $qrCodeUrl = null;
+        if ($paymentQr) {
+            $description = "NOP QUY " . strtoupper(str_replace(' ', '', $user->name ?? $user->student_id)) . " " . $club->id;
+            $qrCodeUrl = $paymentQr->generateVietQR($amount, $description);
+        }
+
+        // Lấy quỹ của CLB
+        $fund = Fund::where('club_id', $club->id)->first();
+        
+        // Lấy danh sách bill nộp quỹ của user cho CLB này
+        $status = $request->input('status', 'all'); // all, pending, approved, rejected
+        
+        $billsQuery = FundTransaction::where('type', 'income')
+            ->where('created_by', $user->id)
+            ->with(['fund.club', 'approver']);
+        
+        // Lọc theo fund_id nếu có fund
+        if ($fund) {
+            $billsQuery->where('fund_id', $fund->id);
+        }
+        
+        // Lọc theo status
+        if ($status !== 'all') {
+            $billsQuery->where('status', $status);
+        }
+        
+        // Sắp xếp theo mới nhất
+        $bills = $billsQuery->orderBy('created_at', 'desc')->paginate(10);
+
+        // Thống kê
+        $billStats = [
+            'total' => FundTransaction::where('type', 'income')
+                ->where('created_by', $user->id)
+                ->when($fund, function($q) use ($fund) {
+                    return $q->where('fund_id', $fund->id);
+                })
+                ->count(),
+            'pending' => FundTransaction::where('type', 'income')
+                ->where('created_by', $user->id)
+                ->where('status', 'pending')
+                ->when($fund, function($q) use ($fund) {
+                    return $q->where('fund_id', $fund->id);
+                })
+                ->count(),
+            'approved' => FundTransaction::where('type', 'income')
+                ->where('created_by', $user->id)
+                ->where('status', 'approved')
+                ->when($fund, function($q) use ($fund) {
+                    return $q->where('fund_id', $fund->id);
+                })
+                ->count(),
+            'rejected' => FundTransaction::where('type', 'income')
+                ->where('created_by', $user->id)
+                ->where('status', 'rejected')
+                ->when($fund, function($q) use ($fund) {
+                    return $q->where('fund_id', $fund->id);
+                })
+                ->count(),
+        ];
+
+        return view('student.club-management.fund-deposit', [
+            'user' => $user,
+            'club' => $club,
+            'fund' => $fund,
+            'paymentQr' => $paymentQr,
+            'qrCodeUrl' => $qrCodeUrl,
+            'amount' => $amount,
+            'paymentMethods' => FundTransaction::$paymentMethods,
+            'bills' => $bills,
+            'billStatus' => $status,
+            'billStats' => $billStats,
+        ]);
+    }
+
+    /**
+     * Submit fund deposit (xử lý nộp quỹ)
+     */
+    public function submitFundDeposit(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        // Validate
+        $request->validate([
+            'club_id' => 'required|exists:clubs,id',
+            'amount' => 'required|numeric|min:1000',
+            'payment_method' => 'required|string|in:VietQR,Momo,ZaloPay,BankTransfer,Cash',
+            'transaction_code' => 'nullable|string|max:255',
+            'payer_name' => 'nullable|string|max:255',
+            'payer_phone' => 'nullable|string|max:20',
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        // Kiểm tra user là thành viên của CLB
+        $club = $user->clubs()->where('clubs.id', $request->club_id)->first();
+        if (!$club) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        // Lấy hoặc tạo fund của CLB
+        $fund = Fund::firstOrCreate(
+            ['club_id' => $club->id],
+            [
+                'name' => 'Quỹ ' . $club->name,
+                'current_amount' => 0,
+                'initial_amount' => 0,
+                'status' => 'active',
+                'created_by' => $club->leader_id ?? $user->id,
+            ]
+        );
+
+        // Tạo giao dịch nộp quỹ với status pending (chờ leader/treasurer duyệt)
+        $transaction = new FundTransaction();
+        $transaction->fund_id = $fund->id;
+        $transaction->type = 'income'; // Nộp quỹ là thu nhập
+        $transaction->amount = $request->amount;
+        $transaction->title = 'Nộp quỹ từ ' . ($request->payer_name ?: $user->name);
+        $transaction->description = $request->note;
+        $transaction->category = 'Nộp quỹ từ thành viên';
+        $transaction->payment_method = $request->payment_method;
+        $transaction->transaction_code = $request->transaction_code;
+        $transaction->payer_name = $request->payer_name ?: $user->name;
+        $transaction->payer_phone = $request->payer_phone;
+        $transaction->transaction_date = now();
+        $transaction->status = 'pending'; // Chờ duyệt
+        $transaction->created_by = $user->id;
+        $transaction->save();
+
+        // Gửi thông báo cho Leader và Treasurer
+        $leaders = ClubMember::where('club_id', $club->id)
+            ->whereIn('position', ['leader', 'treasurer'])
+            ->where('status', 'active')
+            ->pluck('user_id')
+            ->unique();
+
+        foreach ($leaders as $leaderId) {
+            // Thông báo cho Leader/Treasurer
+            $notification = Notification::create([
+                'title' => 'Yêu cầu thanh toán quỹ mới',
+                'message' => "{$transaction->payer_name} đã thanh toán quỹ số tiền " . number_format($request->amount, 0, ',', '.') . " VNĐ qua {$request->payment_method} cho CLB {$club->name}. Vui lòng kiểm tra và duyệt tại trang Quản lý quỹ > Yêu cầu nộp quỹ.",
+                'type' => 'info',
+                'sender_id' => $user->id,
+            ]);
+
+            // Gán notification cho leader/treasurer
+            NotificationTarget::create([
+                'notification_id' => $notification->id,
+                'target_id' => $leaderId,
+                'target_type' => 'user',
+            ]);
+        }
+
+        // Gửi thông báo cho Admin
+        $admins = User::where('is_admin', true)->pluck('id');
+        foreach ($admins as $adminId) {
+            $adminNotification = Notification::create([
+                'title' => 'Yêu cầu thanh toán quỹ mới từ CLB ' . $club->name,
+                'message' => "{$transaction->payer_name} từ CLB {$club->name} đã thanh toán quỹ số tiền " . number_format($request->amount, 0, ',', '.') . " VNĐ. Đang chờ xác nhận.",
+                'type' => 'info',
+                'sender_id' => $user->id,
+            ]);
+
+            NotificationTarget::create([
+                'notification_id' => $adminNotification->id,
+                'target_id' => $adminId,
+                'target_type' => 'user',
+            ]);
+        }
+
+        return redirect()->route('student.club-management.fund-deposit', ['club' => $club->id])
+            ->with('success', 'Yêu cầu thanh toán đã được gửi. Vui lòng chờ Thủ quỹ hoặc Trưởng CLB xác nhận.');
+    }
+
+    /**
+     * Hiển thị danh sách yêu cầu nộp quỹ (cho Leader và Treasurer)
+     */
+    public function fundDepositRequests(Request $request)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $clubId = $request->input('club');
+        
+        if (!$clubId) {
+            // Nếu không có club_id, lấy CLB đầu tiên của user
+            $userClub = $user->clubs()->first();
+            if ($userClub) {
+                $clubId = $userClub->id;
+            } else {
+                return redirect()->route('student.club-management.index')
+                    ->with('error', 'Bạn chưa tham gia CLB nào.');
+            }
+        }
+
+        $club = Club::find($clubId);
+        if (!$club || !$user->clubs->contains('id', $club->id)) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        $position = $user->getPositionInClub($club->id);
+        if (!in_array($position, ['leader', 'treasurer'])) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Chỉ Trưởng CLB và Thủ quỹ mới có quyền xem danh sách yêu cầu nộp quỹ.');
+        }
+
+        // Lấy quỹ của CLB
+        $fund = Fund::where('club_id', $club->id)->first();
+        if (!$fund) {
+            $fund = Fund::create([
+                'club_id' => $club->id,
+                'name' => 'Quỹ ' . $club->name,
+                'current_amount' => 0,
+                'initial_amount' => 0,
+                'status' => 'active',
+                'created_by' => $user->id,
+            ]);
+        }
+
+        // Lấy danh sách yêu cầu nộp quỹ (income type, pending status)
+        $status = $request->input('status', 'pending'); // pending, approved, rejected, all
+        
+        $query = FundTransaction::where('fund_id', $fund->id)
+            ->where('type', 'income')
+            ->with(['creator', 'approver']);
+        
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+        
+        $requests = $query->orderBy('created_at', 'desc')->paginate(15);
+
+        // Thống kê
+        $stats = [
+            'pending' => FundTransaction::where('fund_id', $fund->id)
+                ->where('type', 'income')
+                ->where('status', 'pending')
+                ->count(),
+            'approved' => FundTransaction::where('fund_id', $fund->id)
+                ->where('type', 'income')
+                ->where('status', 'approved')
+                ->count(),
+            'rejected' => FundTransaction::where('fund_id', $fund->id)
+                ->where('type', 'income')
+                ->where('status', 'rejected')
+                ->count(),
+            'total_pending_amount' => FundTransaction::where('fund_id', $fund->id)
+                ->where('type', 'income')
+                ->where('status', 'pending')
+                ->sum('amount') ?? 0,
+        ];
+
+        return view('student.club-management.fund-deposit-requests', [
+            'user' => $user,
+            'club' => $club,
+            'fund' => $fund,
+            'requests' => $requests,
+            'status' => $status,
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Xem bill/receipt của giao dịch nộp quỹ
+     */
+    public function fundDepositBill($transactionId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $transaction = FundTransaction::with(['fund.club', 'creator', 'approver'])
+            ->findOrFail($transactionId);
+
+        // Kiểm tra quyền: chỉ creator hoặc leader/treasurer của CLB đó mới xem được
+        $club = $transaction->fund->club;
+        $isCreator = $transaction->created_by == $user->id;
+        $isLeader = false;
+        
+        if ($club && $user->clubs->contains('id', $club->id)) {
+            $position = $user->getPositionInClub($club->id);
+            $isLeader = in_array($position, ['leader', 'treasurer']);
+        }
+
+        if (!$isCreator && !$isLeader) {
+            return redirect()->back()->with('error', 'Bạn không có quyền xem bill này.');
+        }
+
+        return view('student.club-management.fund-deposit-bill', [
+            'transaction' => $transaction,
+            'club' => $club,
+            'user' => $user,
+        ]);
+    }
+
+    /**
+     * Manage payment QR codes (quản lý QR code thanh toán - chỉ Leader)
+     */
+    public function managePaymentQr(Request $request, $clubId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = $user->clubs()->where('clubs.id', $clubId)->first();
+        if (!$club) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        // Chỉ Leader mới có quyền quản lý QR code
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Chỉ Trưởng CLB mới có quyền quản lý QR code thanh toán.');
+        }
+
+        $paymentQrs = ClubPaymentQr::where('club_id', $club->id)
+            ->orderBy('is_primary', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('student.club-management.payment-qr', [
+            'user' => $user,
+            'club' => $club,
+            'paymentQrs' => $paymentQrs,
+        ]);
+    }
+
+    /**
+     * Store payment QR code (Thêm QR code - chỉ Leader)
+     */
+    public function storePaymentQr(Request $request, $clubId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = $user->clubs()->where('clubs.id', $clubId)->first();
+        if (!$club) {
+            return redirect()->back()->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        // Chỉ Leader mới có quyền
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->back()->with('error', 'Chỉ Trưởng CLB mới có quyền thêm QR code.');
+        }
+
+        $request->validate([
+            'account_number' => 'required|string|max:255',
+            'bank_code' => 'nullable|string|max:50',
+            'account_name' => 'nullable|string|max:255',
+            'qr_code_image' => 'required|image|max:2048',
+        ]);
+
+        // Xóa QR code cũ nếu có (chỉ cho phép 1 QR code mỗi CLB)
+        ClubPaymentQr::where('club_id', $club->id)->delete();
+
+        // Upload ảnh QR code
+        $dir = public_path('uploads/qr-codes');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $filename = time() . '_' . $club->id . '_' . $user->id . '.' . $request->file('qr_code_image')->getClientOriginalExtension();
+        $request->file('qr_code_image')->move($dir, $filename);
+        $qrCodeImage = 'uploads/qr-codes/' . $filename;
+
+        // Tạo QR code mới
+        ClubPaymentQr::create([
+            'club_id' => $club->id,
+            'payment_method' => 'VietQR',
+            'account_number' => $request->account_number,
+            'bank_code' => $request->bank_code,
+            'account_name' => $request->account_name,
+            'qr_code_image' => $qrCodeImage,
+            'is_primary' => true,
+            'is_active' => true,
+            'created_by' => $user->id,
+        ]);
+
+        return redirect()->route('student.club-management.payment-qr', ['club' => $club->id])
+            ->with('success', 'QR code thanh toán đã được thêm thành công.');
+    }
+
+    /**
+     * Update payment QR code (Cập nhật QR code - chỉ Leader)
+     */
+    public function updatePaymentQr(Request $request, $clubId, $qrId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = $user->clubs()->where('clubs.id', $clubId)->first();
+        if (!$club) {
+            return redirect()->back()->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->back()->with('error', 'Chỉ Trưởng CLB mới có quyền cập nhật QR code.');
+        }
+
+        $paymentQr = ClubPaymentQr::where('club_id', $club->id)
+            ->where('id', $qrId)
+            ->firstOrFail();
+
+        $request->validate([
+            'account_number' => 'required|string|max:255',
+            'bank_code' => 'nullable|string|max:50',
+            'account_name' => 'nullable|string|max:255',
+            'qr_code_image' => 'nullable|image|max:2048',
+        ]);
+
+        // Upload ảnh QR code mới nếu có
+        if ($request->hasFile('qr_code_image')) {
+            // Xóa ảnh cũ nếu có
+            if ($paymentQr->qr_code_image && file_exists(public_path($paymentQr->qr_code_image))) {
+                unlink(public_path($paymentQr->qr_code_image));
+            }
+
+            $dir = public_path('uploads/qr-codes');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $filename = time() . '_' . $club->id . '_' . $user->id . '.' . $request->file('qr_code_image')->getClientOriginalExtension();
+            $request->file('qr_code_image')->move($dir, $filename);
+            $paymentQr->qr_code_image = 'uploads/qr-codes/' . $filename;
+        }
+
+        // Cập nhật thông tin
+        $paymentQr->account_number = $request->account_number;
+        $paymentQr->bank_code = $request->bank_code;
+        $paymentQr->account_name = $request->account_name;
+        $paymentQr->save();
+
+        return redirect()->route('student.club-management.payment-qr', ['club' => $club->id])
+            ->with('success', 'QR code thanh toán đã được cập nhật thành công.');
+    }
+
+    /**
+     * Delete payment QR code (Xóa QR code - chỉ Leader)
+     */
+    public function deletePaymentQr(Request $request, $clubId, $qrId)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        $club = $user->clubs()->where('clubs.id', $clubId)->first();
+        if (!$club) {
+            return redirect()->back()->with('error', 'Bạn không phải là thành viên của CLB này.');
+        }
+
+        $position = $user->getPositionInClub($club->id);
+        if ($position !== 'leader') {
+            return redirect()->back()->with('error', 'Chỉ Trưởng CLB mới có quyền xóa QR code.');
+        }
+
+        $paymentQr = ClubPaymentQr::where('club_id', $club->id)
+            ->where('id', $qrId)
+            ->firstOrFail();
+
+        // Xóa ảnh nếu có
+        if ($paymentQr->qr_code_image && file_exists(public_path($paymentQr->qr_code_image))) {
+            unlink(public_path($paymentQr->qr_code_image));
+        }
+
+        $paymentQr->delete();
+
+        return redirect()->route('student.club-management.payment-qr', ['club' => $club->id])
+            ->with('success', 'QR code thanh toán đã được xóa thành công.');
     }
 
     /**

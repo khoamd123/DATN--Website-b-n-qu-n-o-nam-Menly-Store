@@ -122,7 +122,8 @@ class ClubManagementController extends Controller
 
     public function approveFundTransaction(Request $request, $transaction)
     {
-        return $this->oldController->approveFundTransaction($request, $transaction);
+        // approveFundTransaction trong StudentController nhận $transactionId
+        return $this->oldController->approveFundTransaction($transaction);
     }
 
     public function rejectFundTransaction(Request $request, $transaction)
@@ -163,6 +164,50 @@ class ClubManagementController extends Controller
     public function fundRequestResubmit(Request $request, $id)
     {
         return $this->oldController->fundRequestResubmit($request, $id);
+    }
+
+    // Fund Deposit methods
+    public function showFundDeposit(Request $request)
+    {
+        return $this->oldController->showFundDeposit($request);
+    }
+
+    public function submitFundDeposit(Request $request)
+    {
+        return $this->oldController->submitFundDeposit($request);
+    }
+
+    // Payment QR management methods (for leaders)
+    public function managePaymentQr(Request $request, $club)
+    {
+        return $this->oldController->managePaymentQr($request, $club);
+    }
+
+    public function storePaymentQr(Request $request, $club)
+    {
+        return $this->oldController->storePaymentQr($request, $club);
+    }
+
+    public function updatePaymentQr(Request $request, $club, $qr)
+    {
+        return $this->oldController->updatePaymentQr($request, $club, $qr);
+    }
+
+    public function deletePaymentQr(Request $request, $club, $qr)
+    {
+        return $this->oldController->deletePaymentQr($request, $club, $qr);
+    }
+
+    // Fund Deposit Requests (Danh sách yêu cầu nộp quỹ - cho Leader và Treasurer)
+    public function fundDepositRequests(Request $request)
+    {
+        return $this->oldController->fundDepositRequests($request);
+    }
+
+    // Fund Deposit Bill (Xem bill chuyển khoản)
+    public function fundDepositBill($transaction)
+    {
+        return $this->oldController->fundDepositBill($transaction);
     }
 }
 

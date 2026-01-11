@@ -80,8 +80,15 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
     // Contact
     Route::get('/contact', [DashboardController::class, 'contact'])->name('contact.index');
     
+    // Fund Deposit (nộp quỹ - tất cả thành viên)
+    Route::get('/club-management/fund-deposit', [ClubManagementController::class, 'showFundDeposit'])->name('club-management.fund-deposit');
+    Route::post('/club-management/fund-deposit/submit', [ClubManagementController::class, 'submitFundDeposit'])->name('club-management.fund-deposit.submit');
+    
+    // Fund Deposit Bill (xem bill chuyển khoản)
+    Route::get('/club-management/fund-deposit/bill/{transaction}', [ClubManagementController::class, 'fundDepositBill'])->name('club-management.fund-deposit.bill');
+    
     // Club Management (for club leaders)
-    Route::prefix('club-management')->name('club-management.')->middleware('club_role:leader,vice_president,treasurer')->group(function () {
+    Route::prefix('club-management')->name('club-management.')->group(function () {
         Route::get('/', [ClubManagementController::class, 'index'])->name('index');
         Route::get('/reports', [ClubManagementController::class, 'reports'])->name('reports');
         
@@ -118,6 +125,9 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
         Route::post('/fund-transactions/{transaction}/approve', [ClubManagementController::class, 'approveFundTransaction'])->name('fund-transactions.approve');
         Route::post('/fund-transactions/{transaction}/reject', [ClubManagementController::class, 'rejectFundTransaction'])->name('fund-transactions.reject');
         
+        // Fund Deposit Requests (Yêu cầu nộp quỹ - cho Leader và Treasurer)
+        Route::get('/fund-deposit-requests', [ClubManagementController::class, 'fundDepositRequests'])->name('fund-deposit-requests');
+        
         // Fund Requests
         Route::get('/fund-requests', [ClubManagementController::class, 'fundRequests'])->name('fund-requests');
         Route::get('/fund-requests/create', [ClubManagementController::class, 'fundRequestCreate'])->name('fund-requests.create');
@@ -126,6 +136,12 @@ Route::prefix('student')->name('student.')->middleware([\App\Http\Middleware\Sim
         Route::get('/fund-requests/{fundRequest}/edit', [ClubManagementController::class, 'fundRequestEdit'])->name('fund-requests.edit');
         Route::put('/fund-requests/{fundRequest}', [ClubManagementController::class, 'fundRequestUpdate'])->name('fund-requests.update');
         Route::post('/fund-requests/{fundRequest}/resubmit', [ClubManagementController::class, 'fundRequestResubmit'])->name('fund-requests.resubmit');
+        
+        // Payment QR Management (quản lý QR code thanh toán - chỉ Leader, kiểm tra quyền trong controller)
+        Route::get('/{club}/payment-qr', [ClubManagementController::class, 'managePaymentQr'])->name('payment-qr');
+        Route::post('/{club}/payment-qr', [ClubManagementController::class, 'storePaymentQr'])->name('payment-qr.store');
+        Route::put('/{club}/payment-qr/{qr}', [ClubManagementController::class, 'updatePaymentQr'])->name('payment-qr.update');
+        Route::delete('/{club}/payment-qr/{qr}', [ClubManagementController::class, 'deletePaymentQr'])->name('payment-qr.delete');
     });
 });
 

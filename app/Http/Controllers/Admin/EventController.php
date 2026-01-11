@@ -52,12 +52,22 @@ class EventController extends Controller
 
     public function approve(Request $request, $event)
     {
-        return $this->oldController->eventsApprove($request, $event);
+        // Extract ID from event (could be model or ID)
+        $eventId = is_object($event) ? $event->id : $event;
+        
+        // Validate ID is numeric
+        if (!is_numeric($eventId)) {
+            return redirect()->back()->with('error', 'ID sự kiện không hợp lệ.');
+        }
+        
+        return $this->oldController->eventsApprove($eventId);
     }
 
     public function cancel(Request $request, $event)
     {
-        return $this->oldController->eventsCancel($request, $event);
+        // Extract ID from event (could be model or ID)
+        $eventId = is_object($event) ? $event->id : $event;
+        return $this->oldController->eventsCancel($request, $eventId);
     }
 }
 

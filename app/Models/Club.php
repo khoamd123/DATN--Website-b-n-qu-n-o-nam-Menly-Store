@@ -95,4 +95,28 @@ class Club extends Model
     {
         return $this->hasMany(ClubJoinRequest::class);
     }
+
+    /**
+     * Get the fund of the club
+     */
+    public function fund()
+    {
+        return $this->hasOne(Fund::class);
+    }
+
+    /**
+     * Get payment QR codes of the club
+     */
+    public function paymentQrs()
+    {
+        return $this->hasMany(ClubPaymentQr::class);
+    }
+
+    /**
+     * Get primary payment QR code of the club
+     */
+    public function primaryPaymentQr()
+    {
+        return $this->hasOne(ClubPaymentQr::class)->where('is_primary', true)->where('is_active', true);
+    }
 }
