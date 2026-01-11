@@ -22,7 +22,7 @@
         .main-header {
             background: #14b8a6;
             color: white;
-            padding: 1rem 0;
+            padding: 0.85rem 0;
             box-shadow: 0 2px 4px rgba(20, 184, 166, 0.1);
             position: sticky;
             top: 0;
@@ -42,6 +42,14 @@
             font-size: 18px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             transition: all 0.2s ease;
+            overflow: hidden;
+            object-fit: cover;
+        }
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .user-avatar:hover {
@@ -120,10 +128,11 @@
         .nav-link {
             color: #6b7280;
             font-weight: 500;
-            padding: 0.75rem 1.5rem;
+            padding: 0.45rem 1rem;
             border-radius: 8px;
             transition: all 0.2s ease;
             text-decoration: none;
+            font-size: 0.95rem;
         }
         
         /* .nav-link:hover {
@@ -353,25 +362,93 @@
                 position: static;
             }
         }
+
+        /* Header search tweak */
+        .header-search .input-group {
+            max-width: 260px;
+            margin: 0 auto;
+        }
+        .header-search .form-control {
+            padding: 0.5rem 0.75rem;
+        }
+        /* Đồng bộ chiều cao ô tìm kiếm với nút bên cạnh */
+        .header-search .form-control,
+        .header-search .btn {
+            height: 38px;
+        }
+        .header-search .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
     
     @stack('styles')
 </head>
 <body>
     <!-- Header với menu bên trong -->
-    <header class="main-header" style="padding: 1rem 0;">
+    <header class="main-header">
         <div class="container">
-            <div class="row align-items-center mb-3">
-                <div class="col-md-3">
-                    <h4 class="mb-0 text-white">
+            <div class="row align-items-center g-3 flex-nowrap" style="flex-wrap: nowrap;">
+                <div class="col-auto flex-shrink-0">
+                    <a href="{{ route('home') }}" class="text-white text-decoration-none d-flex align-items-center" style="font-size: 1.9rem; margin-left: -30px;">
                         <i class="fas fa-graduation-cap me-2"></i> UniClubs
-                    </h4>
+                    </a>
                 </div>
-                <div class="col-md-5">
+
+                <!-- Navigation moved up to same row as search -->
+                <div class="col-auto flex-shrink-0">
+                    <ul class="nav align-items-center" style="flex-wrap: nowrap; gap: 0.5rem;">
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}" style="color: white !important;">
+                                <i class="fas fa-home me-2"></i> Trang chủ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('student.clubs*') ? 'active' : '' }}" href="{{ route('student.clubs.index') }}" style="color: white !important;">
+                                <i class="fas fa-users me-2"></i> Câu lạc bộ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('student.events*') ? 'active' : '' }}" href="{{ route('student.events.index') }}" style="color: white !important;">
+                                <i class="fas fa-calendar-alt me-2"></i> Sự kiện
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}" style="color: white !important;">
+                                <i class="fas fa-newspaper me-2"></i> Bài viết
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('student.contact*') ? 'active' : '' }}" href="{{ route('student.contact.index') }}" style="color: white !important;">
+                                <i class="fas fa-phone me-2"></i> Liên hệ
+                            </a>
+                        </li>
+                        @php
+                            $hasManagementRole = false;
+                            $currentUser = isset($user) ? $user : (session('user_id') ? \App\Models\User::find(session('user_id')) : null);
+                            if ($currentUser) {
+                                $hasManagementRole = \App\Models\ClubMember::where('user_id', $currentUser->id)
+                                    ->whereIn('status', ['approved', 'active'])
+                                    ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
+                                    ->exists();
+                            }
+                        @endphp
+                        @if($hasManagementRole)
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ request()->routeIs('student.club-management*') ? 'active' : '' }}" href="{{ route('student.club-management.index') }}" style="color: white !important;">
+                                <i class="fas fa-crown me-2"></i> Quản lý CLB
+                            </a>
+                        </li>
+                        @endif
+                    </ul>
+                </div>
+
+                <div class="col-auto flex-grow-1">
                     @php
                         $currentRoute = request()->route()->getName();
                         $searchRoute = 'student.posts';
-                        $searchPlaceholder = 'Tìm kiếm bài viết, sự kiện, câu lạc bộ...';
+                        $searchPlaceholder = 'Tìm kiếm...';
                         
                         if (str_contains($currentRoute, 'club-management')) {
                             // Trang quản lý CLB - tìm kiếm trong chính trang đó
@@ -388,10 +465,11 @@
                             $searchPlaceholder = 'Tìm kiếm bài viết...';
                         } elseif (str_contains($currentRoute, 'home')) {
                             $searchRoute = 'home';
-                            $searchPlaceholder = 'Tìm kiếm câu lạc bộ, sự kiện, bài viết...';
+                            $searchPlaceholder = 'Tìm kiếm...';
                         }
                     @endphp
-                    <form method="GET" action="{{ route($searchRoute) }}" class="d-flex">
+                    <div class="d-flex align-items-center gap-3">
+                        <form method="GET" action="{{ route($searchRoute) }}" class="d-flex header-search w-100">
                         <div class="input-group">
                             <input type="text" 
                                    name="search" 
@@ -404,9 +482,7 @@
                             </button>
                         </div>
                     </form>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="d-flex align-items-center justify-content-end">
+                        <div class="d-flex align-items-center justify-content-end flex-shrink-0">
                         @if(isset($user) && $user)
                         <!-- Notification Bell -->
                         <a href="{{ route('student.notifications.index') }}" class="notification-icon me-3 position-relative text-white text-decoration-none">
@@ -440,7 +516,17 @@
                                     data-bs-toggle="dropdown" 
                                     aria-expanded="false"
                                     style="border: none; background: none;">
-                                <div class="user-avatar">{{ substr($user->name ?? 'U', 0, 1) }}</div>
+                                @php
+                                    $userAvatar = optional($user)->avatar;
+                                    $defaultAvatar = '/images/avatar/avatar.png';
+                                    $hasCustomAvatar = $userAvatar && $userAvatar !== $defaultAvatar && $userAvatar !== ltrim($defaultAvatar, '/') && $userAvatar !== 'images/avatar/avatar.png';
+                                    $avatarUrl = $hasCustomAvatar ? (optional($user)->avatar_url ?? asset('images/avatar/avatar.png')) : null;
+                                @endphp
+                                @if($hasCustomAvatar && $avatarUrl)
+                                    <img src="{{ $avatarUrl }}" alt="{{ $user->name ?? 'User' }}" class="user-avatar">
+                                @else
+                                    <div class="user-avatar">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</div>
+                                @endif
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
@@ -488,59 +574,6 @@
                         </div>
                         @endif
                     </div>
-                </div>
-            </div>
-            {{-- Navigation menu trong header --}}
-            <div class="row">
-                <div class="col-12">
-                    <ul class="nav justify-content-center" style="flex-wrap: wrap;">
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}" style="color: white !important;">
-                        <i class="fas fa-home me-2"></i> Trang chủ
-                    </a>
-                </li>
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('student.clubs*') ? 'active' : '' }}" href="{{ route('student.clubs.index') }}" style="color: white !important;">
-                        <i class="fas fa-users me-2"></i> Câu lạc bộ
-                    </a>
-                </li>
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('student.events*') ? 'active' : '' }}" href="{{ route('student.events.index') }}" style="color: white !important;">
-                        <i class="fas fa-calendar-alt me-2"></i> Sự kiện
-                    </a>
-                </li>
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('student.posts*') ? 'active' : '' }}" href="{{ route('student.posts') }}" style="color: white !important;">
-                        <i class="fas fa-newspaper me-2"></i> Bài viết
-                    </a>
-                </li>
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('student.contact*') ? 'active' : '' }}" href="{{ route('student.contact.index') }}" style="color: white !important;">
-                        <i class="fas fa-phone me-2"></i> Liên hệ
-                    </a>
-                </li>
-                @php
-                    $hasManagementRole = false;
-                            // Lấy user từ session hoặc từ biến $user nếu có
-                            $currentUser = isset($user) ? $user : (session('user_id') ? \App\Models\User::find(session('user_id')) : null);
-                            
-                            if ($currentUser) {
-                                // Chỉ hiển thị menu "Quản lý CLB" nếu user có role quản lý (leader, vice_president, treasurer)
-                                // Không hiển thị nếu user chỉ là member
-                                $hasManagementRole = \App\Models\ClubMember::where('user_id', $currentUser->id)
-                            ->whereIn('status', ['approved', 'active'])
-                                    ->whereIn('position', ['leader', 'vice_president', 'treasurer'])
-                            ->exists();
-                    }
-                @endphp
-                @if($hasManagementRole)
-                <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('student.club-management*') ? 'active' : '' }}" href="{{ route('student.club-management.index') }}" style="color: white !important;">
-                        <i class="fas fa-crown me-2"></i> Quản lý CLB
-                    </a>
-                </li>
-                @endif
-            </ul>
         </div>
             </div>
         </div>

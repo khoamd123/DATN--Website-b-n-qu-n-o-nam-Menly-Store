@@ -120,12 +120,12 @@
         <div class="content-card" id="search-results-section">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0" id="search-results-title">
-                    @if(isset($search) && !empty($search))
-                        <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
-                    @else
-                        <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
-                    @endif
-                </h4>
+                @if(isset($search) && !empty($search))
+                    <i class="fas fa-search text-primary me-2"></i> Kết quả tìm kiếm
+                @else
+                    <i class="fas fa-compass text-info me-2"></i> Khám phá CLB khác
+                @endif
+            </h4>
                 @if(isset($otherClubs) && $otherClubs->count() > 0)
                     <span class="badge bg-primary">
                         <i class="fas fa-users me-1"></i> {{ $otherClubs->count() }} CLB
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 resultsContainer.innerHTML = `<div class="text-center py-5 text-danger">Đã có lỗi xảy ra khi tìm kiếm. Vui lòng tải lại trang và thử lại.</div>`;
             });
     }
-    
+
     function updateClubCount() {
         // Đếm số lượng CLB trong container
         const clubCards = resultsContainer.querySelectorAll('.club-card');

@@ -42,12 +42,23 @@
         <div class="content-card">
             <div class="table-responsive">
                 @php
+                    // Nhãn tiếng Việt cho quyền
                     $permLabels = [
-                        'dang_thong_bao' => 'Đăng thông báo',
-                        'quan_ly_clb' => 'Quản lý CLB',
-                        'quan_ly_thanh_vien' => 'Quản lý thành viên',
-                        'tao_su_kien' => 'Tạo sự kiện',
-                        'xem_bao_cao' => 'Xem báo cáo',
+                        // Các key tiếng Việt hiện có
+                        'dang_thong_bao'      => 'Tạo bài viết',
+                        'quan_ly_clb'         => 'Quản lý CLB',
+                        'quan_ly_thanh_vien'  => 'Quản lý thành viên',
+                        'tao_su_kien'         => 'Tạo sự kiện',
+                        'xem_bao_cao'         => 'Xem báo cáo',
+                        // Bổ sung key tiếng Anh tương ứng
+                        'manage_club'         => 'Quản lý CLB',
+                        'manage_members'      => 'Quản lý thành viên',
+                        'create_event'        => 'Tạo sự kiện',
+                        'post_announcement'   => 'Tạo bài viết',
+                        'evaluate_member'     => 'Đánh giá thành viên',
+                        'manage_department'   => 'Quản lý phòng ban',
+                        'manage_documents'    => 'Quản lý tài liệu',
+                        'view_reports'        => 'Xem báo cáo',
                     ];
                     $positionLabels = [
                         'leader' => 'Trưởng CLB',
@@ -60,6 +71,7 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
+                            
                             <th style="width: 30%;">Thành viên</th>
                             <th style="width: 15%;">Vai trò</th>
                             <th style="width: 35%;">Quyền hiện có</th>
@@ -104,40 +116,81 @@
                                             </span>
                                         @endforeach
                                         @if(count($member->permission_names) > 3)
-                                            <span class="badge bg-light text-dark" style="font-size: 0.75rem;" 
-                                                  data-bs-toggle="tooltip" 
-                                                  data-bs-placement="top" 
-                                                  title="{{ implode(', ', array_map(function($p) use ($permLabels) { return $permLabels[$p] ?? $p; }, $member->permission_names)) }}">
+                                            <span class="badge bg-light text-dark" style="font-size: 0.75rem; cursor: pointer;"
+                                                  data-bs-toggle="modal"
+                                                  data-bs-target="#permissionsModal_{{ $member->id }}">
                                                 +{{ count($member->permission_names) - 3 }}
                                             </span>
                                         @endif
+                                        <button type="button"
+                                                class="btn btn-link btn-sm p-0 ms-2"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#permissionsModal_{{ $member->id }}">
+                                            Xem quyền
+                                        </button>
+
                                     @else
                                         <span class="text-muted small">Chưa có quyền</span>
                                     @endif
                                 </div>
                             </td>
                             <td class="text-end">
+                                @if(empty($canManageMembers) || !$canManageMembers)
+                                    <span class="text-muted small">Chỉ ban quản lý mới chỉnh sửa.</span>
+                                @else
                                 <div class="d-flex flex-column gap-1">
                                     @if($member->user_id === $user->id || in_array($member->position, ['leader','owner']))
                                         <span class="text-muted small">Không thể chỉnh sửa</span>
                                     @else
-                                        <button type="button" class="btn btn-warning btn-sm text-white w-100" 
+                                        <button type="button" class="btn btn-warning btn-sm text-white w-100 action-btn-equal" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#editMemberModal_{{ $member->id }}">
                                             <i class="fas fa-edit me-1"></i> Chỉnh sửa
                                         </button>
-                                        <button type="button" class="btn btn-danger btn-sm text-white w-100" 
+                                        <button type="button" class="btn btn-danger btn-sm text-white w-100 action-btn-equal" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#deleteMemberModal_{{ $member->id }}">
                                             <i class="fas fa-user-times me-1"></i> Xóa
                                         </button>
                                     @endif
                                 </div>
+                                @endif
                             </td>
                         </tr>
 
+                        <!-- Permissions Modal -->
+                        <div class="modal fade" id="permissionsModal_{{ $member->id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-shield-alt me-2"></i>Quyền của {{ $member->user->name }}
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        @if(!empty($member->permission_names))
+                                            <ul class="list-group">
+                                                @foreach($member->permission_names as $permissionName)
+                                                    <li class="list-group-item d-flex align-items-center">
+                                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                                        <span>{{ $permLabels[$permissionName] ?? \Illuminate\Support\Str::headline(str_replace('_',' ',$permissionName)) }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <p class="text-muted mb-0">Thành viên này chưa được gán quyền.</p>
+                                        @endif
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Edit Member Modal -->
-                        @if($member->user_id !== $user->id && !in_array($member->position, ['leader','owner']))
+                        @if(!empty($canManageMembers) && $canManageMembers && $member->user_id !== $user->id && !in_array($member->position, ['leader','owner']))
                         <div class="modal fade" id="editMemberModal_{{ $member->id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
@@ -165,10 +218,10 @@
                                             </div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">
+                                        <button type="button" class="btn btn-secondary text-white action-btn-equal" data-bs-dismiss="modal">
                                                 <i class="fas fa-times me-1"></i> Hủy
                                             </button>
-                                            <button type="submit" class="btn btn-primary text-white">
+                                        <button type="submit" class="btn btn-primary text-white action-btn-equal">
                                                 <i class="fas fa-save me-1"></i> Lưu thay đổi
                                             </button>
                                         </div>
@@ -179,7 +232,7 @@
                         @endif
 
                         <!-- Delete Member Modal -->
-                        @if($member->user_id !== $user->id && !in_array($member->position, ['leader','owner']))
+                        @if(!empty($canManageMembers) && $canManageMembers && $member->user_id !== $user->id && !in_array($member->position, ['leader','owner']))
                         <div class="modal fade" id="deleteMemberModal_{{ $member->id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -200,8 +253,8 @@
                                             </div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Huỷ</button>
-                                            <button type="submit" class="btn btn-danger text-white">
+                                        <button type="button" class="btn btn-secondary text-white action-btn-equal" data-bs-dismiss="modal">Huỷ</button>
+                                        <button type="submit" class="btn btn-danger text-white action-btn-equal">
                                                 <i class="fas fa-trash me-1"></i> Xóa thành viên
                                             </button>
                                         </div>
@@ -224,7 +277,6 @@
         </div>
     </div>
 </div>
-
 @push('scripts')
 <script>
     // Initialize tooltips
@@ -236,6 +288,19 @@
         
     });
 </script>
+@endpush
+
+@push('styles')
+<style>
+    .action-btn-equal {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
 @endpush
 @endsection
 

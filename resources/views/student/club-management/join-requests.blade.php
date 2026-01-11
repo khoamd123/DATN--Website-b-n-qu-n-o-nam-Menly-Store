@@ -19,7 +19,6 @@
                 <tr>
                     <th>Thành viên</th>
                     <th>Email</th>
-                    <th>Lời nhắn</th>
                     <th>Trạng thái</th>
                     <th>Thời gian</th>
                     <th class="text-end">Hành động</th>
@@ -30,10 +29,10 @@
                 <tr>
                     <td>{{ optional($req->user)->name ?? 'N/A' }}</td>
                     <td class="text-muted">{{ optional($req->user)->email }}</td>
-                    <td class="text-muted" style="max-width: 360px">{{ $req->message }}</td>
                     <td>
                         @php $map = ['pending'=>'warning','approved'=>'success','rejected'=>'secondary']; @endphp
-                        <span class="badge bg-{{ $map[$req->status] ?? 'light' }}">{{ $req->status }}</span>
+                        @php $statusLabel = ['pending' => 'Đang chờ', 'approved' => 'Đã duyệt', 'rejected' => 'Đã từ chối']; @endphp
+                        <span class="badge bg-{{ $map[$req->status] ?? 'light' }}">{{ $statusLabel[$req->status] ?? $req->status }}</span>
                     </td>
                     <td><small class="text-muted">{{ $req->created_at?->format('d/m/Y H:i') }}</small></td>
                     <td class="text-end">

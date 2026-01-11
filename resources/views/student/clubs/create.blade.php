@@ -47,16 +47,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-
-                        <!-- Giới thiệu chi tiết -->
-                        <div class="mb-3">
-                            <label for="introduction" class="form-label fw-bold">Giới thiệu chi tiết</label>
-                            <textarea class="form-control @error('introduction') is-invalid @enderror" id="introduction" name="introduction" rows="10">{{ old('introduction') }}</textarea>
-                            <small class="form-text text-muted">Bài viết chi tiết giới thiệu về mục đích, hoạt động, cách thức tham gia...</small>
-                            @error('introduction')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
                     </div>
                     <div class="col-md-4">
                         <!-- Lĩnh vực -->
@@ -170,7 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("student.posts.upload-image") }}', '{{ csrf_token() }}');
     
     let descriptionEditor = null;
-    let introductionEditor = null;
     
     // Khởi tạo CKEditor cho mô tả ngắn
     const descriptionTextarea = document.querySelector('#description');
@@ -204,47 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error initializing CKEditor for description:', error);
-            });
-    }
-    
-    // Khởi tạo CKEditor cho giới thiệu chi tiết
-    const introductionTextarea = document.querySelector('#introduction');
-    if (introductionTextarea) {
-        ClassicEditor
-            .create(introductionTextarea, {
-                extraPlugins: [SimpleUploadAdapterPlugin],
-                toolbar: {
-                    items: [
-                        'heading', '|',
-                        'bold', 'italic', 'link', '|',
-                        'bulletedList', 'numberedList', '|',
-                        'blockQuote', 'insertTable', '|',
-                        'uploadImage', '|',
-                        'undo', 'redo'
-                    ]
-                },
-                image: {
-                    toolbar: [
-                        'imageTextAlternative',
-                        'toggleImageCaption',
-                        'imageStyle:inline',
-                        'imageStyle:block',
-                        'imageStyle:side'
-                    ]
-                },
-                language: 'vi'
-            })
-            .then(editor => {
-                introductionEditor = editor;
-                // Xóa required attribute nếu có
-                const textarea = document.getElementById('introduction');
-                if (textarea) {
-                    textarea.removeAttribute('required');
-                }
-                console.log('CKEditor initialized for introduction');
-            })
-            .catch(error => {
-                console.error('Error initializing CKEditor for introduction:', error);
             });
     }
     
@@ -296,16 +244,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.preventDefault();
                     alert('Vui lòng nhập mô tả ngắn cho CLB.');
                     return false;
-                }
-            }
-            
-            // Sync introduction editor
-            if (introductionEditor) {
-                try {
-                introductionEditor.updateSourceElement();
-                    console.log('Introduction synced');
-                } catch (err) {
-                    console.error('Error syncing introduction editor:', err);
                 }
             }
             

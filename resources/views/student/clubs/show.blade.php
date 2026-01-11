@@ -37,14 +37,21 @@
                         <span class="club-logo-fallback-large">{{ substr($club->name, 0, 2) }}</span>
                     @endif
                 </div>
-                <div>
-                    <h2 class="mb-1">{{ $club->name }}</h2>
-                    <p class="text-muted mb-2">
-                        <i class="fas fa-users me-1"></i> {{ $membersCount ?? $club->members_count ?? 0 }} thành viên
-                        <span class="mx-2">|</span>
-                        <i class="fas fa-tag me-1"></i> {{ $club->field->name ?? 'Chưa phân loại' }}
-                    </p>
-                    <p class="mb-0">{!! nl2br(e(strip_tags(html_entity_decode($club->description ?? '', ENT_QUOTES, 'UTF-8')))) !!}</p>
+                <div class="flex-grow-1">
+                    <h2 class="mb-2">{{ $club->name }}</h2>
+                    <div class="d-flex flex-wrap align-items-center gap-3 text-muted mb-3">
+                        <span><i class="fas fa-users me-1"></i> {{ $membersCount ?? $club->members_count ?? 0 }} thành viên</span>
+                        <span class="text-muted">|</span>
+                        <span><i class="fas fa-tag me-1"></i> {{ $club->field->name ?? 'Chưa phân loại' }}</span>
+                    </div>
+                    @php $desc = $club->description; @endphp
+                    @if(!empty($desc))
+                        <div class="mb-0 text-muted">
+                            {!! html_entity_decode($desc, ENT_QUOTES, 'UTF-8') !!}
+                        </div>
+                    @else
+                        <p class="mb-0 text-muted">Chưa có mô tả.</p>
+                    @endif
                 </div>
             </div>
             <hr>
@@ -55,19 +62,23 @@
                             <i class="fas fa-check-circle me-1"></i> Đang hoạt động
                         </span>
                         @if($clubMember->position)
+                            @php
+                                $roleMap = [
+                                    'leader' => 'Trưởng CLB',
+                                    'vice_president' => 'Phó CLB',
+                                    'treasurer' => 'Thủ quỹ',
+                                    'member' => 'Thành viên',
+                                    'owner' => 'Chủ nhiệm',
+                                ];
+                            @endphp
                             <span class="badge bg-info">
                                 <i class="fas fa-user-tag me-1"></i> 
-                                @if($clubMember->position == 'leader') Trưởng CLB
-                                @elseif($clubMember->position == 'vice_president') Phó CLB
-                                @elseif($clubMember->position == 'treasurer') Thủ quỹ
-                                @elseif($clubMember->position == 'member') Thành viên
-                                @else {{ ucfirst($clubMember->position) }}
-                                @endif
+                                {{ $roleMap[$clubMember->position] ?? $clubMember->position }}
                             </span>
                         @endif
                         <small class="text-muted">
                             <i class="far fa-calendar me-1"></i> 
-                            Tham gia từ: {{ $clubMember->joined_at ? (\Carbon\Carbon::parse($clubMember->joined_at)->format('d/m/Y')) : 'N/A' }}
+                            Ngày thành lập: {{ $club->created_at ? $club->created_at->format('d/m/Y') : 'Chưa cập nhật' }}
                         </small>
                     </div>
                     <div class="d-flex gap-2">
@@ -168,31 +179,22 @@
         <div class="tab-content" id="clubDetailTabsContent">
             <!-- Overview Tab -->
             <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-                <!-- Giới thiệu CLB -->
-                <div class="content-card mb-4">
-                    <h5 class="card-title mb-3">
-                        <i class="fas fa-info-circle text-teal me-2"></i> Giới thiệu về CLB
-                    </h5>
-                    <div class="introduction-content">
-                        @if($club->introduction)
-                            {!! nl2br(e($club->introduction)) !!}
-                        @else
-                            <p class="text-muted">Chưa có bài viết giới thiệu chi tiết.</p>
-                        @endif
-                    </div>
-                </div>
+                <!-- Giới thiệu CLB - ẩn theo yêu cầu -->
 
                 @if($isMember)
                 <!-- Thống kê nhanh -->
                 <div class="row mb-4">
                     <div class="col-md-4 mb-3">
-                        <div class="content-card text-center stat-card">
-                            <div class="stat-icon-large bg-primary mb-2">
-                                <i class="fas fa-users"></i>
+                        <a href="{{ route('student.club-management.members', ['club' => $club->id]) }}"
+                           class="text-decoration-none text-dark d-block">
+                            <div class="content-card text-center stat-card h-100">
+                                <div class="stat-icon-large bg-primary mb-2">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <h4 class="mb-1">{{ $membersCount ?? 0 }}</h4>
+                                <p class="text-muted mb-0">Thành viên</p>
                             </div>
-                            <h4 class="mb-1">{{ $membersCount ?? 0 }}</h4>
-                            <p class="text-muted mb-0">Thành viên</p>
-                        </div>
+                        </a>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="content-card text-center stat-card">
@@ -373,7 +375,7 @@
                                         </p>
                                         <div class="d-flex align-items-center gap-3">
                                             <small class="text-muted">
-                                                <i class="fas fa-user me-1"></i> {{ $post->user->name ?? 'N/A' }}
+                                                <i class="fas fa-user me-1"></i> {{ $post->user->name ?? 'Chưa xác định' }}
                                             </small>
                                             <small class="text-muted">
                                                 <i class="far fa-clock me-1"></i> {{ $post->created_at->diffForHumans() }}

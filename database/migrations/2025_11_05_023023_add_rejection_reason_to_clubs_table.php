@@ -14,7 +14,9 @@ class AddRejectionReasonToClubsTable extends Migration
     public function up()
     {
         Schema::table('clubs', function (Blueprint $table) {
-            $table->text('rejection_reason')->nullable()->after('status');
+            if (!Schema::hasColumn('clubs', 'rejection_reason')) {
+                $table->text('rejection_reason')->nullable()->after('status');
+            }
         });
     }
 

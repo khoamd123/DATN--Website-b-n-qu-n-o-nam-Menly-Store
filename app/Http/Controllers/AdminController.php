@@ -1450,6 +1450,51 @@ class AdminController extends Controller
         }
         
         $club->update($updateData);
+
+        // Thông báo cho Trưởng CLB khi duyệt
+        if (($updateData['status'] ?? null) === 'active') {
+            try {
+                // Tìm leader: ưu tiên leader_id, nếu chưa có lấy member position leader, nếu vẫn chưa có dùng owner_id
+                $leaderId = $club->leader_id;
+                if (!$leaderId) {
+                    $leaderMember = ClubMember::where('club_id', $club->id)
+                        ->whereIn('status', ['approved', 'active'])
+                        ->where('position', 'leader')
+                        ->first();
+                    if ($leaderMember) {
+                        $leaderId = $leaderMember->user_id;
+                    }
+                }
+                if (!$leaderId && $club->owner_id) {
+                    $leaderId = $club->owner_id;
+                }
+
+                if ($leaderId) {
+                    $notification = Notification::create([
+                        'sender_id'    => session('user_id') ?? null,
+                        'type'         => 'club_status',
+                        'title'        => 'CLB đã được duyệt',
+                        'message'      => "Câu lạc bộ \"{$club->name}\" đã được quản trị viên duyệt và kích hoạt.",
+                        'related_id'   => $club->id,
+                        'related_type' => 'Club',
+                    ]);
+
+                    NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type'     => 'user',
+                        'target_id'       => $leaderId,
+                    ]);
+
+                    NotificationRead::create([
+                        'notification_id' => $notification->id,
+                        'user_id'         => $leaderId,
+                        'is_read'         => false,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Notify leader on club approval failed: ' . $e->getMessage());
+            }
+        }
         
         return redirect()->back()->with('success', 'Cập nhật trạng thái câu lạc bộ thành công!');
     }
