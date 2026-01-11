@@ -54,7 +54,7 @@
                         $canManageResources = in_array($position, ['leader', 'vice_president']);
                     @endphp
                     @if($canManageResources)
-                    <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary resource-btn">
                         <i class="fas fa-plus me-1"></i> Tạo tài nguyên
                     </a>
                     @endif
@@ -95,10 +95,10 @@
                             </select>
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-sm me-2">
+                            <button type="submit" class="btn btn-primary btn-sm me-2 resource-btn">
                                 <i class="fas fa-search me-1"></i> Tìm kiếm
                             </button>
-                            <a href="{{ route('student.club-management.resources', ['club' => $clubId]) }}" class="btn btn-secondary btn-sm">
+                            <a href="{{ route('student.club-management.resources', ['club' => $clubId]) }}" class="btn btn-secondary btn-sm resource-btn">
                                 <i class="fas fa-redo me-1"></i> Làm mới
                             </a>
                         </div>
@@ -184,7 +184,7 @@
                                             $canManageResources = in_array($position, ['leader', 'vice_president']);
                                         @endphp
                                         @if($canManageResources)
-                                        <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary btn-sm mt-2">
+                                        <a href="{{ route('student.club-management.resources.create', ['club' => $clubId]) }}" class="btn btn-primary btn-sm mt-2 resource-btn">
                                             <i class="fas fa-plus me-1"></i> Tạo tài nguyên đầu tiên
                                         </a>
                                         @endif
@@ -206,6 +206,16 @@
     </div>
 </div>
 @endsection
-
-
-
+@push('styles')
+<style>
+    .resource-btn {
+        min-height: 40px;
+        padding: 0.5rem 0.9rem;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+    }
+</style>
+@endpush

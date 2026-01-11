@@ -82,7 +82,7 @@
                                         <div class="list-group-item">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div>
-                                                    <strong>{{ $member->user->name ?? 'N/A' }}</strong>
+                                                <strong>{{ $member->user->name ?? 'Chưa xác định' }}</strong>
                                                     <span class="badge bg-secondary ms-2">{{ ucfirst($member->position) }}</span>
                                                 </div>
                                                 <a href="{{ route('student.club-management.members', ['club' => $clubId]) }}" class="btn btn-sm btn-outline-primary">
@@ -106,7 +106,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <strong>{{ $event->title }}</strong>
-                                                    <small class="text-muted d-block">{{ $event->start_time ? $event->start_time->format('d/m/Y H:i') : 'N/A' }}</small>
+                                                    <small class="text-muted d-block">{{ $event->start_time ? $event->start_time->format('d/m/Y H:i') : 'Chưa cập nhật' }}</small>
                                                 </div>
                                                 <a href="{{ route('student.events.show', $event->id) }}" class="btn btn-sm btn-outline-primary">
                                                     Xem chi tiết
@@ -179,7 +179,18 @@
                 @else
                     <p class="text-muted mb-4">
                         Chỉ <strong>Trưởng CLB</strong>, <strong>Phó CLB</strong> và <strong>Thủ quỹ</strong> mới có thể quản lý CLB.<br>
-                        Vai trò hiện tại của bạn: <strong>{{ ucfirst($userPosition) }}</strong>
+                        Vai trò hiện tại của bạn: <strong>
+                            @php
+                                $roleMap = [
+                                    'leader' => 'Trưởng CLB',
+                                    'vice_president' => 'Phó CLB',
+                                    'treasurer' => 'Thủ quỹ',
+                                    'member' => 'Thành viên',
+                                    'owner' => 'Chủ nhiệm',
+                                ];
+                            @endphp
+                            {{ $roleMap[$userPosition] ?? 'Thành viên' }}
+                        </strong>
                     </p>
                     <div class="d-flex gap-3 justify-content-center">
                         <a href="{{ route('student.clubs.index') }}" class="btn btn-outline-primary">

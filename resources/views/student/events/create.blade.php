@@ -62,9 +62,20 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Câu lạc bộ</label>
+                        @if(isset($clubs) && $clubs->count() > 1)
+                            <select name="club_id" class="form-select">
+                                @foreach($clubs as $clubOption)
+                                    <option value="{{ $clubOption->id }}" {{ ($clubId ?? null) == $clubOption->id ? 'selected' : '' }}>
+                                        {{ $clubOption->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Chọn CLB bạn muốn tạo sự kiện</small>
+                        @else
                             <input type="text" class="form-control" value="{{ $userClub->name }}" disabled>
                             <input type="hidden" name="club_id" value="{{ $clubId }}">
                             <small class="text-muted">Sự kiện sẽ được tạo cho CLB này</small>
+                        @endif
                         </div>
                     </div>
                 </div>
@@ -323,48 +334,66 @@
 </div>
 
 @push('scripts')
+@include('partials.ckeditor-upload-adapter', ['uploadUrl' => route('student.posts.upload-image'), 'csrfToken' => csrf_token()])
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
-// Sử dụng CKEditor từ CDN đã được load trong layout
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
+    // Tạo upload adapter plugin
+    const SimpleUploadAdapterPlugin = window.CKEditorUploadAdapterFactory('{{ route("student.posts.upload-image") }}', '{{ csrf_token() }}');
     
-    // Kiểm tra ClassicEditor
-    console.log('ClassicEditor available:', typeof ClassicEditor);
+    let descriptionEditor = null;
     
-    if (typeof ClassicEditor === 'undefined') {
-        console.error('ClassicEditor is not loaded!');
-        return;
+    // Khởi tạo CKEditor cho mô tả sự kiện
+    const descriptionTextarea = document.querySelector('#description');
+    if (descriptionTextarea) {
+        ClassicEditor
+            .create(descriptionTextarea, {
+                extraPlugins: [SimpleUploadAdapterPlugin],
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'blockQuote', 'insertTable', '|',
+                        'uploadImage', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'toggleImageCaption',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side'
+                    ]
+                },
+                language: 'vi'
+            })
+            .then(editor => {
+                descriptionEditor = editor;
+                console.log('CKEditor initialized for event description');
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor for description:', error);
+            });
     }
     
-    // Tìm textarea
-    const textarea = document.querySelector('#description');
-    console.log('Textarea found:', textarea);
-    
-    if (!textarea) {
-        console.error('Textarea with id "description" not found');
-        return;
-    }
-    
-    console.log('Creating CKEditor instance...');
-    
-    ClassicEditor
-        .create(textarea, {
-            toolbar: {
-                items: [
-                    'heading', '|',
-                    'bold', 'italic', 'underline', '|',
-                    'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'undo', 'redo'
-                ]
+    // Đảm bảo sync dữ liệu từ CKEditor vào textarea trước khi submit
+    const eventCreateForm = document.getElementById('eventCreateForm');
+    if (eventCreateForm) {
+        eventCreateForm.addEventListener('submit', function(e) {
+            // Sync description editor
+            if (descriptionEditor) {
+                try {
+                    descriptionEditor.updateSourceElement();
+                    console.log('Event description synced');
+                } catch (err) {
+                    console.error('Error syncing description editor:', err);
+                }
             }
-        })
-        .then(editor => {
-            console.log('✅ CKEditor created successfully!', editor);
-        })
-        .catch(error => {
-            console.error('❌ Error creating CKEditor:', error);
         });
+    }
 });
 
 // Preview images

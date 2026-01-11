@@ -1024,23 +1024,36 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Kiểm tra user có CLB và có quyền tạo sự kiện không
-        if ($user->clubs->count() == 0) {
+        // Lấy danh sách CLB mà user có quyền tạo sự kiện
+        $clubsWithPermission = $user->clubs->filter(function ($club) use ($user) {
+            return $user->hasPermission('tao_su_kien', $club->id);
+        });
+
+        if ($clubsWithPermission->count() === 0) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn cần tham gia CLB để tạo sự kiện.');
+                ->with('error', 'Bạn cần tham gia CLB và có quyền tạo sự kiện.');
         }
 
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
-        $userPosition = $user->getPositionInClub($clubId);
-        
-        // Kiểm tra quyền tạo sự kiện
-        if (!$user->hasPermission('tao_su_kien', $clubId)) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB này.');
+        // Chọn CLB theo tham số hoặc CLB đầu tiên đủ quyền
+        $selectedClubId = request()->input('club_id');
+        if ($selectedClubId) {
+            $selectedClub = $clubsWithPermission->firstWhere('id', (int) $selectedClubId);
+            if (!$selectedClub) {
+                return redirect()->route('student.club-management.index')
+                    ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB đã chọn.');
+            }
+        } else {
+            $selectedClub = $clubsWithPermission->first();
         }
 
-        return view('student.events.create', compact('user', 'userClub', 'clubId'));
+        $clubId = $selectedClub->id;
+
+        return view('student.events.create', [
+            'user'    => $user,
+            'userClub'=> $selectedClub,
+            'clubId'  => $clubId,
+            'clubs'   => $clubsWithPermission,
+        ]);
     }
 
     /**
@@ -1053,23 +1066,9 @@ class StudentController extends Controller
             return $user;
         }
 
-        // Kiểm tra user có CLB và có quyền tạo sự kiện không
-        if ($user->clubs->count() == 0) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn cần tham gia CLB để tạo sự kiện.');
-        }
-
-        $userClub = $user->clubs->first();
-        $clubId = $userClub->id;
-        
-        // Kiểm tra quyền tạo sự kiện
-        if (!$user->hasPermission('tao_su_kien', $clubId)) {
-            return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB này.');
-        }
-
         try {
             $request->validate([
+                'club_id' => 'required|integer|exists:clubs,id',
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string|max:10000',
                 'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -1106,6 +1105,18 @@ class StudentController extends Controller
                 'permit_file.mimes' => 'File giấy phép chỉ chấp nhận định dạng: PDF, DOC, DOCX, JPG, JPEG, PNG.',
                 'permit_file.max' => 'File giấy phép không được vượt quá 10MB.',
             ]);
+
+            // Lấy CLB từ request và kiểm tra quyền
+            $clubId = (int) $request->input('club_id');
+            $userClub = $user->clubs()->where('clubs.id', $clubId)->first();
+            if (!$userClub) {
+                return redirect()->route('student.club-management.index')
+                    ->with('error', 'Bạn không phải là thành viên của CLB này.');
+            }
+            if (!$user->hasPermission('tao_su_kien', $clubId)) {
+                return redirect()->route('student.club-management.index')
+                    ->with('error', 'Bạn không có quyền tạo sự kiện cho CLB này.');
+            }
 
             // Validate guest_other_info khi có chọn "other"
             if (is_array($request->guest_types) && in_array('other', $request->guest_types)) {
@@ -2378,12 +2389,14 @@ class StudentController extends Controller
         $clubId = (int) $clubId;
         $club = Club::findOrFail($clubId);
 
-        // Only leader/vice can access members management
+        // Cho phép tất cả thành viên đã duyệt/hoạt động xem danh sách
         $position = $user->getPositionInClub($clubId);
-        if (!in_array($position, ['leader', 'vice_president'])) {
+        $isMember = in_array($position, ['leader', 'vice_president', 'treasurer', 'member']);
+        if (!$isMember) {
             return redirect()->route('student.club-management.index')
-                ->with('error', 'Bạn không có quyền quản lý thành viên CLB này.');
+                ->with('error', 'Bạn không có quyền truy cập thành viên CLB này.');
         }
+        $canManageMembers = in_array($position, ['leader', 'vice_president', 'treasurer']);
 
         // Danh sách thành viên + gán quyền hiện có
         $clubMembers = ClubMember::with('user')
@@ -2408,6 +2421,7 @@ class StudentController extends Controller
             'allPermissions' => $allPermissions,
             'userPosition' => $position,
             'clubId' => $clubId,
+            'canManageMembers' => $canManageMembers,
         ]);
     }
 
@@ -4701,6 +4715,44 @@ class StudentController extends Controller
                 \App\Models\NotificationRead::create([
                     'notification_id' => $notification->id,
                     'user_id' => $admin->id,
+                    'is_read' => false,
+                ]);
+            }
+        }
+
+        // 5. Gửi thông báo cho Trưởng CLB (nếu có)
+        $leaderIds = [];
+        if ($club->leader_id) {
+            $leaderIds[] = $club->leader_id;
+        } else {
+            $leaders = \App\Models\ClubMember::where('club_id', $club->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->whereIn('position', ['leader', 'owner'])
+                ->pluck('user_id')
+                ->toArray();
+            $leaderIds = array_merge($leaderIds, $leaders);
+        }
+        $leaderIds = array_unique(array_filter($leaderIds));
+
+        if (!empty($leaderIds)) {
+            $notificationLeader = \App\Models\Notification::create([
+                'sender_id' => $user->id,
+                'type' => 'club_join_request',
+                'title' => 'Có yêu cầu tham gia CLB mới',
+                'message' => "{$user->name} đã gửi yêu cầu tham gia CLB \"{$club->name}\". Vui lòng xem xét và duyệt.",
+                'related_id' => $joinRequest->id,
+                'related_type' => \App\Models\ClubJoinRequest::class,
+            ]);
+
+            foreach ($leaderIds as $leaderId) {
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notificationLeader->id,
+                    'target_type' => 'user',
+                    'target_id' => $leaderId,
+                ]);
+                \App\Models\NotificationRead::create([
+                    'notification_id' => $notificationLeader->id,
+                    'user_id' => $leaderId,
                     'is_read' => false,
                 ]);
             }

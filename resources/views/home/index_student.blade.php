@@ -159,15 +159,15 @@
                             <p class="text-muted small flex-grow-1 mb-3">{{ Str::words($clubDescription, 24, '...') }}</p>
                             <div class="d-flex gap-2">
                                 @if(!$joined)
-                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-primary cta-btn">
                                         Tham gia ngay
                                     </a>
                                 @else
-                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary cta-btn">
                                         Xem CLB của tôi
                                     </a>
                                 @endif
-                                <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary cta-btn">
                                     Chi tiết
                                 </a>
                             </div>
@@ -242,15 +242,15 @@
                             <p class="text-muted small flex-grow-1 mb-3">{{ Str::words($clubDescription, 24, '...') }}</p>
                             <div class="d-flex gap-2">
                                 @if(!$joined)
-                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-primary cta-btn">
                                         Tham gia ngay
                                     </a>
                                 @else
-                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary cta-btn">
                                         Xem CLB của tôi
                                     </a>
                                 @endif
-                                <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary">
+                                <a href="{{ route('student.clubs.index') }}" class="btn btn-sm btn-outline-secondary cta-btn">
                                     Chi tiết
                                 </a>
                             </div>
@@ -490,6 +490,15 @@
 
 @push('styles')
 <style>
+    .cta-btn {
+        min-height: 42px;
+        min-width: 120px;
+        padding: 0.55rem 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
     * {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;

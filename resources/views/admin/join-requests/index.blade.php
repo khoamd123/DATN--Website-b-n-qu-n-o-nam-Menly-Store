@@ -59,7 +59,6 @@
                         <th style="width:28px"><input type="checkbox" onclick="document.querySelectorAll('.jr-check').forEach(c=>c.checked=this.checked)"></th>
                         <th>Người nộp</th>
                         <th>CLB</th>
-                        <th>Lời nhắn</th>
                         <th>Trạng thái</th>
                         <th>Đánh giá bởi</th>
                         <th>Thời gian</th>
@@ -84,10 +83,10 @@
                             </div>
                         </td>
                         <td>{{ optional($req->club)->name ?? 'N/A' }}</td>
-                        <td class="text-muted" style="max-width:320px">{{ $req->message }}</td>
                         <td>
                             @php $map = ['pending'=>'warning','approved'=>'success','rejected'=>'secondary']; @endphp
-                            <span class="badge bg-{{ $map[$req->status] ?? 'light' }}">{{ $req->status }}</span>
+                            @php $statusLabel = ['pending' => 'Đang chờ', 'approved' => 'Đã duyệt', 'rejected' => 'Đã từ chối']; @endphp
+                            <span class="badge bg-{{ $map[$req->status] ?? 'light' }}">{{ $statusLabel[$req->status] ?? $req->status }}</span>
                         </td>
                         <td>{{ optional($req->reviewer)->name ?? '-' }}</td>
                         <td>

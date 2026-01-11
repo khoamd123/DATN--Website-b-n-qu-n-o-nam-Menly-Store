@@ -35,7 +35,7 @@
         <!-- Notifications -->
         <div class="content-card">
             @forelse($notifications as $notification)
-                <div class="notification-item {{ !$notification->is_read ? 'unread' : '' }}">
+                <div class="notification-item notification-card" data-read="{{ $notification->is_read ? '1' : '0' }}">
                     @php
                         // Xác định icon và màu sắc dựa trên tiêu đề
                         $icon = 'fa-info-circle';
@@ -68,13 +68,14 @@
                             {{ $notification->message }}
                         </p>
                         <div class="notification-actions">
-                            @if(!$notification->is_read)
-                        <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
-                                </form>
-                            @else
-                                <span class="text-muted small"><i class="fas fa-check me-1"></i> Đã đọc</span>
+                            <form action="{{ route('student.notifications.read', $notification->id) }}" method="POST" class="d-inline mark-read-form">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-link text-muted">Đánh dấu đã đọc</button>
+                            </form>
+                            @if($notification->related_type === 'ClubJoinRequest' && optional($notification->related)->club_id)
+                                <a href="{{ route('student.club-management.join-requests', ['club' => $notification->related->club_id]) }}" class="btn btn-link btn-sm ps-0">
+                                    Xem chi tiết
+                                </a>
                             @endif
                         </div>
                     </div>
@@ -188,9 +189,17 @@
         background-color: #f9fafb;
     }
     
-    .notification-item.unread {
+    /* Nền cho chưa đọc dùng data-read, bỏ class unread */
+    .notification-card {
+        border-left: 4px solid transparent;
+    }
+    .notification-card[data-read="0"] {
         background-color: #f0fdfa;
-        border-left: 4px solid #14b8a6;
+        border-left-color: #14b8a6;
+    }
+    .notification-card[data-read="1"] {
+        background-color: #ffffff;
+        border-left-color: transparent;
     }
     
     .notification-icon {

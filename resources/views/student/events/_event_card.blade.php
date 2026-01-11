@@ -51,7 +51,7 @@
             </div>
             
             <p class="card-text text-muted small mb-2">
-                <i class="fas fa-users me-1"></i>{{ $event->club->name ?? 'N/A' }}
+                <i class="fas fa-users me-1"></i>{{ $event->club->name ?? 'Chưa xác định' }}
             </p>
             
             <p class="card-text small mb-3">

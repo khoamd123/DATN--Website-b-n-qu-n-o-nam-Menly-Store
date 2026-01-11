@@ -60,7 +60,7 @@
                                              style="object-fit: cover;"
                                              onerror="this.onerror=null; this.src='{{ asset('/images/avatar/avatar.png') }}';">
                                         <div>
-                                            <div class="fw-semibold mb-1">{{ $member->user->name ?? 'N/A' }}</div>
+                                            <div class="fw-semibold mb-1">{{ $member->user->name ?? 'Chưa xác định' }}</div>
                                             @if($member->user && $member->user->email)
                                                 <small class="text-muted d-block" style="font-size: 0.85rem;">{{ $member->user->email }}</small>
                                             @endif
@@ -113,7 +113,7 @@
                                     @if($member->joined_at)
                                         {{ \Carbon\Carbon::parse($member->joined_at)->format('d/m/Y') }}
                                     @else
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-muted">Chưa cập nhật</span>
                                     @endif
                                 </td>
                             </tr>

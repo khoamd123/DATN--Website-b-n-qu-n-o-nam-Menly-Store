@@ -86,7 +86,7 @@
                                     </a>
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
-                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'Chưa xác định' }}
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
@@ -197,7 +197,7 @@
                                     </a>
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
-                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'Chưa xác định' }}
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
@@ -299,7 +299,7 @@
                                     </a>
                                 </h5>
                                 <p class="card-text text-muted small mb-2">
-                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'N/A' }}
+                                    <i class="fas fa-users me-1 text-teal"></i>{{ $event->club->name ?? 'Chưa xác định' }}
                                 </p>
                                 <p class="card-text small mb-3">
                                     {{ \Illuminate\Support\Str::limit(strip_tags($event->description ?? ''), 100) }}
