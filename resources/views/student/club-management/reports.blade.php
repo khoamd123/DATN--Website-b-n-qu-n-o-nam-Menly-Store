@@ -111,43 +111,127 @@
                 </div>
             </div>
             
-            <!-- Thống kê chi tiết -->
-            <div class="row mt-4">
-                <div class="col-md-6 mb-3">
-                    <div class="stat-detail-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-detail-icon bg-success-light">
-                                <i class="fas fa-chart-line text-success"></i>
-                            </div>
-                            <div class="ms-3">
-                                <div class="stat-detail-label">Tỷ lệ thu/chi</div>
-                                <div class="stat-detail-value">
-                                    @if($stats['fund']['totalExpense'] > 0)
-                                        {{ number_format(($stats['fund']['totalIncome'] / $stats['fund']['totalExpense']) * 100, 1) }}%
+            <!-- Danh sách thu chi -->
+            @if(isset($transactions) && $transactions->count() > 0)
+            <div class="mt-4">
+                <h5 class="mb-3"><i class="fas fa-list text-teal me-2"></i> Danh sách thu chi</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Loại</th>
+                                <th>Mô tả</th>
+                                <th>Số tiền</th>
+                                <th>Ngày</th>
+                                <th>Người tạo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($transactions as $transaction)
+                            <tr>
+                                <td>
+                                    @if($transaction->type === 'income')
+                                        <span class="badge bg-success">Thu</span>
                                     @else
-                                        N/A
+                                        <span class="badge bg-danger">Chi</span>
                                     @endif
-                                </div>
-                            </div>
+                                </td>
+                                <td>
+                                    <strong>{{ $transaction->title ?? $transaction->description ?? 'Không có mô tả' }}</strong>
+                                    @if($transaction->category)
+                                        <br><small class="text-muted">{{ $transaction->category }}</small>
+                                    @endif
+                                </td>
+                                <td class="fw-bold {{ $transaction->type === 'income' ? 'text-success' : 'text-danger' }}">
+                                    {{ $transaction->type === 'income' ? '+' : '-' }}{{ number_format($transaction->amount, 0, ',', '.') }} VNĐ
+                                </td>
+                                <td>
+                                    {{ $transaction->transaction_date ? \Carbon\Carbon::parse($transaction->transaction_date)->format('d/m/Y') : $transaction->created_at->format('d/m/Y') }}
+                                    <br><small class="text-muted">{{ $transaction->created_at->format('H:i') }}</small>
+                                </td>
+                                <td>
+                                    {{ $transaction->creator->name ?? 'N/A' }}
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Phân trang -->
+                @if($transactions->hasPages())
+                <div class="mt-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 p-3 bg-light rounded">
+                        <div class="pagination-info d-flex align-items-center gap-2 text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            <span>
+                                Hiển thị <strong>{{ $transactions->firstItem() }}</strong> - <strong>{{ $transactions->lastItem() }}</strong> 
+                                trong tổng <strong>{{ $transactions->total() }}</strong> giao dịch
+                            </span>
                         </div>
+                        <nav aria-label="Phân trang">
+                            <ul class="pagination pagination-sm mb-0">
+                                @php
+                                    $queryParams = request()->except('page');
+                                    $previousUrl = $transactions->onFirstPage() ? '#' : $transactions->appends($queryParams)->previousPageUrl();
+                                    $nextUrl = $transactions->hasMorePages() ? $transactions->appends($queryParams)->nextPageUrl() : '#';
+                                @endphp
+                                {{-- Previous Page Link --}}
+                                @if ($transactions->onFirstPage())
+                                    <li class="page-item disabled">
+                                        <span class="page-link">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </span>
+                                    </li>
+                                @else
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $previousUrl }}" rel="prev">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                @endif
+
+                                {{-- Pagination Elements --}}
+                                @foreach ($transactions->appends($queryParams)->getUrlRange(1, $transactions->lastPage()) as $page => $url)
+                                    @if($page == $transactions->currentPage())
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ $page }}</span>
+                                        </li>
+                                    @else
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                        </li>
+                                    @endif
+                                @endforeach
+
+                                {{-- Next Page Link --}}
+                                @if ($transactions->hasMorePages())
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $nextUrl }}" rel="next">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                @else
+                                    <li class="page-item disabled">
+                                        <span class="page-link">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </span>
+                                    </li>
+                                @endif
+                            </ul>
+                        </nav>
                     </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <div class="stat-detail-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-detail-icon bg-info-light">
-                                <i class="fas fa-exchange-alt text-info"></i>
-                            </div>
-                            <div class="ms-3">
-                                <div class="stat-detail-label">Số giao dịch</div>
-                                <div class="stat-detail-value">
-                                    {{ ($stats['fund']['totalTransactions'] ?? 0) }} giao dịch
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                @endif
+            </div>
+            @elseif(isset($transactions))
+            <div class="mt-4">
+                <h5 class="mb-3"><i class="fas fa-list text-teal me-2"></i> Danh sách thu chi</h5>
+                <div class="text-center py-3">
+                    <i class="fas fa-inbox text-muted fa-2x mb-2"></i>
+                    <p class="text-muted mb-0">Chưa có giao dịch nào.</p>
                 </div>
             </div>
+            @endif
         @else
             <div class="text-center py-4">
                 <i class="fas fa-info-circle text-muted fa-2x mb-3"></i>
@@ -390,6 +474,63 @@
         position: relative;
         height: 350px; /* Giới hạn chiều cao của biểu đồ */
         width: 100%;
+    }
+
+    /* Pagination Styles */
+    .pagination {
+        gap: 0.25rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .pagination .page-link {
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        text-decoration: none;
+        background-color: #fff;
+    }
+    
+    .pagination .page-link:hover {
+        background-color: #14b8a6;
+        border-color: #14b8a6;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(20, 184, 166, 0.3);
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #14b8a6;
+        border-color: #14b8a6;
+        color: white;
+        box-shadow: 0 2px 6px rgba(20, 184, 166, 0.3);
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .pagination .page-item.disabled .page-link:hover {
+        transform: none;
+        box-shadow: none;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        color: #6c757d;
+    }
+
+    .pagination-info {
+        font-size: 0.9rem;
     }
 </style>
 

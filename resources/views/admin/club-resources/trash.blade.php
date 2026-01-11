@@ -149,17 +149,17 @@
                                                 <td>{{ $resource->club->name }}</td>
                                                 <td>{{ $resource->user->name }}</td>
                                                 <td>{{ $resource->deleted_at->format('d/m/Y H:i') }}</td>
-                                                <td>
-                                                    <div class="btn-group" role="group">
+                                                <td style="min-width: 120px; width: 120px;">
+                                                    <div class="d-flex flex-column gap-1">
                                                         <a href="{{ route('admin.club-resources.show', $resource->id) }}"
-                                                            class="btn btn-sm btn-info" title="Xem chi tiết">
-                                                            <i class="fas fa-eye"></i> Xem
+                                                            class="btn btn-sm btn-primary text-white w-100">
+                                                            <i class="fas fa-eye"></i> Xem chi tiết
                                                         </a>
-                                                        <button type="button" class="btn btn-sm btn-success" title="Khôi phục"
+                                                        <button type="button" class="btn btn-sm btn-success w-100 text-white" title="Khôi phục"
                                                             onclick="restoreResource({{ $resource->id }})">
                                                             <i class="fas fa-undo"></i> Khôi phục
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-danger" title="Xóa vĩnh viễn"
+                                                        <button type="button" class="btn btn-sm btn-danger w-100 text-white" title="Xóa vĩnh viễn"
                                                             onclick="forceDeleteResource({{ $resource->id }})">
                                                             <i class="fas fa-trash"></i> Xóa vĩnh viễn
                                                         </button>

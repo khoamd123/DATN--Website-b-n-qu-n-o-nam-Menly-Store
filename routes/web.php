@@ -560,7 +560,7 @@ Route::prefix('admin')->group(function () {
     Route::post('/clubs/{club}/generate-sample-posts', [AdminController::class, 'generateSamplePostsForClub'])->name('admin.clubs.generate-posts');
     Route::post('/posts/generate-sample-for-all', [AdminController::class, 'generateSamplePostsForAllClubs'])->name('admin.posts.generate-sample-for-all');
     // Upload ảnh từ trình soạn thảo
-    Route::post('/posts/upload-image', [PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
+    Route::post('/posts/upload-image', [\App\Http\Controllers\PostController::class, 'uploadEditorImage'])->name('admin.posts.upload-image');
     Route::get('/posts/{id}', [AdminController::class, 'postsShow'])->name('admin.posts.show');
     Route::get('/posts/{id}/edit', [AdminController::class, 'postsEdit'])->name('admin.posts.edit');
     Route::put('/posts/{id}', [AdminController::class, 'postsUpdate'])->name('admin.posts.update');

@@ -9,18 +9,18 @@
         <h5 class="mb-0">{{ $club->name }}</h5>
         <div class="d-flex gap-2">
             @if(isset($position) && in_array($position, ['leader', 'treasurer']))
-                <a href="{{ route('student.club-management.fund-deposit-requests') }}?club={{ $club->id }}" class="btn btn-outline-success btn-sm">
+                <a href="{{ route('student.club-management.fund-deposit-requests') }}?club={{ $club->id }}" class="btn btn-success btn-sm text-white">
                     <i class="fas fa-money-bill-wave me-1"></i> Yêu cầu nộp quỹ
                 </a>
-                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $club->id }}" class="btn btn-outline-primary btn-sm">
+                <a href="{{ route('student.club-management.fund-requests') }}?club={{ $club->id }}" class="btn btn-success btn-sm text-white">
                     <i class="fas fa-file-invoice-dollar me-1"></i> Yêu cầu cấp kinh phí
                 </a>
-                <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled&club={{ $club->id }}" class="btn btn-info btn-sm text-white">
+                <a href="{{ route('student.club-management.fund-requests') }}?settlement=settled&club={{ $club->id }}" class="btn btn-success btn-sm text-white">
                     <i class="fas fa-calculator me-1"></i> Xem quyết toán
                 </a>
             @endif
             @if(isset($position) && in_array($position, ['leader', 'vice_president', 'treasurer']))
-                <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-primary btn-sm text-white">
+                <a href="{{ route('student.club-management.fund-transactions.create', ['club' => $club->id]) }}" class="btn btn-success btn-sm text-white">
                     <i class="fas fa-plus me-1"></i> Tạo giao dịch
                 </a>
             @endif

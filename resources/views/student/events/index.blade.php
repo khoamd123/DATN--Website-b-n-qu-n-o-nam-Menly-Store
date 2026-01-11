@@ -140,7 +140,7 @@
         <!-- Upcoming Events -->
         <div class="content-card" id="upcoming-events-section">
             <h4 class="mb-4 fw-bold">
-                <i class="fas fa-clock text-warning me-2"></i> Sự kiện sắp tới
+                <i class="fas fa-clock text-warning me-2"></i> Các sự kiện khác
             </h4>
             
             <div class="row" id="events-list">
@@ -246,7 +246,7 @@
                     <div class="col-12">
                         <div class="text-center py-5">
                             <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">Không có sự kiện sắp tới</h5>
+                            <h5 class="text-muted">Không có sự kiện nào</h5>
                             <p class="text-muted">Hãy quay lại sau để xem các sự kiện mới!</p>
                         </div>
                     </div>

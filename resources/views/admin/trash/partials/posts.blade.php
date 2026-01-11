@@ -51,21 +51,17 @@
                                 <span class="text-muted">N/A</span>
                             @endif
                         </td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-success text-white" 
+                        <td style="min-width: 120px; width: 120px;">
+                            <div class="d-flex flex-column gap-1">
+                                <button class="btn btn-sm btn-success w-100 text-white" 
                                         onclick="restore('post', {{ $post->id }})" 
-                                        title="Khôi phục"
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="top">
-                                    <i class="fas fa-undo"></i>
+                                        title="Khôi phục">
+                                    <i class="fas fa-undo"></i> Khôi phục
                                 </button>
-                                <button class="btn btn-danger text-white" 
+                                <button class="btn btn-sm btn-danger w-100 text-white" 
                                         onclick="forceDelete('post', {{ $post->id }})" 
-                                        title="Xóa vĩnh viễn"
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="top">
-                                    <i class="fas fa-trash"></i>
+                                        title="Xóa vĩnh viễn">
+                                    <i class="fas fa-trash"></i> Xóa vĩnh viễn
                                 </button>
                             </div>
                         </td>

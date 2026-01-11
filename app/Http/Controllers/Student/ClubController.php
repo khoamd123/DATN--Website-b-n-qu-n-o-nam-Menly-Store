@@ -40,6 +40,22 @@ class ClubController extends Controller
         if (!session('user_id') || session('is_admin')) {
             return redirect()->route('login')->with('error', 'Vui lòng đăng nhập với tài khoản sinh viên.');
         }
+
+        $user = User::find(session('user_id'));
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Không tìm thấy thông tin người dùng.');
+        }
+
+        // Kiểm tra xem user có đang là leader của CLB nào không
+        $isLeader = ClubMember::where('user_id', $user->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['active', 'approved'])
+            ->exists();
+
+        if ($isLeader) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn đã là trưởng CLB, không thể tạo thêm CLB mới.');
+        }
         
         // Load fields for the form
         $fields = Field::orderBy('name')->get();
@@ -56,6 +72,17 @@ class ClubController extends Controller
         $user = User::find(session('user_id'));
         if (!$user) {
             return redirect()->route('login')->with('error', 'Không tìm thấy thông tin người dùng.');
+        }
+
+        // Kiểm tra xem user có đang là leader của CLB nào không
+        $isLeader = ClubMember::where('user_id', $user->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['active', 'approved'])
+            ->exists();
+
+        if ($isLeader) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn đã là trưởng CLB, không thể tạo thêm CLB mới.');
         }
 
         // Validation

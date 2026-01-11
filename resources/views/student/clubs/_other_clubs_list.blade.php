@@ -49,7 +49,7 @@
                         <span class="badge bg-success rounded-pill">
                             <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Đang hoạt động
                         </span>
-                        <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-primary btn-sm rounded-pill">
+                        <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-eye me-1"></i> Xem & Tham gia
                         </a>
                     </div>

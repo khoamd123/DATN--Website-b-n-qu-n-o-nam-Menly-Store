@@ -108,24 +108,24 @@
                                 <td>
                                     <span class="text-muted">{{ $post->deleted_at->format('d/m/Y H:i') }}</span>
                                 </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.posts.show', $post->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
-                                            <i class="fas fa-eye"></i>
+                                <td style="min-width: 120px; width: 120px;">
+                                    <div class="d-flex flex-column gap-1">
+                                        <a href="{{ route('admin.posts.show', $post->id) }}" class="btn btn-sm btn-primary text-white w-100">
+                                            <i class="fas fa-eye"></i> Xem chi tiết
                                         </a>
                                         <form method="POST" action="{{ route('admin.posts.restore', $post->id) }}" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" 
+                                            <button type="submit" class="btn btn-sm btn-success w-100 text-white" 
                                                     onclick="return confirm('Bạn có chắc muốn khôi phục bài viết này?')" title="Khôi phục">
-                                                <i class="fas fa-undo"></i>
+                                                <i class="fas fa-undo"></i> Khôi phục
                                             </button>
                                         </form>
                                         <form method="POST" action="{{ route('admin.posts.force-delete', $post->id) }}" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" 
+                                            <button type="submit" class="btn btn-sm btn-danger w-100 text-white" 
                                                     onclick="return confirm('Bạn có chắc muốn xóa vĩnh viễn bài viết này? Hành động này không thể hoàn tác!')" title="Xóa vĩnh viễn">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash"></i> Xóa vĩnh viễn
                                             </button>
                                         </form>
                                     </div>

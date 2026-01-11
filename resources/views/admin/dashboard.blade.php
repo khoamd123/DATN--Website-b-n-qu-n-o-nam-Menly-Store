@@ -183,8 +183,24 @@
                                     <td><span class="badge bg-success">{{ $club->events_count }}</span></td>
                                     <td><span class="badge bg-primary">{{ $club->posts_count + $club->events_count }}</span></td>
                                     <td>
-                                        <span class="badge bg-{{ $club->status === 'active' ? 'success' : ($club->status === 'pending' ? 'warning' : 'secondary') }}">
-                                            {{ ucfirst($club->status) }}
+                                        @php
+                                            $statusColors = [
+                                                'pending' => 'warning',
+                                                'approved' => 'info',
+                                                'rejected' => 'danger',
+                                                'active' => 'success',
+                                                'inactive' => 'secondary'
+                                            ];
+                                            $statusLabels = [
+                                                'pending' => 'Chờ duyệt',
+                                                'approved' => 'Đã duyệt',
+                                                'rejected' => 'Từ chối',
+                                                'active' => 'Đang hoạt động',
+                                                'inactive' => 'Không hoạt động'
+                                            ];
+                                        @endphp
+                                        <span class="badge bg-{{ $statusColors[$club->status] ?? 'secondary' }}">
+                                            {{ $statusLabels[$club->status] ?? ucfirst($club->status) }}
                                         </span>
                                     </td>
                                 </tr>

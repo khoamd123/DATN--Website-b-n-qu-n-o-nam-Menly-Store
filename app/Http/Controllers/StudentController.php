@@ -131,8 +131,13 @@ class StudentController extends Controller
 
         $search = $request->input('search');
 
-        // Lấy ID các CLB mà người dùng đã tham gia
-        $myClubIds = $user->clubs->pluck('id')->toArray();
+        // Lấy ID các CLB mà người dùng đang là thành viên (chưa rời)
+        // Chỉ lấy các CLB có status active/approved và chưa bị soft delete
+        $myClubIds = ClubMember::where('user_id', $user->id)
+            ->whereIn('status', ['active', 'approved'])
+            ->whereNull('deleted_at')
+            ->pluck('club_id')
+            ->toArray();
 
         // Luôn lấy đầy đủ danh sách CLB của tôi, không bị ảnh hưởng bởi tìm kiếm
         $myClubs = Club::whereIn('id', $myClubIds)
@@ -156,7 +161,13 @@ class StudentController extends Controller
         // Lấy kết quả với phân trang
         $otherClubs = $otherClubsQuery->orderBy('name')->paginate(8);
 
-        return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search'));
+        // Kiểm tra xem user có đang là leader của CLB nào không
+        $isLeader = \App\Models\ClubMember::where('user_id', $user->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['active', 'approved'])
+            ->exists();
+
+        return view('student.clubs.index', compact('user', 'myClubs', 'otherClubs', 'search', 'isLeader'));
     }
 
     public function ajaxSearchClubs(Request $request)
@@ -168,7 +179,12 @@ class StudentController extends Controller
         }
 
         $search = $request->input('search', '');
-        $myClubIds = $user->clubs->pluck('id')->toArray();
+        // Lấy ID các CLB mà người dùng đang là thành viên (chưa rời)
+        $myClubIds = ClubMember::where('user_id', $user->id)
+            ->whereIn('status', ['active', 'approved'])
+            ->whereNull('deleted_at')
+            ->pluck('club_id')
+            ->toArray();
 
         $otherClubs = Club::where('status', 'active')
             ->whereNotIn('id', $myClubIds)
@@ -190,6 +206,17 @@ class StudentController extends Controller
             return $user;
         }
 
+        // Kiểm tra xem user có đang là leader của CLB nào không
+        $isLeader = \App\Models\ClubMember::where('user_id', $user->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['active', 'approved'])
+            ->exists();
+
+        if ($isLeader) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn đã là trưởng CLB, không thể tạo thêm CLB mới.');
+        }
+
         $fields = Field::orderBy('name')->get();
 
         return view('student.clubs.create', compact('user', 'fields'));
@@ -203,6 +230,17 @@ class StudentController extends Controller
         $user = $this->checkStudentAuth();
         if ($user instanceof \Illuminate\Http\RedirectResponse) {
             return $user;
+        }
+
+        // Kiểm tra xem user có đang là leader của CLB nào không
+        $isLeader = \App\Models\ClubMember::where('user_id', $user->id)
+            ->where('position', 'leader')
+            ->whereIn('status', ['active', 'approved'])
+            ->exists();
+
+        if ($isLeader) {
+            return redirect()->route('student.clubs.index')
+                ->with('error', 'Bạn đã là trưởng CLB, không thể tạo thêm CLB mới.');
         }
 
         // Validate description riêng để xử lý HTML từ CKEditor
@@ -433,9 +471,11 @@ class StudentController extends Controller
             ->toArray();
 
         // Events đã đăng ký: hiển thị nếu public hoặc internal mà user là thành viên CLB tạo event
+        // Chỉ hiển thị các sự kiện chưa kết thúc
         $registeredEvents = Event::with(['club', 'creator', 'images'])
             ->whereIn('id', $registeredEventIds)
             ->whereIn('status', ['approved', 'ongoing'])
+            ->where('end_time', '>=', now())
             ->where(function($query) use ($userClubIds) {
                 // Công khai hoặc NULL: tất cả mọi người thấy
                 $query->where(function($q) {
@@ -474,17 +514,20 @@ class StudentController extends Controller
         
         $todayEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereDate('start_time', now()->toDateString())
+            ->where('end_time', '>=', now())
             ->where($visibilityFilter)
             ->count();
 
         $thisWeekEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereBetween('start_time', [now()->startOfWeek(), now()->endOfWeek()])
+            ->where('end_time', '>=', now())
             ->where($visibilityFilter)
             ->count();
 
         $thisMonthEvents = Event::whereIn('status', ['approved', 'ongoing'])
             ->whereMonth('start_time', now()->month)
             ->whereYear('start_time', now()->year)
+            ->where('end_time', '>=', now())
             ->where($visibilityFilter)
             ->count();
 
@@ -3415,7 +3458,17 @@ class StudentController extends Controller
         // Kiểm tra quyền xem báo cáo (có thể xem nếu có quyền xem_bao_cao hoặc là leader/vice_president/treasurer)
         $canViewReports = $user->hasPermission('xem_bao_cao', $clubId) || $isLeaderOrOfficer;
 
-        return view('student.club-management.reports', compact('user', 'club', 'stats', 'isLeaderOrOfficer', 'canViewReports'));
+        // Lấy danh sách giao dịch thu chi (chỉ các giao dịch đã được duyệt)
+        $transactions = null;
+        if ($fundId && $canViewReports) {
+            $transactions = FundTransaction::where('fund_id', $fundId)
+                ->where('status', 'approved')
+                ->with(['creator', 'approver'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+        }
+
+        return view('student.club-management.reports', compact('user', 'club', 'stats', 'isLeaderOrOfficer', 'canViewReports', 'transactions'));
     }
     
     /**
@@ -5121,10 +5174,10 @@ class StudentController extends Controller
 
         $isMember = $user->clubs()->where('club_id', $club->id)->exists();
         
-        // Load posts
+        // Load relationships
         $club->load(['posts' => function ($query) {
             $query->where('status', 'published')->orderBy('created_at', 'desc')->limit(5);
-        }, 'members']);
+        }, 'members', 'field']);
         
         // Load events với filter visibility
         // Logic: 
@@ -5132,7 +5185,8 @@ class StudentController extends Controller
         // - internal: CHỈ thành viên của CLB tạo sự kiện đó (CLB này) mới thấy
         $eventsQuery = Event::with(['club', 'creator', 'images'])
             ->where('club_id', $club->id)
-            ->where('status', 'approved');
+            ->where('status', 'approved')
+            ->where('end_time', '>=', now());
         
         // Nếu user không phải thành viên CLB này, chỉ hiển thị events công khai hoặc NULL
         // Nếu là thành viên, hiển thị cả public, NULL và internal (vì là CLB của họ)
@@ -5169,7 +5223,19 @@ class StudentController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        return view('student.clubs.show', compact('user', 'club', 'isMember', 'clubMember', 'joinRequest'));
+        // Tính toán số liệu thống kê
+        $membersCount = \App\Models\ClubMember::where('club_id', $club->id)
+            ->whereIn('status', ['active', 'approved'])
+            ->count();
+        
+        $eventsCount = $clubEvents->count();
+        
+        $announcementsCount = \App\Models\Post::where('club_id', $club->id)
+            ->where('type', 'announcement')
+            ->where('status', 'published')
+            ->count();
+
+        return view('student.clubs.show', compact('user', 'club', 'isMember', 'clubMember', 'joinRequest', 'membersCount', 'eventsCount', 'announcementsCount'));
     }
 
     /**
@@ -5215,9 +5281,15 @@ class StudentController extends Controller
             return $user;
         }
 
-        // 1. Kiểm tra xem user đã là thành viên chưa
-        $isMember = $club->members()->where('user_id', $user->id)->exists();
-        if ($isMember) {
+        // 1. Kiểm tra xem user đã là thành viên đang hoạt động chưa (chưa rời)
+        // Chỉ kiểm tra các membership chưa bị soft delete và có status active/approved
+        $isActiveMember = ClubMember::where('user_id', $user->id)
+            ->where('club_id', $club->id)
+            ->whereIn('status', ['active', 'approved'])
+            ->whereNull('deleted_at')
+            ->exists();
+        
+        if ($isActiveMember) {
             return redirect()->back()->with('error', 'Bạn đã là thành viên của câu lạc bộ này.');
         }
 

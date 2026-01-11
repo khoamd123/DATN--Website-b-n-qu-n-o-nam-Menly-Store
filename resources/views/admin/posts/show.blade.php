@@ -17,27 +17,27 @@
                     @csrf
                     <input type="hidden" name="type" value="post">
                     <input type="hidden" name="id" value="{{ $post->id }}">
-                    <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc chắn muốn khôi phục bài viết này?')">
+                    <button type="submit" class="btn btn-sm btn-success text-white" onclick="return confirm('Bạn có chắc chắn muốn khôi phục bài viết này?')">
                         <i class="fas fa-undo me-1"></i> Khôi phục
                     </button>
                 </form>
-                <a href="{{ route('admin.posts.trash') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Quay lại
+                <a href="{{ route('admin.posts.trash') }}" class="btn btn-sm btn-secondary text-white">
+<i class="fas fa-arrow-left me-1"></i> Quay lại
                 </a>
             @else
                 {{-- Bài viết chưa xóa - hiển thị nút chỉnh sửa --}}
-                <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-warning">
+                <a href="{{ route('admin.posts.edit', $post->id) }}" class="btn btn-sm btn-warning text-white">
                     <i class="fas fa-edit me-1"></i> Chỉnh sửa
                 </a>
                 <form method="POST" action="{{ route('admin.posts.status', $post->id) }}" class="d-inline">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="status" value="deleted">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác!')">
+                    <button type="submit" class="btn btn-sm btn-danger text-white" onclick="return confirm('Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác!')">
                         <i class="fas fa-trash me-1"></i> Xóa
                     </button>
                 </form>
-                <a href="{{ route('admin.posts') }}" class="btn btn-secondary">
+                <a href="{{ route('admin.posts') }}" class="btn btn-sm btn-secondary text-white">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
                 </a>
             @endif

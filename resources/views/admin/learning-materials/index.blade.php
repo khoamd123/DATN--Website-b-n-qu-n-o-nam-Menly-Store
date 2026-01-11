@@ -103,7 +103,7 @@
                             <td>{{ $document->created_at->format('d/m/Y') }}</td>
                             <td style="min-width: 140px; width: 140px;">
                                 <div class="d-flex flex-column gap-1">
-                                    <a href="{{ route('admin.learning-materials.edit', $document->id) }}" class="btn btn-sm btn-warning">
+                                    <a href="{{ route('admin.learning-materials.edit', $document->id) }}" class="btn btn-sm btn-warning text-white w-100">
                                         <i class="fas fa-edit"></i> Chỉnh sửa
                                     </a>
                                     @if($document->status === 'published')
@@ -111,7 +111,7 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="hidden">
-                                            <button type="submit" class="btn btn-sm btn-warning w-100">
+                                            <button type="submit" class="btn btn-sm btn-warning w-100 text-white">
                                                 <i class="fas fa-eye-slash"></i> Ẩn
                                             </button>
                                         </form>
@@ -122,7 +122,7 @@
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="published">
-                                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                            <button type="submit" class="btn btn-sm btn-success w-100 text-white">
                                                 <i class="fas fa-eye"></i> Hiện
                                             </button>
                                         </form>
@@ -132,7 +132,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="status" value="deleted">
-                                        <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Bạn có chắc chắn muốn xóa tài nguyên này?')">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-white" onclick="return confirm('Bạn có chắc chắn muốn xóa tài nguyên này?')">
                                             <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </form>

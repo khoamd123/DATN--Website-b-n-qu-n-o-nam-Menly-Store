@@ -8,14 +8,14 @@
         <h1><i class="fas fa-comment"></i> Chi tiết bình luận</h1>
         <div class="d-flex gap-2">
             @if($commentable)
-                <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-primary">
+                <a href="{{ route($commentableRoute, $commentable->id) }}" class="btn btn-sm btn-primary text-white">
                     <i class="fas fa-eye me-1"></i> Xem {{ $commentableType }}
                 </a>
             @endif
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
+            <button type="button" class="btn btn-sm btn-danger text-white" data-bs-toggle="modal" data-bs-target="#deleteCommentModal">
                 <i class="fas fa-trash me-1"></i> Xóa
             </button>
-            <a href="{{ route('admin.comments') }}" class="btn btn-secondary">
+            <a href="{{ route('admin.comments') }}" class="btn btn-sm btn-secondary text-white">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại
             </a>
         </div>

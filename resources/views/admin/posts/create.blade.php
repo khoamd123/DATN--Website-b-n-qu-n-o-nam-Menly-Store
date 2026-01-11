@@ -75,12 +75,18 @@
 
                                 <!-- Toolbar row: Media button (like WordPress) -->
                                 <div class="d-flex align-items-center mb-2 gap-2">
-                                    <button type="button" id="add-media-btn" class="btn btn-sm btn-outline-primary">
+                                    <button type="button" id="add-media-btn" class="btn btn-sm btn-outline-primary" disabled>
                                         <i class="fas fa-photo-video"></i> Thêm Media
                                     </button>
                                     <input type="file" id="quick-media-input" accept="image/*" multiple style="display:none">
                                     <small class="text-muted">Nhấp Thêm Media để chọn ảnh và chèn trực tiếp.</small>
                                 </div>
+                                <style>
+                                    #add-media-btn:disabled {
+                                        opacity: 0.6;
+                                        cursor: not-allowed;
+                                    }
+                                </style>
 
                                 <div class="mb-3">
                                     <label class="form-label">Nội dung <span class="text-danger">*</span></label>
@@ -199,6 +205,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Store editor reference globally
             window.editor = editor;
+            
+            // Enable media button now that editor is ready
+            const addMediaBtn = document.getElementById('add-media-btn');
+            if (addMediaBtn) {
+                addMediaBtn.disabled = false;
+                addMediaBtn.title = 'Thêm ảnh vào bài viết';
+            }
             
             // Add drag and drop functionality to CKEditor
             const editorElement = editor.ui.getEditableElement();
@@ -327,6 +340,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error initializing CKEditor:', error);
+            alert('Không thể khởi tạo trình soạn thảo. Vui lòng tải lại trang.');
+            
+            // Keep button disabled if editor fails to initialize
+            const addMediaBtn = document.getElementById('add-media-btn');
+            if (addMediaBtn) {
+                addMediaBtn.disabled = true;
+                addMediaBtn.title = 'Lỗi khởi tạo editor';
+            }
         });
 
     // Global variables for selected images
@@ -385,17 +406,51 @@ document.addEventListener('DOMContentLoaded', function() {
     // Media button: choose files and insert immediately
     const addMediaBtn = document.getElementById('add-media-btn');
     const quickMediaInput = document.getElementById('quick-media-input');
+    
+    // Disable button initially until editor is ready
+    if (addMediaBtn) {
+        addMediaBtn.disabled = true;
+        addMediaBtn.title = 'Đang khởi tạo editor...';
+    }
+    
     if (addMediaBtn && quickMediaInput) {
         addMediaBtn.addEventListener('click', function() {
+            if (!window.editor) {
+                alert('Editor chưa sẵn sàng. Vui lòng đợi một chút và thử lại.');
+                return;
+            }
             quickMediaInput.click();
         });
         quickMediaInput.addEventListener('change', async function() {
             if (!this.files || this.files.length === 0) return;
-            let success = 0;
-            for (const file of this.files) {
-                try { await uploadImageAndInsert(file); success++; } catch (e) {}
+            
+            if (!window.editor) {
+                alert('Editor chưa sẵn sàng. Vui lòng đợi một chút và thử lại.');
+                this.value = '';
+                return;
             }
-            showSuccessMessage(`Đã tải và chèn ${success}/${this.files.length} ảnh.`);
+            
+            let success = 0;
+            let errors = [];
+            for (const file of this.files) {
+                try { 
+                    await uploadImageAndInsert(file); 
+                    success++; 
+                } catch (e) {
+                    console.error('Upload error:', e);
+                    const errorMsg = e.message || 'Lỗi không xác định';
+                    errors.push(file.name + ' (' + errorMsg + ')');
+                }
+            }
+            
+            if (success > 0 && errors.length === 0) {
+                showSuccessMessage(`Đã tải và chèn ${success}/${this.files.length} ảnh thành công.`);
+            } else if (success > 0 && errors.length > 0) {
+                showSuccessMessage(`Đã tải ${success}/${this.files.length} ảnh.`);
+                alert('Không thể tải lên một số ảnh:\n' + errors.join('\n'));
+            } else if (errors.length > 0) {
+                alert('Không thể tải lên ảnh:\n' + errors.join('\n'));
+            }
             this.value = '';
         });
     }
@@ -435,45 +490,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function uploadImageAndInsert(file) {
         if (!window.editor) {
-            throw new Error('Editor chưa được khởi tạo');
+            throw new Error('Editor chưa được khởi tạo. Vui lòng đợi một chút và thử lại.');
         }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            throw new Error('File phải là ảnh (jpeg, png, jpg, gif, webp)');
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('Kích thước ảnh không được vượt quá 5MB');
+        }
+        
         const formData = new FormData();
         formData.append('image', file);
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-        const res = await fetch("{{ route('admin.posts.upload-image') }}", {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': token },
-            body: formData
-        });
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error('Upload failed: ' + errorText);
-        }
-        const data = await res.json();
-        if (!data || !data.url) {
-            throw new Error('Không nhận được URL ảnh từ server');
-        }
-        const imageHtml = `<figure class="image"><img src="${data.url}" alt="${file.name || 'Image'}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></figure>`;
+        
         try {
-            // Sử dụng insertContent API của CKEditor 5
-            const currentData = window.editor.getData();
-            const newContent = currentData + (currentData ? '<p></p>' : '') + imageHtml;
-            window.editor.setData(newContent);
+            const res = await fetch("{{ route('admin.posts.upload-image') }}", {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': token },
+                body: formData
+            });
             
-            // Scroll to bottom để hiển thị ảnh vừa chèn
-            setTimeout(() => {
-                const editorElement = window.editor.ui.getEditableElement();
-                if (editorElement) {
-                    editorElement.scrollTop = editorElement.scrollHeight;
+            if (!res.ok) {
+                let errorMessage = 'Không thể tải ảnh lên server.';
+                try {
+                    const errorText = await res.text();
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.error && errorJson.error.message) {
+                        errorMessage = errorJson.error.message;
+                    } else if (errorJson.message) {
+                        errorMessage = errorJson.message;
+                    } else {
+                        errorMessage = errorText || errorMessage;
+                    }
+                } catch (e) {
+                    // Nếu không parse được JSON, sử dụng status text
+                    errorMessage = `Lỗi ${res.status}: ${res.statusText}`;
                 }
-            }, 100);
-        } catch (e) {
-            console.error('Error inserting image:', e);
-            // Fallback: append to textarea directly
-            const textarea = document.getElementById('content');
-            if (textarea) {
-                textarea.value = (textarea.value || '') + imageHtml;
+                throw new Error(errorMessage);
             }
+            
+            const data = await res.json();
+            if (!data) {
+                throw new Error('Không nhận được phản hồi từ server');
+            }
+            
+            if (data.error) {
+                throw new Error(data.error.message || 'Lỗi từ server');
+            }
+            
+            if (!data.url) {
+                throw new Error('Không nhận được URL ảnh từ server');
+            }
+            
+            const imageHtml = `<figure class="image"><img src="${data.url}" alt="${file.name || 'Image'}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></figure>`;
+            
+            try {
+                // Sử dụng insertContent API của CKEditor 5
+                const currentData = window.editor.getData();
+                const newContent = currentData + (currentData && !currentData.endsWith('</p>') ? '<p></p>' : '') + imageHtml;
+                window.editor.setData(newContent);
+                
+                // Scroll to bottom để hiển thị ảnh vừa chèn
+                setTimeout(() => {
+                    const editorElement = window.editor.ui.getEditableElement();
+                    if (editorElement) {
+                        editorElement.scrollTop = editorElement.scrollHeight;
+                    }
+                }, 100);
+            } catch (e) {
+                console.error('Error inserting image into editor:', e);
+                // Fallback: append to textarea directly
+                const textarea = document.getElementById('content');
+                if (textarea) {
+                    textarea.value = (textarea.value || '') + imageHtml;
+                }
+                throw new Error('Không thể chèn ảnh vào editor: ' + e.message);
+            }
+        } catch (e) {
+            console.error('Upload error:', e);
             throw e;
         }
     }

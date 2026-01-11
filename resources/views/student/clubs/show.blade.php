@@ -200,13 +200,15 @@
                         </a>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <div class="content-card text-center stat-card">
-                            <div class="stat-icon-large bg-success mb-2">
-                                <i class="fas fa-calendar-alt"></i>
+                        <a href="javascript:void(0);" onclick="document.getElementById('events-tab').click();" class="text-decoration-none text-dark d-block">
+                            <div class="content-card text-center stat-card h-100">
+                                <div class="stat-icon-large bg-success mb-2">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <h4 class="mb-1">{{ $eventsCount ?? 0 }}</h4>
+                                <p class="text-muted mb-0">Sự kiện</p>
                             </div>
-                            <h4 class="mb-1">{{ $eventsCount ?? 0 }}</h4>
-                            <p class="text-muted mb-0">Sự kiện</p>
-                        </div>
+                        </a>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="content-card text-center stat-card">

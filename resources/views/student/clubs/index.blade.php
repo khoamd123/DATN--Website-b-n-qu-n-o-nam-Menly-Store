@@ -15,9 +15,11 @@
                     </h2>
                     <p class="text-muted mb-0">Khám phá, tìm kiếm và tham gia các câu lạc bộ thú vị.</p>
                 </div>
-                <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-2"></i> Tạo CLB mới
-                </a>
+                @if(!isset($isLeader) || !$isLeader)
+                    <a href="{{ route('student.clubs.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i> Tạo CLB mới
+                    </a>
+                @endif
             </div>
         </div>
 
@@ -98,7 +100,7 @@
                                     <span class="badge bg-teal rounded-pill">
                                         <i class="fas fa-check-circle me-1"></i> Đã tham gia
                                     </span>
-                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                                    <a href="{{ route('student.clubs.show', $club->id) }}" class="btn btn-outline-primary btn-sm">
                                         <i class="fas fa-eye me-1"></i> Xem chi tiết
                                     </a>
                                 </div>

@@ -132,6 +132,59 @@ class HomeController extends Controller
             }
         }
 
+        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
+        $recentPosts = Post::with(['club', 'user', 'attachments'])
+            ->where('status', 'published')
+            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
+            ->orderByDesc('created_at')
+            ->limit(6)
+            ->get();
+
+        $fields = Field::orderBy('name')->get();
+
+        // Build main clubs query with filters & sorting
+        $clubsQuery = Club::with(['field'])
+            ->withCount([
+                'clubMembers as active_members_count' => function ($query) {
+                    $query->whereIn('status', ['approved', 'active']);
+                },
+            ])
+            ->where('status', 'active');
+
+        if ($search !== '') {
+            $clubsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($fieldId) {
+            $clubsQuery->where('field_id', $fieldId);
+        }
+
+        switch ($sort) {
+            case 'newest':
+                $clubsQuery->orderByDesc('created_at');
+                break;
+            case 'name':
+                $clubsQuery->orderBy('name');
+                break;
+            case 'popular':
+            default:
+                $clubsQuery->orderByDesc('active_members_count')
+                    ->orderBy('name');
+                break;
+        }
+
+        $clubs = $clubsQuery->paginate(8)->withQueryString();
+
+        // Newest clubs for student homepage
+        $newestClubs = Club::with(['field'])
+            ->where('status', 'active')
+            ->orderByDesc('created_at')
+            ->limit(4)
+            ->get();
+
         return view($viewName, [
             'stats' => $stats,
             'featuredClubs' => $featuredClubs,

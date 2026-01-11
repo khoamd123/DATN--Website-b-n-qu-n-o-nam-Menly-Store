@@ -178,25 +178,62 @@ class PostController extends Controller
      */
     public function uploadEditorImage(Request $request)
     {
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ]);
+        try {
+            $request->validate([
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            ]);
 
-        $path = $request->file('image')->store('public/posts/content');
-        $url = Storage::url($path); // e.g. /storage/posts/content/xxx.jpg
-        $fullUrl = asset($url);
+            $image = $request->file('image');
+            
+            // Tạo tên file đơn giản - giống như AdminController
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = 'uploads/posts/' . $imageName;
+            $destination = public_path('uploads/posts');
+            
+            // Tạo thư mục nếu chưa tồn tại
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            
+            // Di chuyển file vào thư mục public - giống như AdminController
+            $image->move($destination, $imageName);
+            
+            $fullUrl = asset($imagePath);
 
-        // Hỗ trợ cả CKEditor 4 và CKEditor 5
-        // CKEditor 4 sử dụng callback function
-        if ($request->has('CKEditorFuncNum')) {
-            $CKEditorFuncNum = $request->input('CKEditorFuncNum');
-            return response("<script type='text/javascript'>window.parent.CKEDITOR.tools.callFunction({$CKEditorFuncNum}, '{$fullUrl}', '');</script>")
-                ->header('Content-Type', 'text/html');
+            // Hỗ trợ cả CKEditor 4 và CKEditor 5
+            // CKEditor 4 sử dụng callback function
+            if ($request->has('CKEditorFuncNum')) {
+                $CKEditorFuncNum = $request->input('CKEditorFuncNum');
+                return response("<script type='text/javascript'>window.parent.CKEDITOR.tools.callFunction({$CKEditorFuncNum}, '{$fullUrl}', '');</script>")
+                    ->header('Content-Type', 'text/html');
+            }
+
+            // CKEditor 5 sử dụng JSON response
+            return response()->json([
+                'url' => $fullUrl,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Upload image validation error', ['errors' => $e->errors()]);
+            $errorMessage = 'Lỗi validation: ';
+            foreach ($e->errors() as $field => $messages) {
+                $errorMessage .= implode(', ', $messages);
+            }
+            return response()->json([
+                'error' => [
+                    'message' => $errorMessage
+                ]
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Upload image error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json([
+                'error' => [
+                    'message' => 'Không thể tải ảnh lên: ' . $e->getMessage()
+                ]
+            ], 500);
         }
-
-        // CKEditor 5 sử dụng JSON response
-        return response()->json([
-            'url' => $fullUrl,
-        ]);
     }
 }
