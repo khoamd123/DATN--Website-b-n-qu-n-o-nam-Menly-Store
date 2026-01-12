@@ -42,7 +42,9 @@ class EventController extends Controller
 
     public function register(Request $request, $event)
     {
-        return $this->oldController->registerEvent($request, $event);
+        // Xử lý $event có thể là Event model hoặc ID
+        $eventId = $event instanceof \App\Models\Event ? $event->id : $event;
+        return $this->oldController->registerEvent($eventId);
     }
 
     public function cancelRegistration($event)

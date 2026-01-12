@@ -38,10 +38,7 @@
             </div>
 
             <div class="content-card">
-                <div class="row">
-                    <!-- Cột bài viết (chiếm toàn bộ) -->
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0">
                                 <i class="fas fa-newspaper text-teal me-2"></i>
                                 @if(isset($search) && !empty($search))
@@ -54,7 +51,191 @@
                                 <span class="text-muted small">{{ $posts->total() }} kết quả</span>
                             @endif
                         </div>
-                @forelse($posts as $post)
+                
+                @if($posts->count() > 0)
+                    {{-- Bố cục 2/3 - 1/3 cho bài viết đầu tiên - chỉ hiển thị ở trang đầu tiên --}}
+                    @if(request('page', 1) == 1)
+                        <div class="row g-4 mb-4">
+                            @php
+                                $firstPost = $posts->first();
+                            @endphp
+                            @if($firstPost)
+                            {{-- Bài viết lớn - 2/3 --}}
+                            <div class="col-lg-8">
+                                @php
+                                    $imageUrl = null;
+                                    if ($firstPost->type !== 'announcement') {
+                                        $imageField = $firstPost->image;
+                                        if (empty($imageField) && isset($firstPost->attachments) && $firstPost->attachments->count() > 0) {
+                                            $firstImageAttachment = $firstPost->attachments->firstWhere('file_type', 'image') ?? $firstPost->attachments->first();
+                                            $imageField = $firstImageAttachment->file_url ?? null;
+                                        }
+                                        if (empty($imageField) && !empty($firstPost->content)) {
+                                            if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $firstPost->content, $m)) {
+                                                $imageField = $m[1] ?? null;
+                                            }
+                                        }
+                                        if (!empty($imageField)) {
+                                            if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                $imageUrl = $imageField;
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                $imageUrl = asset(ltrim($imageField, '/'));
+                                            } else {
+                                                $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                            }
+                                        }
+                                    }
+                                    
+                                    $raw = html_entity_decode($firstPost->content ?? '', ENT_QUOTES, 'UTF-8');
+                                    $text = strip_tags($raw);
+                                    $text = str_replace("\xc2\xa0", ' ', $text);
+                                    $text = preg_replace('/\s+/u', ' ', $text);
+                                    $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
+                                    $postExcerpt = trim($text);
+                                @endphp
+                                <div class="post-item-card-featured rounded overflow-hidden h-100" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $firstPost->id) }}'">
+                                    {{-- Image --}}
+                                    @if($imageUrl)
+                                        <div class="post-image-container-featured" style="width: 100%; height: 400px; overflow: hidden; background: #f0f0f0;">
+                                            <img src="{{ $imageUrl }}" alt="{{ $firstPost->title }}" class="w-100 h-100" style="object-fit: cover; display: block;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\'width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-4x\'></i></div>';">
+                                        </div>
+                                    @else
+                                        <div class="post-icon-featured" style="width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-newspaper text-white fa-4x"></i>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Content --}}
+                                    <div class="p-4">
+                                        {{-- Header --}}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0 me-2">
+                                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-users text-white"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold text-dark">{{ $firstPost->club->name ?? 'UniClubs' }}</div>
+                                                <div class="text-muted" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-user-circle me-1"></i>{{ $firstPost->user->name ?? 'Ban quản trị' }}
+                                                    <span class="mx-1">•</span>
+                                                    <i class="far fa-clock me-1"></i>{{ $firstPost->created_at->diffForHumans() }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {{-- Title --}}
+                                        <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem; line-height: 1.3;">{{ $firstPost->title }}</h4>
+                                        
+                                        {{-- Excerpt --}}
+                                        <p class="text-muted mb-3" style="font-size: 1rem; line-height: 1.6;">{{ Str::words($postExcerpt, 50, '...') }}</p>
+                                        
+                                        {{-- Engagement Bar --}}
+                                        <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                                            <div class="d-flex align-items-center text-muted" style="font-size: 0.9rem;">
+                                                <i class="far fa-eye me-1"></i>
+                                                <span>{{ number_format($firstPost->views ?? 0) }} lượt xem</span>
+                                                @if(isset($firstPost->comments_count) && $firstPost->comments_count > 0)
+                                                    <span class="mx-2">•</span>
+                                                    <i class="far fa-comments me-1"></i>
+                                                    <span>{{ $firstPost->comments_count }} bình luận</span>
+                                                @endif
+                                            </div>
+                                            <a href="{{ route('student.posts.show', $firstPost->id) }}#comments" class="btn btn-sm btn-outline-teal text-decoration-none" onclick="event.stopPropagation();">
+                                                <i class="far fa-comment me-1"></i>
+                                                Bình luận
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {{-- Các bài viết nhỏ - 1/3 --}}
+                            <div class="col-lg-4">
+                                <div class="d-flex flex-column gap-3">
+                                    @foreach($posts->skip(1)->take(4) as $post)
+                                        @php
+                                            $imageUrl = null;
+                                            if ($post->type !== 'announcement') {
+                                                $imageField = $post->image;
+                                                if (empty($imageField) && isset($post->attachments) && $post->attachments->count() > 0) {
+                                                    $firstImageAttachment = $post->attachments->firstWhere('file_type', 'image') ?? $post->attachments->first();
+                                                    $imageField = $firstImageAttachment->file_url ?? null;
+                                                }
+                                                if (empty($imageField) && !empty($post->content)) {
+                                                    if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $post->content, $m)) {
+                                                        $imageField = $m[1] ?? null;
+                                                    }
+                                                }
+                                                if (!empty($imageField)) {
+                                                    if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                        $imageUrl = $imageField;
+                                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                                    } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                        $imageUrl = asset(ltrim($imageField, '/'));
+                                                    } else {
+                                                        $imageUrl = asset('storage/' . ltrim($imageField, '/'));
+                                                    }
+                                                }
+                                            }
+                                            
+                                            $raw = html_entity_decode($post->content ?? '', ENT_QUOTES, 'UTF-8');
+                                            $text = strip_tags($raw);
+                                            $text = str_replace("\xc2\xa0", ' ', $text);
+                                            $text = preg_replace('/\s+/u', ' ', $text);
+                                            $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
+                                            $postExcerpt = trim($text);
+                                        @endphp
+                                        <div class="post-item-card-small rounded overflow-hidden" style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $post->id) }}'">
+                                            <div class="d-flex">
+                                                {{-- Image --}}
+                                                <div class="flex-shrink-0" style="width: 120px; height: 120px; overflow: hidden; background: #f0f0f0;">
+                                                    @if($imageUrl)
+                                                        <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 h-100" style="object-fit: cover;" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<div style=\'width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-2x\'></i></div>';">
+                                                    @else
+                                                        <div style="width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                                            <i class="fas fa-newspaper text-white fa-2x"></i>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                
+                                                {{-- Content --}}
+                                                <div class="flex-grow-1 p-3 d-flex flex-column">
+                                                    <div class="mb-2">
+                                                        <div class="fw-semibold text-dark small mb-1">{{ $post->club->name ?? 'UniClubs' }}</div>
+                                                        <div class="text-muted" style="font-size: 0.7rem;">
+                                                            <i class="far fa-clock me-1"></i>{{ $post->created_at->diffForHumans() }}
+                                                        </div>
+                                                    </div>
+                                                    <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.9rem; line-height: 1.3; flex-grow: 1;">{{ Str::limit($post->title, 60) }}</h6>
+                                                    @if(isset($post->comments_count) && $post->comments_count > 0)
+                                                        <div class="text-muted small mt-auto">
+                                                            <i class="far fa-comments me-1"></i>
+                                                            <span>{{ $post->comments_count }}</span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    @endif
+                    
+                    {{-- Danh sách bài viết - từ trang 2 trở đi hoặc các bài viết còn lại ở trang 1 --}}
+                    @php
+                        $currentPage = request('page', 1);
+                        $skipCount = ($currentPage == 1) ? 5 : 0; // Ở trang 1 skip 5 bài đầu (1 featured + 4 sidebar), từ trang 2 trở đi không skip
+                    @endphp
+                    @if($currentPage > 1 || $posts->count() > 5)
+                        <div class="row g-4">
+                            <div class="col-12">
+                                @foreach($posts->skip($skipCount) as $post)
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="row g-0">
                             @php
@@ -235,7 +416,11 @@
                             @endif
                         </div>
                     </div>
-                @empty
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @else
                     <div class="text-center py-5">
                         @if(isset($search) && !empty($search))
                             <i class="fas fa-search fa-3x text-muted mb-3"></i>
@@ -247,19 +432,12 @@
                             <p class="text-muted mb-0">Chưa có bài viết nào.</p>
                         @endif
                     </div>
-                @endforelse
+                @endif
 
                         @if($posts->hasPages())
-                            <div class="pagination-wrapper mt-4" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap; gap: 1rem;">
-                                <div class="pagination-info" style="display: flex; align-items: center; gap: 0.5rem; color: #495057; font-size: 0.9rem;">
-                                    <i class="fas fa-info-circle" style="color: #6c757d;"></i>
-                                    <span>
-                                        Hiển thị <strong>{{ $posts->firstItem() }}</strong> - <strong>{{ $posts->lastItem() }}</strong> 
-                                        trong tổng <strong>{{ $posts->total() }}</strong> kết quả
-                                    </span>
-                                </div>
-                                <nav aria-label="Page navigation">
-                                    <ul class="pagination pagination-sm mb-0">
+                            <div class="pagination-wrapper mt-4">
+                                <nav aria-label="Page navigation" class="d-flex justify-content-center">
+                                    <ul class="pagination mb-0">
                                         @php
                                             $queryParams = request()->except('page');
                                             $previousUrl = $posts->onFirstPage() ? '#' : $posts->appends($queryParams)->previousPageUrl();
@@ -335,52 +513,71 @@
         padding: 0.375rem 0.75rem;
     }
     
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 1.5rem 0;
+    }
+    
     .pagination {
-        gap: 0.25rem;
+        gap: 0.5rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .pagination .page-item {
+        margin: 0;
     }
     
     .pagination .page-link {
-        border-radius: 4px;
-        border: 1px solid #dee2e6;
-        color: #495057;
-        padding: 0.375rem 0.75rem;
-        transition: all 0.3s ease;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        padding: 0;
+        transition: all 0.2s ease;
         font-weight: 500;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 32px;
+        width: 40px;
+        height: 40px;
+        background-color: #ffffff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     
     .pagination .page-link:hover {
         background-color: #14b8a6;
         border-color: #14b8a6;
         color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(20, 184, 166, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(20, 184, 166, 0.25);
     }
     
     .pagination .page-item.active .page-link {
         background-color: #14b8a6;
         border-color: #14b8a6;
         color: white;
-        box-shadow: 0 2px 4px rgba(20, 184, 166, 0.3);
+        box-shadow: 0 2px 6px rgba(20, 184, 166, 0.35);
+        font-weight: 600;
     }
     
     .pagination .page-item.disabled .page-link {
-        background-color: #f8f9fa;
-        border-color: #dee2e6;
-        color: #6c757d;
+        background-color: #f9fafb;
+        border-color: #e5e7eb;
+        color: #9ca3af;
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.7;
+        box-shadow: none;
     }
     
     .pagination .page-item.disabled .page-link:hover {
         transform: none;
         box-shadow: none;
-        background-color: #f8f9fa;
-        border-color: #dee2e6;
-        color: #6c757d;
+        background-color: #f9fafb;
+        border-color: #e5e7eb;
+        color: #9ca3af;
     }
 </style>
 @endpush

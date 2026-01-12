@@ -15,6 +15,7 @@ class ClubMember extends Model
         'club_id',
         'user_id',
         'role_in_club',
+        'position',
         'status',
         'joined_at',
         'left_at',
@@ -24,6 +25,7 @@ class ClubMember extends Model
     protected $casts = [
         'joined_at' => 'datetime',
         'left_at' => 'datetime',
+        'position' => 'string', // Cast position as string to ensure proper handling
     ];
 
     /**

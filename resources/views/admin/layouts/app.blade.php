@@ -611,6 +611,8 @@
                             aria-expanded="false">
                         <i class="fas fa-bell"></i>
                         @php
+                            $notificationCount = 0;
+                            $latestNotifications = collect();
                             try {
                                 $currentUserId = session('user_id');
                                 if ($currentUserId) {
@@ -622,8 +624,18 @@
                                         $query->where('user_id', $currentUserId)
                                               ->where('is_read', true);
                                     })->count();
-                                } else {
-                                    $notificationCount = 0;
+                                    
+                                    // Lấy 6 thông báo mới nhất
+                                    $latestNotifications = \App\Models\Notification::with(['sender'])
+                                        ->whereHas('targets', function($query) use ($currentUserId) {
+                                            $query->where(function($q) use ($currentUserId) {
+                                                $q->where('target_type', 'user')->where('target_id', $currentUserId);
+                                            })
+                                            ->orWhere('target_type', 'all');
+                                        })
+                                        ->orderBy('created_at', 'desc')
+                                        ->limit(6)
+                                        ->get();
                                 }
                             } catch (Exception $e) {
                                 $notificationCount = 0;
@@ -633,15 +645,60 @@
                             <span class="notification-badge">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
                         @endif
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
-                        <li><h6 class="dropdown-header">🔔 Thông báo</h6></li>
-                        @if($notificationCount > 0)
-                            <li><a class="dropdown-item" href="{{ route('admin.notifications', ['filter' => 'unread']) }}"><i class="fas fa-user-plus text-success"></i> Có {{ $notificationCount }} thông báo mới</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 500px; overflow-y: auto; padding: 0;">
+                        <li>
+                            <h6 class="dropdown-header d-flex align-items-center" style="background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%); padding: 1rem; border-bottom: 2px solid #14b8a6;">
+                                <i class="fas fa-bell text-warning me-2"></i>
+                                <span>Thông báo</span>
+                                @if($notificationCount > 0)
+                                    <span class="badge bg-danger ms-2">{{ $notificationCount }}</span>
+                                @endif
+                            </h6>
+                        </li>
+                        <li><hr class="dropdown-divider m-0"></li>
+                        @if($latestNotifications->count() > 0)
+                            @foreach($latestNotifications as $notification)
+                                @php
+                                    $isRead = \App\Models\NotificationRead::where('notification_id', $notification->id)
+                                        ->where('user_id', $currentUserId ?? 0)
+                                        ->where('is_read', true)
+                                        ->exists();
+                                @endphp
+                                <li>
+                                    <a class="dropdown-item {{ !$isRead ? 'fw-semibold' : '' }}" 
+                                       href="{{ route('admin.notifications.show', $notification->id) }}"
+                                       style="{{ !$isRead ? 'background-color: #f0fdfa;' : '' }} padding: 0.875rem 1rem; border-bottom: 1px solid #f1f5f9;">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-2">
+                                                <i class="fas fa-circle text-primary" style="font-size: 0.5rem;"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="small text-dark mb-1">{{ $notification->title }}</div>
+                                                <div class="text-muted small" style="font-size: 0.75rem; line-height: 1.4;">
+                                                    {{ \Illuminate\Support\Str::limit($notification->message, 60) }}
+                                                </div>
+                                                <div class="text-muted" style="font-size: 0.7rem; margin-top: 0.25rem;">
+                                                    <i class="far fa-clock me-1"></i>{{ $notification->created_at->diffForHumans() }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endforeach
                         @else
-                            <li><a class="dropdown-item text-muted" href="{{ route('admin.notifications') }}"><i class="fas fa-check-circle text-success"></i> Không có thông báo mới</a></li>
+                            <li>
+                                <div class="dropdown-item text-center text-muted py-3">
+                                    <i class="fas fa-bell-slash fa-2x mb-2 d-block"></i>
+                                    <small>Chưa có thông báo nào</small>
+                                </div>
+                            </li>
                         @endif
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center" href="{{ route('admin.notifications') }}">Xem tất cả thông báo</a></li>
+                        <li><hr class="dropdown-divider m-0"></li>
+                        <li>
+                            <a class="dropdown-item text-center text-primary fw-semibold" href="{{ route('admin.notifications') }}" style="padding: 0.75rem;">
+                                <i class="fas fa-arrow-right me-1"></i> Xem tất cả thông báo
+                            </a>
+                        </li>
                     </ul>
                 </div>
                 

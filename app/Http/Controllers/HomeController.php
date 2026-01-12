@@ -59,12 +59,13 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
-        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
+        // Latest public posts (chỉ lấy bài viết, không lấy thông báo) - sắp xếp theo lượt xem
         $recentPosts = Post::with(['club', 'user', 'attachments'])
             ->where('status', 'published')
             ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
-            ->orderByDesc('created_at')
-            ->limit(6)
+            ->orderByDesc('views') // Sắp xếp theo lượt xem giảm dần
+            ->orderByDesc('created_at') // Nếu lượt xem bằng nhau thì sắp xếp theo ngày tạo
+            ->limit(5)
             ->get();
 
         $fields = Field::orderBy('name')->get();
@@ -134,15 +135,7 @@ class HomeController extends Controller
                 ->first();
         }
 
-        // Latest public posts (chỉ lấy bài viết, không lấy thông báo)
-        $recentPosts = Post::with(['club', 'user', 'attachments'])
-            ->where('status', 'published')
-            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
-            ->orderByDesc('created_at')
-            ->limit(6)
-            ->get();
-
-        $fields = Field::orderBy('name')->get();
+        // Note: $recentPosts đã được định nghĩa ở trên, không cần định nghĩa lại
 
         // Build main clubs query with filters & sorting
         $clubsQuery = Club::with(['field'])

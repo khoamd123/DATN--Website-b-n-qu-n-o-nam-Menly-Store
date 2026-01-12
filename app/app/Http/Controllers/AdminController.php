@@ -142,59 +142,76 @@ class AdminController extends Controller
         if ($dateFilter) {
             $newUsers = User::whereBetween('created_at', [$startDate, $endDate])
                 ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
+                ->paginate(10)
+                ->withQueryString();
             
             // Câu lạc bộ mới trong khoảng thời gian được chọn
             $newClubs = Club::with(['field', 'owner'])
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->orderBy('created_at', 'desc')
-                ->limit(5)
-                ->get();
+                ->paginate(10)
+                ->withQueryString();
             
             // Sự kiện trong khoảng thời gian được chọn
             $upcomingEvents = Event::with(['club'])
                 ->whereBetween('start_time', [$startDate, $endDate])
                 ->orderBy('start_time', 'desc')
-                ->limit(5)
-                ->get();
+                ->paginate(5)
+                ->withQueryString();
         } else {
             // Người dùng mới (7 ngày gần nhất)
             $newUsers = User::where('created_at', '>=', now()->subDays(7))
                 ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
+                ->paginate(10);
             
             // Câu lạc bộ mới
             $newClubs = Club::with(['field', 'owner'])
                 ->where('created_at', '>=', now()->subDays(7))
                 ->orderBy('created_at', 'desc')
-                ->limit(5)
-                ->get();
+                ->paginate(10);
             
             // Sự kiện gần đây (cả sắp tới và đã diễn ra gần đây)
             $upcomingEvents = Event::with(['club'])
                 ->where('start_time', '>=', now()->subDays(30)) // Lấy sự kiện từ 30 ngày trước đến tương lai
                 ->orderBy('start_time', 'desc')
-                ->limit(5)
-                ->get();
+                ->paginate(5);
         }
 
 
             
         // Top 5 CLB hoạt động mạnh nhất (dựa trên số bài viết + sự kiện)
-        $topClubs = Club::withCount([
-                'posts as posts_count' => function ($query) {
-                    $query->where('type', 'post');
-                },
-                'events'
-            ])
-            ->with(['field'])
-            ->having('posts_count', '>', 0)
-            ->orHaving('events_count', '>', 0)
-            ->orderByRaw('(posts_count + events_count) DESC')
-            ->limit(5)
-            ->get();
+        if ($dateFilter) {
+            // Lọc theo khoảng thời gian được chọn
+            $topClubs = Club::withCount([
+                    'posts as posts_count' => function ($query) use ($startDate, $endDate) {
+                        $query->where('type', 'post')
+                            ->whereBetween('created_at', [$startDate, $endDate]);
+                    },
+                    'events as events_count' => function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('created_at', [$startDate, $endDate]);
+                    }
+                ])
+                ->with(['field'])
+                ->having('posts_count', '>', 0)
+                ->orHaving('events_count', '>', 0)
+                ->orderByRaw('(posts_count + events_count) DESC')
+                ->limit(5)
+                ->get();
+        } else {
+            // Không có bộ lọc - lấy tất cả
+            $topClubs = Club::withCount([
+                    'posts as posts_count' => function ($query) {
+                        $query->where('type', 'post');
+                    },
+                    'events'
+                ])
+                ->with(['field'])
+                ->having('posts_count', '>', 0)
+                ->orHaving('events_count', '>', 0)
+                ->orderByRaw('(posts_count + events_count) DESC')
+                ->limit(5)
+                ->get();
+        }
             
         // Thống kê theo lĩnh vực
         $clubsByField = \App\Models\Field::withCount('clubs')->get();

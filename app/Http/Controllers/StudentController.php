@@ -2780,25 +2780,31 @@ class StudentController extends Controller
         }
         
         // Nếu có position từ form, tự động gán permissions theo position
-        if ($requestedPosition && empty($permissionNames)) {
+        if ($requestedPosition) {
             switch ($requestedPosition) {
                 case 'leader':
+                    // Trưởng CLB: luôn có tất cả quyền, bất kể người dùng chọn gì
                     $permissionNames = ['quan_ly_clb', 'quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
                     break;
-                    case 'vice_president':
-                        $permissionNames = ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
-                        break;
+                case 'vice_president':
+                    // Phó CLB: luôn có 4 quyền, bất kể người dùng chọn gì
+                    $permissionNames = ['quan_ly_thanh_vien', 'tao_su_kien', 'dang_thong_bao', 'xem_bao_cao'];
+                    break;
                 case 'treasurer':
+                    // Thủ quỹ: luôn có 2 quyền (quan_ly_quy + xem_bao_cao), bất kể người dùng chọn gì
                     $permissionNames = ['quan_ly_quy', 'xem_bao_cao'];
                     break;
-                    case 'member':
-                    default:
+                case 'member':
+                default:
+                    // Thành viên: chỉ có xem_bao_cao, nhưng nếu người dùng đã chọn quyền thì giữ lại
+                    if (empty($permissionNames)) {
                         $permissionNames = ['xem_bao_cao'];
-                        break;
+                    }
+                    break;
             }
         }
         
-        // Nếu không có quyền nào được chọn, tự động gán quyền "xem báo cáo"
+        // Nếu không có quyền nào được chọn và không có position, tự động gán quyền "xem báo cáo"
         if (empty($permissionNames)) {
             $permissionNames = ['xem_bao_cao'];
         }
@@ -2807,7 +2813,7 @@ class StudentController extends Controller
 
         try {
             $requestedPosition = $request->input('position');
-            DB::transaction(function () use ($clubMember, $clubId, $permissionIds, $request, $requestedPosition) {
+            DB::transaction(function () use ($clubMember, $clubId, $permissionIds, $request, $requestedPosition, $user) {
                 // Cập nhật permissions
                 DB::table('user_permissions_club')
                     ->where('user_id', $clubMember->user_id)
@@ -2896,7 +2902,21 @@ class StudentController extends Controller
                 }
                 
                 // Ưu tiên position từ form nếu có, nếu không thì dùng position được tính toán từ quyền
-                $finalPosition = $requestedPosition ?: $calculatedPosition;
+                // Nếu position từ form là treasurer, luôn ưu tiên position từ form (bỏ qua calculatedPosition)
+                if ($requestedPosition === 'treasurer') {
+                    $finalPosition = 'treasurer';
+                } else {
+                    $finalPosition = $requestedPosition ?: $calculatedPosition;
+                }
+                
+                // Đảm bảo finalPosition là string hợp lệ
+                $finalPosition = (string) $finalPosition;
+                
+                // Validate position hợp lệ
+                $validPositions = ['member', 'treasurer', 'vice_president', 'leader'];
+                if (!in_array($finalPosition, $validPositions)) {
+                    $finalPosition = 'member'; // Fallback về member nếu không hợp lệ
+                }
                 
                 // KIỂM TRA: Nếu finalPosition là lãnh đạo (leader, vice_president, treasurer),
                 // kiểm tra xem user đã có vai trò lãnh đạo ở CLB khác chưa
@@ -2922,17 +2942,37 @@ class StudentController extends Controller
                     }
                 }
                 
-                // Kiểm tra giới hạn cho position từ form (nếu có)
-                if ($requestedPosition === 'treasurer') {
-                    $treasurerCount = ClubMember::where('club_id', $clubId)
+                // Kiểm tra giới hạn cho treasurer (chỉ 1 thủ quỹ mỗi CLB)
+                // Chỉ kiểm tra nếu finalPosition là treasurer (sau khi đã xác định)
+                if ($finalPosition === 'treasurer') {
+                    $existingTreasurer = ClubMember::where('club_id', $clubId)
                         ->whereIn('status', ['approved', 'active'])
                         ->where('position', 'treasurer')
                         ->where('id', '!=', $clubMember->id)
-                        ->count();
+                        ->first();
                     
-                    if ($treasurerCount >= 1) {
-                        // Nếu đã có treasurer, không cho phép thay đổi
-                        throw new \Exception("CLB này đã có thủ quỹ. Vui lòng chuyển thủ quỹ hiện tại về thành viên trước.");
+                    if ($existingTreasurer) {
+                        // Nếu đã có treasurer, tự động chuyển thủ quỹ cũ về member
+                        // Sử dụng DB::update() với raw SQL để đảm bảo giá trị ENUM được quote đúng cách
+                        $sql = "UPDATE club_members SET position = ?, updated_at = ? WHERE id = ?";
+                        DB::update($sql, ['member', now(), $existingTreasurer->id]);
+                        
+                        // Xóa quyền của thủ quỹ cũ, chỉ giữ xem_bao_cao
+                        DB::table('user_permissions_club')
+                            ->where('user_id', $existingTreasurer->user_id)
+                            ->where('club_id', $clubId)
+                            ->delete();
+                        
+                        $xemBaoCaoPerm = Permission::where('name', 'xem_bao_cao')->first();
+                        if ($xemBaoCaoPerm) {
+                            DB::table('user_permissions_club')->insert([
+                                'user_id' => $existingTreasurer->user_id,
+                                'club_id' => $clubId,
+                                'permission_id' => $xemBaoCaoPerm->id,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
                     }
                 }
                 
@@ -2949,16 +2989,61 @@ class StudentController extends Controller
                     }
                 }
                 
-                // Cập nhật position
-                    ClubMember::where('id', $clubMember->id)
-                    ->update(['position' => $finalPosition]);
+                // Lấy position cũ trước khi cập nhật
+                $oldPosition = $clubMember->position;
+                
+                // Cập nhật position - sử dụng raw SQL với giá trị được quote thủ công
+                // Đảm bảo giá trị là string và nằm trong danh sách ENUM hợp lệ
+                $validPosition = in_array($finalPosition, ['leader', 'vice_president', 'treasurer', 'member']) 
+                    ? (string) $finalPosition 
+                    : 'member';
+                
+                // Sử dụng DB::update() với raw SQL để đảm bảo giá trị ENUM được quote đúng cách
+                // MySQL cần giá trị ENUM được quote bằng dấu nháy đơn
+                $sql = "UPDATE club_members SET position = ?, updated_at = ? WHERE id = ?";
+                DB::update($sql, [$validPosition, now(), $clubMember->id]);
+                
+                // Refresh model để đảm bảo dữ liệu mới nhất
+                $clubMember->refresh();
+                
+                // Tạo thông báo cho thành viên khi được phân quyền làm phó CLB hoặc thủ quỹ
+                if (in_array($validPosition, ['vice_president', 'treasurer']) && $oldPosition !== $validPosition) {
+                    try {
+                        $club = Club::find($clubId);
+                        $positionLabels = [
+                            'vice_president' => 'Phó CLB',
+                            'treasurer' => 'Thủ quỹ',
+                        ];
+                        $positionLabel = $positionLabels[$validPosition] ?? $validPosition;
+                        
+                        // Tạo notification
+                        $notification = \App\Models\Notification::create([
+                            'sender_id' => $user->id,
+                            'type' => 'club_role_change',
+                            'title' => "Bạn đã được phân quyền {$positionLabel}",
+                            'message' => "Bạn đã được phân quyền làm {$positionLabel} của CLB \"{$club->name}\". Chúc mừng bạn!",
+                            'related_id' => $clubId,
+                            'related_type' => 'Club',
+                        ]);
+                        
+                        // Tạo notification target cho thành viên được phân quyền
+                        \App\Models\NotificationTarget::create([
+                            'notification_id' => $notification->id,
+                            'target_type' => 'user',
+                            'target_id' => $clubMember->user_id,
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('Lỗi khi tạo thông báo phân quyền: ' . $e->getMessage());
+                    }
+                }
                 
                     // Log để debug
-                \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$clubMember->position} -> {$finalPosition} (requested: {$requestedPosition}, calculated: {$calculatedPosition}, permission count: {$permissionCount})");
+                \Log::info("Updated position for user {$clubMember->user_id} in club {$clubId}: {$oldPosition} -> {$finalPosition} (requested: {$requestedPosition}, calculated: {$calculatedPosition}, permission count: {$permissionCount}, validPosition: {$validPosition})");
             });
 
             return redirect()->back()->with('success', 'Đã cập nhật thành công.');
         } catch (\Exception $e) {
+            \Log::error("Error updating member permissions: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -3538,6 +3623,120 @@ class StudentController extends Controller
                     ->groupBy('category')
                     ->pluck('total', 'category')
                     ->toArray();
+                
+                // Thống kê quỹ theo tuần (7 ngày gần nhất)
+                $fundStatsByWeek = [
+                    'labels' => [],
+                    'income' => [],
+                    'expense' => []
+                ];
+                for ($i = 6; $i >= 0; $i--) {
+                    $date = now()->subDays($i);
+                    $startOfDay = $date->copy()->startOfDay();
+                    $endOfDay = $date->copy()->endOfDay();
+                    
+                    $fundStatsByWeek['labels'][] = $date->format('d/m');
+                    $fundStatsByWeek['income'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'income')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfDay, $endOfDay) {
+                            $query->whereBetween('transaction_date', [$startOfDay, $endOfDay])
+                                  ->orWhere(function($q) use ($startOfDay, $endOfDay) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereBetween('created_at', [$startOfDay, $endOfDay]);
+                                  });
+                        })
+                        ->sum('amount');
+                    $fundStatsByWeek['expense'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'expense')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfDay, $endOfDay) {
+                            $query->whereBetween('transaction_date', [$startOfDay, $endOfDay])
+                                  ->orWhere(function($q) use ($startOfDay, $endOfDay) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereBetween('created_at', [$startOfDay, $endOfDay]);
+                                  });
+                        })
+                        ->sum('amount');
+                }
+                
+                // Thống kê quỹ theo tháng (12 tháng gần nhất)
+                $fundStatsByMonth = [
+                    'labels' => [],
+                    'income' => [],
+                    'expense' => []
+                ];
+                for ($i = 11; $i >= 0; $i--) {
+                    $date = now()->subMonths($i);
+                    $startOfMonth = $date->copy()->startOfMonth();
+                    $endOfMonth = $date->copy()->endOfMonth();
+                    
+                    $fundStatsByMonth['labels'][] = $date->format('m/Y');
+                    $fundStatsByMonth['income'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'income')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                            $query->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereYear('created_at', $startOfMonth->year)
+                                        ->whereMonth('created_at', $startOfMonth->month);
+                                  });
+                        })
+                        ->sum('amount');
+                    $fundStatsByMonth['expense'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'expense')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                            $query->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+                                  ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereYear('created_at', $startOfMonth->year)
+                                        ->whereMonth('created_at', $startOfMonth->month);
+                                  });
+                        })
+                        ->sum('amount');
+                }
+                
+                // Thống kê quỹ theo năm (5 năm gần nhất)
+                $fundStatsByYear = [
+                    'labels' => [],
+                    'income' => [],
+                    'expense' => []
+                ];
+                for ($i = 4; $i >= 0; $i--) {
+                    $date = now()->subYears($i);
+                    $startOfYear = $date->copy()->startOfYear();
+                    $endOfYear = $date->copy()->endOfYear();
+                    
+                    $fundStatsByYear['labels'][] = $date->format('Y');
+                    $fundStatsByYear['income'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'income')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfYear, $endOfYear) {
+                            $query->whereBetween('transaction_date', [$startOfYear, $endOfYear])
+                                  ->orWhere(function($q) use ($startOfYear) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereYear('created_at', $startOfYear->year);
+                                  });
+                        })
+                        ->sum('amount');
+                    $fundStatsByYear['expense'][] = (int) FundTransaction::where('fund_id', $fundId)
+                        ->where('type', 'expense')
+                        ->where('status', 'approved')
+                        ->where(function($query) use ($startOfYear, $endOfYear) {
+                            $query->whereBetween('transaction_date', [$startOfYear, $endOfYear])
+                                  ->orWhere(function($q) use ($startOfYear) {
+                                      $q->whereNull('transaction_date')
+                                        ->whereYear('created_at', $startOfYear->year);
+                                  });
+                        })
+                        ->sum('amount');
+                }
+        } else {
+            $fundStatsByWeek = ['labels' => [], 'income' => [], 'expense' => []];
+            $fundStatsByMonth = ['labels' => [], 'income' => [], 'expense' => []];
+            $fundStatsByYear = ['labels' => [], 'income' => [], 'expense' => []];
         }
 
         // Member structure (leader/vice_president/treasurer/member) simple distribution
@@ -3621,6 +3820,9 @@ class StudentController extends Controller
                 'totalExpense' => (int) $totalExpense,
                 'balance' => (int) $balance,
                 'expenseByCategory' => $expenseByCategory,
+                'statsByWeek' => $fundStatsByWeek,
+                'statsByMonth' => $fundStatsByMonth,
+                'statsByYear' => $fundStatsByYear,
             ],
             'resources' => [
                 'total' => $totalResources,
@@ -4735,7 +4937,7 @@ class StudentController extends Controller
         // Thông báo luôn sắp xếp theo mới nhất
         $announcementsQuery->orderBy('created_at', 'desc');
 
-        $posts = $postsQuery->paginate(3);
+        $posts = $postsQuery->paginate(5);
         $announcements = $announcementsQuery->limit(5)->get();
         $clubs = Club::where('status', 'active')->get();
 
@@ -4769,11 +4971,11 @@ class StudentController extends Controller
             return redirect()->route('student.posts')->with('error', 'Bạn không có quyền xem bài viết này.');
         }
 
-        // Bài viết liên quan: cùng CLB, đã xuất bản (hoặc members_only nếu là thành viên CLB), loại post/announcement
+        // Bài viết liên quan: cùng CLB, đã xuất bản (hoặc members_only nếu là thành viên CLB), chỉ loại post (không bao gồm announcement)
         $relatedQuery = Post::with(['club', 'user'])
             ->where('id', '!=', $post->id)
             ->where('club_id', $post->club_id)
-            ->whereIn('type', ['post', 'announcement'])
+            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
             ->orderBy('created_at', 'desc')
             ->limit(6);
 

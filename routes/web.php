@@ -89,7 +89,6 @@ Route::get('/admin/test-yesterday-debug', function() {
 // Simple Login Routes
 Route::get('/admin-login', [App\Http\Controllers\SimpleLoginController::class, 'showLogin'])->name('simple.login');
 Route::post('/admin-login', [App\Http\Controllers\SimpleLoginController::class, 'login'])->name('simple.login.submit');
-Route::post('/logout', [App\Http\Controllers\SimpleLoginController::class, 'logout'])->name('logout');
 
 /*
 |--------------------------------------------------------------------------
@@ -109,7 +108,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Logout route - sử dụng SimpleLoginController để xử lý cả admin và student
+Route::post('/logout', [App\Http\Controllers\SimpleLoginController::class, 'logout'])->name('logout');
 
 // Quick login route for testing
 Route::get('/quick-login-student', function () {

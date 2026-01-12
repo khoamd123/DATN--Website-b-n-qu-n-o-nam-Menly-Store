@@ -83,10 +83,27 @@ class NotificationController extends Controller
                 ]
             );
             
-            // Load nội dung đầy đủ nếu thông báo liên quan đến Post (announcement)
-            $relatedPost = null;
+            // Kiểm tra nếu thông báo là về yêu cầu tham gia CLB - redirect đến trang danh sách thành viên
             $relatedType = strtolower($notificationModel->related_type ?? '');
             $type = strtolower($notificationModel->type ?? '');
+            
+            if ($notificationModel->related_id && 
+                ($relatedType === 'clubjoinrequest' || 
+                 $relatedType === 'app\\models\\clubjoinrequest' ||
+                 $type === 'club_join_request')) {
+                try {
+                    $joinRequest = \App\Models\ClubJoinRequest::with('club')->find($notificationModel->related_id);
+                    if ($joinRequest && $joinRequest->club) {
+                        // Redirect đến trang danh sách thành viên của CLB
+                        return redirect()->route('student.club-management.members', ['club' => $joinRequest->club_id]);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore if join request not found
+                }
+            }
+            
+            // Load nội dung đầy đủ nếu thông báo liên quan đến Post (announcement)
+            $relatedPost = null;
             
             if ($notificationModel->related_id && 
                 (($relatedType === 'app\\models\\post' || $relatedType === 'post' || $type === 'post' || $type === 'announcement'))) {

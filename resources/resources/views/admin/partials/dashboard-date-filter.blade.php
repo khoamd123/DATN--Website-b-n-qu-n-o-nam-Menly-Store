@@ -28,21 +28,6 @@
                     </a>
                 </form>
             </div>
-            <div class="card-body">
-                @if(request('start_date') || request('end_date'))
-                    <div class="alert alert-info mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Khoảng thời gian đã chọn:</strong>
-                        @if(request('start_date') && request('end_date'))
-                            {{ \Carbon\Carbon::parse(request('start_date'))->format('d/m/Y') }} - {{ \Carbon\Carbon::parse(request('end_date'))->format('d/m/Y') }}
-                        @elseif(request('start_date'))
-                            Từ {{ \Carbon\Carbon::parse(request('start_date'))->format('d/m/Y') }}
-                        @elseif(request('end_date'))
-                            Đến {{ \Carbon\Carbon::parse(request('end_date'))->format('d/m/Y') }}
-                        @endif
-                    </div>
-                @endif
-            </div>
         </div>
     </div>
 </div>

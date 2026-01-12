@@ -55,8 +55,15 @@
                             <td>{{ $item->description }}</td>
                             <td>{{ number_format($item->amount,0,',','.') }}đ</td>
                             <td>
+                                @php
+                                    $statusLabels = [
+                                        'pending' => 'Chờ duyệt',
+                                        'approved' => 'Đã duyệt',
+                                        'rejected' => 'Đã từ chối'
+                                    ];
+                                @endphp
                                 <span class="badge bg-{{ $item->status === 'approved' ? 'success' : ($item->status === 'rejected' ? 'danger' : 'secondary') }}">
-                                    {{ ucfirst($item->status) }}
+                                    {{ $statusLabels[$item->status] ?? ucfirst($item->status) }}
                                 </span>
                             </td>
                         </tr>

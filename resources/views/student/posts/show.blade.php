@@ -256,24 +256,50 @@
                                 @php
                                     $relImage = null;
                                     if (!empty($rel->image)) {
-                                        if (\Illuminate\Support\Str::startsWith($rel->image, ['uploads/', '/uploads/'])) {
-                                            $relImage = asset(ltrim($rel->image, '/'));
+                                        $imageField = $rel->image;
+                                        if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                            $relImage = $imageField;
+                                        } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                            $relImage = asset(ltrim($imageField, '/'));
+                                        } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                            $relImage = asset(ltrim($imageField, '/'));
                                         } else {
-                                            $relImage = asset('storage/' . ltrim($rel->image, '/'));
+                                            $relImage = asset('storage/' . ltrim($imageField, '/'));
+                                        }
+                                    }
+                                    // Fallback: lấy ảnh đầu tiên trong nội dung HTML nếu có
+                                    if (empty($relImage) && !empty($rel->content)) {
+                                        if (preg_match('/<img[^>]+src=[\\\"\\\']([^\\\"\\\']+)/i', $rel->content, $m)) {
+                                            $imageField = $m[1] ?? null;
+                                            if (!empty($imageField)) {
+                                                if (\Illuminate\Support\Str::startsWith($imageField, ['http://', 'https://'])) {
+                                                    $relImage = $imageField;
+                                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['/storage/', 'storage/'])) {
+                                                    $relImage = asset(ltrim($imageField, '/'));
+                                                } elseif (\Illuminate\Support\Str::startsWith($imageField, ['uploads/', '/uploads/'])) {
+                                                    $relImage = asset(ltrim($imageField, '/'));
+                                                } else {
+                                                    $relImage = asset('storage/' . ltrim($imageField, '/'));
+                                                }
+                                            }
                                         }
                                     }
                                 @endphp
-                                <div class="col-sm-6 col-lg-4">
+                                <div class="col-sm-6 col-lg-4 mb-3">
                                     <a href="{{ route('student.posts.show', $rel->id) }}" class="text-decoration-none text-dark">
-                                        <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card h-100 border-0 shadow-sm" style="display: flex; flex-direction: column;">
                                             @if($relImage)
-                                                <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #f8fafc;">
+                                                <div style="position: relative; width: 100%; height: 200px; background: #f8fafc; overflow: hidden; flex-shrink: 0;">
                                                     <img src="{{ $relImage }}" alt="{{ $rel->title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-top-left-radius:.5rem;border-top-right-radius:.5rem;">
                                                 </div>
+                                            @else
+                                                <div style="position: relative; width: 100%; height: 200px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center; border-top-left-radius:.5rem;border-top-right-radius:.5rem; flex-shrink: 0;">
+                                                    <i class="fas fa-newspaper text-white fa-3x"></i>
+                                                </div>
                                             @endif
-                                            <div class="card-body">
-                                                <h6 class="card-title mb-2">{{ \Illuminate\Support\Str::limit($rel->title, 80) }}</h6>
-                                                <small class="text-muted">
+                                            <div class="card-body d-flex flex-column" style="flex-grow: 1;">
+                                                <h6 class="card-title mb-2" style="flex-grow: 1; min-height: 48px; display: flex; align-items: center;">{{ \Illuminate\Support\Str::limit($rel->title, 80) }}</h6>
+                                                <small class="text-muted mt-auto">
                                                     <i class="far fa-clock me-1"></i>{{ $rel->created_at->format('d/m/Y') }}
                                                 </small>
                                             </div>

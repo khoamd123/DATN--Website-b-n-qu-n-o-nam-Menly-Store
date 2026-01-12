@@ -82,6 +82,36 @@
             width: 20px;
         }
         
+        /* Notification Dropdown Styles */
+        #notificationDropdown + .dropdown-menu {
+            padding: 0;
+        }
+        
+        #notificationDropdown + .dropdown-menu .dropdown-header {
+            background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+            padding: 1rem;
+            border-bottom: 2px solid #14b8a6;
+            font-weight: 600;
+        }
+        
+        #notificationDropdown + .dropdown-menu .dropdown-item {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        #notificationDropdown + .dropdown-menu .dropdown-item:last-of-type {
+            border-bottom: none;
+        }
+        
+        #notificationDropdown + .dropdown-menu .dropdown-item:hover {
+            background: #f0fdfa;
+            transform: translateX(2px);
+        }
+        
+        #notificationDropdown + .dropdown-menu .dropdown-item .text-muted {
+            line-height: 1.4;
+        }
+        
         /* Notification Icon */
         .notification-icon {
             position: relative;
@@ -484,29 +514,108 @@
                     </form>
                         <div class="d-flex align-items-center justify-content-end flex-shrink-0">
                         @if(isset($user) && $user)
-                        <!-- Notification Bell -->
-                        <a href="{{ route('student.notifications.index') }}" class="notification-icon me-3 position-relative text-white text-decoration-none">
-                            <i class="fas fa-bell fa-lg"></i>
-                            @php
-                                $unreadAnnouncementCount = 0;
-                                try {
-                                    // Lấy thông báo có target là user hiện tại và chưa được đọc
-                                    $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user) {
-                                        $query->where('target_type', 'user')
-                                              ->where('target_id', $user->id);
-                                    })->whereDoesntHave('reads', function($query) use ($user) {
-                                        $query->where('user_id', $user->id)
-                                              ->where('is_read', true);
-                                    })->count();
-                                    $unreadAnnouncementCount = $unreadCount;
-                                } catch (\Exception $e) {
+                        <!-- Notification Bell Dropdown -->
+                        <div class="dropdown me-3">
+                            <button class="notification-icon position-relative text-white text-decoration-none border-0 bg-transparent p-0" 
+                                    type="button" 
+                                    id="notificationDropdown" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false"
+                                    style="border: none; background: none;">
+                                <i class="fas fa-bell fa-lg"></i>
+                                @php
                                     $unreadAnnouncementCount = 0;
-                                }
-                            @endphp
-                            @if($unreadAnnouncementCount > 0)
-                                <span class="notification-badge">{{ $unreadAnnouncementCount > 99 ? '99+' : $unreadAnnouncementCount }}</span>
-                            @endif
-                        </a>
+                                    $latestNotifications = collect();
+                                    try {
+                                        // Lấy thông báo có target là user hiện tại và chưa được đọc
+                                        $unreadCount = \App\Models\Notification::whereHas('targets', function($query) use ($user) {
+                                            $query->where('target_type', 'user')
+                                                  ->where('target_id', $user->id);
+                                        })->whereDoesntHave('reads', function($query) use ($user) {
+                                            $query->where('user_id', $user->id)
+                                                  ->where('is_read', true);
+                                        })->count();
+                                        $unreadAnnouncementCount = $unreadCount;
+                                        
+                                        // Lấy 6 thông báo mới nhất
+                                        $latestNotifications = \App\Models\Notification::with(['sender'])
+                                            ->whereHas('targets', function($query) use ($user) {
+                                                $query->where(function($q) use ($user) {
+                                                    $q->where('target_type', 'user')->where('target_id', $user->id);
+                                                })
+                                                ->orWhere('target_type', 'all')
+                                                ->orWhere(function($q) use ($user) {
+                                                    $q->where('target_type', 'club')
+                                                      ->whereIn('target_id', $user->clubs->pluck('id')->toArray());
+                                                });
+                                            })
+                                            ->orderBy('created_at', 'desc')
+                                            ->limit(6)
+                                            ->get();
+                                    } catch (\Exception $e) {
+                                        $unreadAnnouncementCount = 0;
+                                    }
+                                @endphp
+                                @if($unreadAnnouncementCount > 0)
+                                    <span class="notification-badge">{{ $unreadAnnouncementCount > 99 ? '99+' : $unreadAnnouncementCount }}</span>
+                                @endif
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="min-width: 350px; max-height: 500px; overflow-y: auto;">
+                                <li>
+                                    <h6 class="dropdown-header d-flex align-items-center">
+                                        <i class="fas fa-bell text-warning me-2"></i>
+                                        <span>Thông báo</span>
+                                        @if($unreadAnnouncementCount > 0)
+                                            <span class="badge bg-danger ms-2">{{ $unreadAnnouncementCount }}</span>
+                                        @endif
+                                    </h6>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @if($latestNotifications->count() > 0)
+                                    @foreach($latestNotifications as $notification)
+                                        @php
+                                            $isRead = \App\Models\NotificationRead::where('notification_id', $notification->id)
+                                                ->where('user_id', $user->id)
+                                                ->where('is_read', true)
+                                                ->exists();
+                                        @endphp
+                                        <li>
+                                            <a class="dropdown-item {{ !$isRead ? 'fw-semibold' : '' }}" 
+                                               href="{{ route('student.notifications.show', $notification->id) }}"
+                                               style="{{ !$isRead ? 'background-color: #f0fdfa;' : '' }}">
+                                                <div class="d-flex align-items-start">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <i class="fas fa-circle text-teal" style="font-size: 0.5rem;"></i>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <div class="small text-dark mb-1">{{ $notification->title }}</div>
+                                                        <div class="text-muted small" style="font-size: 0.75rem;">
+                                                            {{ \Illuminate\Support\Str::limit($notification->message, 60) }}
+                                                        </div>
+                                                        <div class="text-muted" style="font-size: 0.7rem; margin-top: 0.25rem;">
+                                                            <i class="far fa-clock me-1"></i>{{ $notification->created_at->diffForHumans() }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                @else
+                                    <li>
+                                        <div class="dropdown-item text-center text-muted py-3">
+                                            <i class="fas fa-bell-slash fa-2x mb-2 d-block"></i>
+                                            <small>Chưa có thông báo nào</small>
+                                        </div>
+                                    </li>
+                                @endif
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-center text-teal fw-semibold" href="{{ route('student.notifications.index') }}">
+                                        <i class="fas fa-arrow-right me-1"></i> Xem tất cả thông báo
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                         
                         <!-- User Profile Dropdown -->
                         <div class="dropdown">

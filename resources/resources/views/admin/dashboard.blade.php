@@ -16,6 +16,26 @@
         height: 400px;
         width: 100%;
     }
+    
+    /* Đảm bảo hai phần user-list có cùng chiều cao */
+    .user-list-row {
+        display: flex;
+        align-items: stretch;
+    }
+    
+    .user-list-row > .col-md-6 {
+        display: flex;
+    }
+    
+    .user-list-row .user-list {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .user-list-row .user-list > *:last-child {
+        margin-top: auto;
+    }
 </style>
 @endsection
 
@@ -27,24 +47,6 @@
 
 {{-- Date Filter --}}
 @include('admin.partials.dashboard-date-filter')
-
-{{-- Filter Status Indicator --}}
-@if($startDate && $endDate)
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="alert alert-info">
-            <i class="fas fa-filter me-2"></i>
-            <strong>Đang hiển thị thống kê từ:</strong> 
-            {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} 
-            <strong>đến:</strong> 
-            {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
-            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary ms-2">
-                <i class="fas fa-times me-1"></i>Xóa bộ lọc
-            </a>
-        </div>
-    </div>
-</div>
-@endif
 
 <!-- Quick Actions -->
 <div class="row mb-4">
@@ -135,7 +137,14 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
-                <h5 class="card-title">Thống kê tăng trưởng (12 tháng gần nhất)</h5>
+                <h5 class="card-title">
+                    Thống kê tăng trưởng
+                    @if($startDate && $endDate)
+                        ({{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }})
+                    @else
+                        (12 tháng gần nhất)
+                    @endif
+                </h5>
                 <div class="chart-container">
                     <canvas id="monthlyChart"></canvas>
                 </div>
@@ -159,7 +168,12 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <h5 class="card-title">Top 5 CLB hoạt động mạnh nhất</h5>
+                <h5 class="card-title">
+                    Top 5 CLB hoạt động mạnh nhất
+                    @if($startDate && $endDate)
+                        <small class="text-muted">({{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }})</small>
+                    @endif
+                </h5>
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -197,7 +211,7 @@
     </div>
 </div>
 
-<div class="row">
+<div class="row user-list-row">
     <!-- Người dùng mới -->
     <div class="col-md-6">
         <div class="user-list">
@@ -231,8 +245,20 @@
                         </div>
                     </div>
                 @endforeach
+                
+                @if($newUsers->hasPages())
+                    <div class="mt-3">
+                        {{ $newUsers->links('vendor.pagination.bootstrap-5') }}
+                    </div>
+                @endif
             @else
-                <p class="text-muted">Không có người dùng mới trong 7 ngày qua</p>
+                <p class="text-muted">
+                    @if($startDate && $endDate)
+                        Không có người dùng mới trong khoảng thời gian đã chọn
+                    @else
+                        Không có người dùng mới trong 7 ngày qua
+                    @endif
+                </p>
             @endif
         </div>
     </div>
@@ -256,8 +282,20 @@
                         </div>
                     </div>
                 @endforeach
+                
+                @if($newClubs->hasPages())
+                    <div class="mt-3">
+                        {{ $newClubs->links('vendor.pagination.bootstrap-5') }}
+                    </div>
+                @endif
             @else
-                <p class="text-muted">Không có câu lạc bộ mới trong 7 ngày qua</p>
+                <p class="text-muted">
+                    @if($startDate && $endDate)
+                        Không có câu lạc bộ mới trong khoảng thời gian đã chọn
+                    @else
+                        Không có câu lạc bộ mới trong 7 ngày qua
+                    @endif
+                </p>
             @endif
         </div>
     </div>
@@ -287,8 +325,28 @@
                                     <td>{{ $event->club->name ?? 'Không xác định' }}</td>
                                     <td>{{ \Carbon\Carbon::parse($event->start_time)->format('d/m/Y H:i') }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $event->status === 'active' ? 'success' : 'warning' }}">
-                                            {{ ucfirst($event->status) }}
+                                        @php
+                                            $statusColors = [
+                                                'draft' => 'secondary',
+                                                'pending' => 'warning',
+                                                'approved' => 'info',
+                                                'ongoing' => 'success',
+                                                'completed' => 'primary',
+                                                'cancelled' => 'danger',
+                                                'active' => 'success'
+                                            ];
+                                            $statusLabels = [
+                                                'draft' => 'Bản nháp',
+                                                'pending' => 'Chờ duyệt',
+                                                'approved' => 'Đã duyệt',
+                                                'ongoing' => 'Đang diễn ra',
+                                                'completed' => 'Hoàn thành',
+                                                'cancelled' => 'Đã hủy',
+                                                'active' => 'Đang hoạt động'
+                                            ];
+                                        @endphp
+                                        <span class="badge bg-{{ $statusColors[$event->status] ?? 'secondary' }}">
+                                            {{ $statusLabels[$event->status] ?? ucfirst($event->status) }}
                                         </span>
                                     </td>
                                 </tr>
@@ -296,8 +354,20 @@
                         </tbody>
                     </table>
                 </div>
+                
+                @if($upcomingEvents->hasPages())
+                    <div class="mt-3">
+                        {{ $upcomingEvents->links('vendor.pagination.bootstrap-5') }}
+                    </div>
+                @endif
             @else
-                <p class="text-muted">Không có sự kiện trong 30 ngày gần đây</p>
+                <p class="text-muted">
+                    @if($startDate && $endDate)
+                        Không có sự kiện trong khoảng thời gian đã chọn
+                    @else
+                        Không có sự kiện trong 30 ngày gần đây
+                    @endif
+                </p>
             @endif
         </div>
     </div>

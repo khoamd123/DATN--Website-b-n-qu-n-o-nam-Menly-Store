@@ -61,10 +61,17 @@ class SimpleLoginController extends Controller
     /**
      * Handle logout
      */
-    public function logout()
+    public function logout(Request $request)
     {
-        session()->forget(['logged_in', 'user_id', 'user_name', 'user_email', 'student_id', 'is_admin', 'club_roles']);
-        return redirect()->route('simple.login')->with('success', 'Đã đăng xuất thành công!');
+        // Xóa thông tin user khỏi session
+        $request->session()->forget(['logged_in', 'user_id', 'user_name', 'user_email', 'student_id', 'is_admin', 'club_roles']);
+        
+        // Invalidate và regenerate session để tránh lỗi CSRF
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        // Redirect về trang chủ hoặc trang login
+        return redirect()->route('home')->with('success', 'Đã đăng xuất thành công!');
     }
 
     /**

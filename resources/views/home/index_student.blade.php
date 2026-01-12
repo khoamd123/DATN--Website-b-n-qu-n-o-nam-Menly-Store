@@ -320,52 +320,71 @@
                                 $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
                                 $postExcerpt = trim($text);
                             @endphp
-                            <div class="post-item-card-featured rounded overflow-hidden h-100" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $latestPost->id) }}'">
-                                {{-- Image --}}
+                            <div class="post-item-card-featured rounded overflow-hidden h-100" style="background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 1px solid rgba(226, 232, 240, 0.8);" onclick="window.location.href='{{ route('student.posts.show', $latestPost->id) }}'" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)';">
+                                {{-- Image with overlay --}}
                                 @if($imageUrl)
-                                    <div class="post-image-container-featured" style="width: 100%; height: 400px; overflow: hidden; background: #f0f0f0;">
-                                        <img src="{{ $imageUrl }}" alt="{{ $latestPost->title }}" class="w-100 h-100" style="object-fit: cover; display: block;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\'width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-4x\'></i></div>';">
+                                    <div class="post-image-container-featured position-relative" style="width: 100%; height: 450px; overflow: hidden; background: #f0f0f0;">
+                                        <img src="{{ $imageUrl }}" alt="{{ $latestPost->title }}" class="w-100 h-100" style="object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\'width: 100%; height: 450px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-4x\'></i></div>';" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                                        {{-- Category Badge Overlay --}}
+                                        @if($latestPost->club && $latestPost->club->field)
+                                            <div class="position-absolute top-0 start-0 m-3">
+                                                <span class="badge px-3 py-2" style="background: rgba(20, 184, 166, 0.95); color: white; font-size: 0.75rem; font-weight: 600; border-radius: 20px; backdrop-filter: blur(10px);">
+                                                    <i class="fas fa-tag me-1"></i>{{ $latestPost->club->field->name ?? 'UniClubs' }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                        {{-- Gradient Overlay --}}
+                                        <div class="position-absolute bottom-0 start-0 w-100" style="height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%); pointer-events: none;"></div>
                                     </div>
                                 @else
-                                    <div class="post-icon-featured" style="width: 100%; height: 400px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                    <div class="post-icon-featured position-relative" style="width: 100%; height: 450px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
                                         <i class="fas fa-newspaper text-white fa-4x"></i>
+                                        @if($latestPost->club && $latestPost->club->field)
+                                            <div class="position-absolute top-0 start-0 m-3">
+                                                <span class="badge px-3 py-2" style="background: rgba(255, 255, 255, 0.25); color: white; font-size: 0.75rem; font-weight: 600; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                                                    <i class="fas fa-tag me-1"></i>{{ $latestPost->club->field->name ?? 'UniClubs' }}
+                                                </span>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
                                 
                                 {{-- Content --}}
-                                <div class="p-4">
+                                <div class="p-5">
                                     {{-- Header --}}
                                     <div class="d-flex align-items-center mb-3">
-                                        <div class="flex-shrink-0 me-2">
-                                            <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
-                                                <i class="fas fa-users text-white"></i>
+                                        <div class="flex-shrink-0 me-3">
+                                            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(20, 184, 166, 0.25); transition: all 0.3s ease;">
+                                                <i class="fas fa-users text-white" style="font-size: 1.1rem;"></i>
                                             </div>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <div class="fw-semibold text-dark">{{ $latestPost->club->name ?? 'UniClubs' }}</div>
-                                            <div class="text-muted" style="font-size: 0.8rem;">
-                                                <i class="fas fa-user-circle me-1"></i>{{ $latestPost->user->name ?? 'Ban quản trị' }}
-                                                <span class="mx-1">•</span>
-                                                <i class="far fa-clock me-1"></i>{{ $latestPost->created_at->diffForHumans() }}
+                                            <div class="fw-bold mb-1" style="font-size: 0.9rem; color: #14b8a6;">{{ $latestPost->club->name ?? 'UniClubs' }}</div>
+                                            <div class="text-muted d-flex align-items-center gap-2 flex-wrap" style="font-size: 0.8rem;">
+                                                <span><i class="fas fa-user-circle me-1"></i>{{ $latestPost->user->name ?? 'Ban quản trị' }}</span>
+                                                <span class="text-muted">•</span>
+                                                <span><i class="far fa-clock me-1"></i>{{ $latestPost->created_at->diffForHumans() }}</span>
                                             </div>
                                         </div>
                                     </div>
                                     
                                     {{-- Title --}}
-                                    <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem; line-height: 1.3;">{{ $latestPost->title }}</h4>
+                                    <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.75rem; line-height: 1.35; letter-spacing: -0.01em; transition: color 0.3s ease;" onmouseover="this.style.color='#14b8a6'" onmouseout="this.style.color='#1e293b'">{{ $latestPost->title }}</h4>
                                     
                                     {{-- Excerpt --}}
-                                    <p class="text-muted mb-3" style="font-size: 1rem; line-height: 1.6;">{{ Str::words($postExcerpt, 50, '...') }}</p>
+                                    <p class="text-muted mb-4" style="font-size: 1rem; line-height: 1.75; color: #64748b;">{{ Str::words($postExcerpt, 45, '...') }}</p>
                                     
                                     {{-- Engagement Bar --}}
-                                    <div class="d-flex align-items-center justify-content-between pt-3 border-top">
-                                        <div class="d-flex align-items-center text-muted" style="font-size: 0.9rem;">
+                                    <div class="d-flex align-items-center justify-content-between pt-3 border-top" style="border-color: #e2e8f0;">
+                                        <div class="d-flex align-items-center text-muted gap-3 flex-wrap" style="font-size: 0.875rem;">
+                                            @if(isset($latestPost->views) && $latestPost->views > 0)
+                                                <span><i class="far fa-eye me-1"></i>{{ number_format($latestPost->views) }} lượt xem</span>
+                                            @endif
                                             @if(isset($latestPost->comments_count) && $latestPost->comments_count > 0)
-                                                <i class="far fa-comments me-1"></i>
-                                                <span>{{ $latestPost->comments_count }} bình luận</span>
+                                                <span><i class="far fa-comments me-1"></i>{{ $latestPost->comments_count }} bình luận</span>
                                             @endif
                                         </div>
-                                        <a href="{{ route('student.posts.show', $latestPost->id) }}#comments" class="btn btn-sm btn-outline-teal text-decoration-none" onclick="event.stopPropagation();">
+                                        <a href="{{ route('student.posts.show', $latestPost->id) }}#comments" class="btn btn-sm btn-outline-teal text-decoration-none px-3 py-2" style="border-radius: 8px; font-weight: 500; transition: all 0.3s ease; border-width: 2px;" onclick="event.stopPropagation();" onmouseover="this.style.transform='scale(1.05)'; this.style.background='#14b8a6'; this.style.color='white'; this.style.borderColor='#14b8a6';" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'; this.style.color='#14b8a6'; this.style.borderColor='#14b8a6';">
                                             <i class="far fa-comment me-1"></i>
                                             Bình luận
                                         </a>
@@ -375,10 +394,10 @@
                         @endif
                     </div>
                     
-                    {{-- Các bài viết khác - 1/3 --}}
-                    <div class="col-lg-4">
-                        <div class="d-flex flex-column gap-3">
-                            @foreach($recentPosts->skip(1)->take(4) as $post)
+                     {{-- Các bài viết khác - 1/3 --}}
+                     <div class="col-lg-4">
+                         <div class="d-flex flex-column gap-3">
+                             @foreach($recentPosts->skip(1)->take(4) as $post)
                                 @php
                                     $imageUrl = null;
                                     // Lấy ảnh từ trường image
@@ -419,14 +438,14 @@
                                     $text = preg_replace('/\b[\w\-]+\.(?:jpg|jpeg|png|gif|webp)\b/i', '', $text);
                                     $postExcerpt = trim($text);
                                 @endphp
-                                <div class="post-item-card-small rounded overflow-hidden" style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ route('student.posts.show', $post->id) }}'">
+                                <div class="post-item-card-small rounded overflow-hidden" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 1px solid rgba(226, 232, 240, 0.5);" onclick="window.location.href='{{ route('student.posts.show', $post->id) }}'">
                                     <div class="d-flex">
                                         {{-- Image --}}
-                                        <div class="flex-shrink-0" style="width: 120px; height: 120px; overflow: hidden; background: #f0f0f0;">
+                                        <div class="flex-shrink-0" style="width: 130px; height: 130px; overflow: hidden; background: #f0f0f0; border-radius: 8px 0 0 8px;">
                                             @if($imageUrl)
-                                                <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 h-100" style="object-fit: cover;" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<div style=\'width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;\'><i class=\'fas fa-newspaper text-white fa-2x\'></i></div>';">
+                                                <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-100 h-100" style="object-fit: cover; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<div style=\'width: 130px; height: 130px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center; border-radius: 8px 0 0 8px;\'><i class=\'fas fa-newspaper text-white fa-2x\'></i></div>';">
                                             @else
-                                                <div style="width: 120px; height: 120px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center;">
+                                                <div style="width: 130px; height: 130px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); display: flex; align-items: center; justify-content: center; border-radius: 8px 0 0 8px; transition: all 0.3s ease;">
                                                     <i class="fas fa-newspaper text-white fa-2x"></i>
                                                 </div>
                                             @endif
@@ -435,22 +454,31 @@
                                         {{-- Content --}}
                                         <div class="flex-grow-1 p-3 d-flex flex-column">
                                             <div class="mb-2">
-                                                <div class="fw-semibold text-dark small mb-1">{{ $post->club->name ?? 'UniClubs' }}</div>
-                                                <div class="text-muted" style="font-size: 0.7rem;">
+                                                <div class="fw-bold text-teal small mb-1" style="font-size: 0.75rem; color: #14b8a6;">{{ $post->club->name ?? 'UniClubs' }}</div>
+                                                <div class="text-muted d-flex align-items-center" style="font-size: 0.7rem;">
                                                     <i class="far fa-clock me-1"></i>{{ $post->created_at->diffForHumans() }}
                                                 </div>
                                             </div>
-                                            <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.9rem; line-height: 1.3; flex-grow: 1;">{{ Str::limit($post->title, 60) }}</h6>
+                                            <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.4; flex-grow: 1; letter-spacing: -0.01em;">{{ Str::limit($post->title, 65) }}</h6>
                                             @if(isset($post->comments_count) && $post->comments_count > 0)
-                                                <div class="text-muted small mt-auto">
+                                                <div class="text-muted small mt-auto d-flex align-items-center">
                                                     <i class="far fa-comments me-1"></i>
-                                                    <span>{{ $post->comments_count }}</span>
+                                                    <span>{{ $post->comments_count }} bình luận</span>
                                                 </div>
                                             @endif
                                         </div>
                                     </div>
                                 </div>
                             @endforeach
+                            
+                            {{-- Nút Xem thêm --}}
+                            @if($recentPosts->count() > 4)
+                                <div class="text-center mt-2">
+                                    <a href="{{ route('student.posts') }}" class="btn btn-outline-teal btn-sm w-100">
+                                        <i class="fas fa-arrow-right me-1"></i> Xem thêm
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -865,21 +893,39 @@
     /* Post Item Styles (similar to announcement) */
     /* Featured Post Card (2/3) */
     .post-item-card-featured {
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
     }
     
     .post-item-card-featured:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
-        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        transform: translateY(-6px);
+        border-color: rgba(20, 184, 166, 0.3) !important;
     }
     
     .post-item-card-featured .post-image-container-featured {
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    
+    .post-item-card-featured .post-image-container-featured::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.1) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .post-item-card-featured:hover .post-image-container-featured::after {
+        opacity: 1;
     }
     
     .post-item-card-featured:hover .post-image-container-featured img {
-        transform: scale(1.05);
+        transform: scale(1.08);
     }
     
     .post-item-card-featured img {
@@ -891,26 +937,33 @@
     }
     
     .post-item-card-featured:hover .post-icon-featured {
-        transform: scale(1.02);
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(20, 184, 166, 0.3);
     }
     
     /* Small Post Card (1/3) */
     .post-item-card-small {
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
     }
     
     .post-item-card-small:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
-        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important;
+        transform: translateY(-3px);
+        border-color: rgba(20, 184, 166, 0.4) !important;
+        background: #fafafa !important;
     }
     
     .post-item-card-small img {
-        transition: transform 0.3s ease;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .post-item-card-small:hover img {
-        transform: scale(1.1);
+        transform: scale(1.12);
+    }
+    
+    .post-item-card-small:hover .text-teal {
+        color: #0d9488 !important;
     }
     
     /* Event Item Styles (similar to announcement) */
