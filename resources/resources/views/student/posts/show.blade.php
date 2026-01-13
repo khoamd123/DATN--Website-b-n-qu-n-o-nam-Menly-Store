@@ -12,8 +12,8 @@
                     </a>
                 </div>
                 <h2 class="mb-2">{{ $post->title }}</h2>
-                <div class="d-flex align-items-center text-muted mb-3">
-                    <small>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <small class="text-muted">
                         <i class="far fa-user me-1"></i>{{ $post->user->name ?? 'Hệ thống' }}
                         <span class="mx-2">•</span>
                         <i class="far fa-clock me-1"></i>{{ $post->created_at->format('d/m/Y H:i') }}
@@ -26,6 +26,15 @@
                             <i class="fas fa-lock me-1"></i> Chỉ thành viên
                         @endif
                     </small>
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" 
+                                class="btn btn-sm {{ isset($isLiked) && $isLiked ? 'btn-danger' : 'btn-outline-danger' }} like-btn" 
+                                data-post-id="{{ $post->id }}"
+                                style="transition: all 0.3s ease;">
+                            <i class="fas fa-heart me-1"></i>
+                            <span class="likes-count">{{ isset($likesCount) ? number_format($likesCount) : '0' }}</span>
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Không hiển thị ảnh đại diện trên trang chi tiết theo yêu cầu --}}
@@ -123,5 +132,81 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const likeBtn = document.querySelector('.like-btn');
+    if (!likeBtn) return;
+
+    likeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const postId = this.getAttribute('data-post-id');
+        const btn = this;
+        const icon = btn.querySelector('i');
+        const countSpan = btn.querySelector('.likes-count');
+        
+        // Disable button during request
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+
+        fetch(`/student/posts/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(async response => {
+            // Kiểm tra xem response có phải JSON không
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error('Server trả về lỗi. Vui lòng kiểm tra console để xem chi tiết.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Update button style
+                if (data.liked) {
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-danger');
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                } else {
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-outline-danger');
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                }
+                
+                // Update count
+                countSpan.textContent = parseInt(data.likesCount).toLocaleString('vi-VN');
+                
+                // Add animation
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                }, 200);
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi thực hiện thao tác. Vui lòng đảm bảo bảng post_likes đã được tạo trong database.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
+    });
+});
+</script>
+@endpush
 
 

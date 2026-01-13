@@ -96,7 +96,7 @@
 <!-- Bộ lọc loại dữ liệu -->
 <div class="card mb-4">
     <div class="card-body">
-        <div class="btn-group" role="group">
+        <div class="btn-group mb-3" role="group">
             <a href="{{ route('admin.trash', ['type' => 'all']) }}" 
                class="btn {{ $type === 'all' ? 'btn-primary' : 'btn-outline-primary' }}">
                 <i class="fas fa-list"></i> Tất cả
@@ -126,6 +126,53 @@
                 <i class="fas fa-folder-open"></i> Tài nguyên CLB
             </a>
         </div>
+        
+        <!-- Form tìm kiếm và lọc -->
+        <form method="GET" action="{{ route('admin.trash') }}" class="mt-3">
+            <input type="hidden" name="type" value="{{ $type }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Tìm kiếm..." 
+                               value="{{ $search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Từ ngày</label>
+                    <input type="date" name="date_from" class="form-control" 
+                           value="{{ $dateFrom }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Đến ngày</label>
+                    <input type="date" name="date_to" class="form-control" 
+                           value="{{ $dateTo }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Sắp xếp</label>
+                    <select name="sort" class="form-select">
+                        <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Mới nhất</option>
+                        <option value="oldest" {{ $sort === 'oldest' ? 'selected' : '' }}>Cũ nhất</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                    @if($search || $dateFrom || $dateTo)
+                        <a href="{{ route('admin.trash', ['type' => $type]) }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times"></i> Xóa bộ lọc
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

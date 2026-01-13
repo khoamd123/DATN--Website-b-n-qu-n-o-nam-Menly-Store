@@ -12,7 +12,6 @@
                         <i class="fas fa-money-bill-wave text-teal"></i>
                         Chi tiết yêu cầu cấp kinh phí
                     </h3>
-                    <small class="text-muted">ID: #{{ $fundRequest->id }}</small>
                 </div>
                 <a href="{{ route('student.club-management.fund-requests') }}" class="btn btn-secondary btn-sm text-white">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại

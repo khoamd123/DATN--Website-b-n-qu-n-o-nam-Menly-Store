@@ -137,6 +137,11 @@
                                             <div class="d-flex align-items-center text-muted" style="font-size: 0.9rem;">
                                                 <i class="far fa-eye me-1"></i>
                                                 <span>{{ number_format($firstPost->views ?? 0) }} lượt xem</span>
+                                                @if(isset($firstPost->likes_count) && $firstPost->likes_count > 0)
+                                                    <span class="mx-2">•</span>
+                                                    <i class="fas fa-heart me-1" style="color: #dc3545;"></i>
+                                                    <span>{{ number_format($firstPost->likes_count) }} lượt thích</span>
+                                                @endif
                                                 @if(isset($firstPost->comments_count) && $firstPost->comments_count > 0)
                                                     <span class="mx-2">•</span>
                                                     <i class="far fa-comments me-1"></i>
@@ -309,6 +314,11 @@
                                                 <i class="far fa-clock me-1"></i>{{ $post->created_at->format('d/m/Y H:i') }}
                                                 <span class="mx-2">•</span>
                                                 <i class="far fa-eye me-1"></i>{{ number_format($post->views ?? 0) }}
+                                                @if(isset($post->likes_count) && $post->likes_count > 0)
+                                                    <span class="mx-2">•</span>
+                                                    <i class="fas fa-heart me-1" style="color: #dc3545;"></i>
+                                                    <span>{{ number_format($post->likes_count) }}</span>
+                                                @endif
                                                 @if($post->status === 'members_only')
                                                     <span class="mx-2">•</span>
                                                     <i class="fas fa-lock me-1"></i> Chỉ thành viên
@@ -358,6 +368,11 @@
                                                 <i class="far fa-clock me-1"></i>{{ $post->created_at->format('d/m/Y H:i') }}
                                                 <span class="mx-2">•</span>
                                                 <i class="far fa-eye me-1"></i>{{ number_format($post->views ?? 0) }}
+                                                @if(isset($post->likes_count) && $post->likes_count > 0)
+                                                    <span class="mx-2">•</span>
+                                                    <i class="fas fa-heart me-1" style="color: #dc3545;"></i>
+                                                    <span>{{ number_format($post->likes_count) }}</span>
+                                                @endif
                                                 @if($post->status === 'members_only')
                                                     <span class="mx-2">•</span>
                                                     <i class="fas fa-lock me-1"></i> Chỉ thành viên
@@ -578,6 +593,181 @@
         background-color: #f9fafb;
         border-color: #e5e7eb;
         color: #9ca3af;
+    }
+    
+    /* Hover effects for featured post card */
+    .post-item-card-featured {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .post-item-card-featured:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .post-item-card-featured:hover .post-image-container-featured img,
+    .post-item-card-featured:hover .post-icon-featured {
+        transform: scale(1.05);
+        transition: transform 0.5s ease;
+    }
+    
+    .post-image-container-featured {
+        overflow: hidden;
+    }
+    
+    .post-image-container-featured img {
+        transition: transform 0.5s ease;
+    }
+    
+    /* Hover effects for small post cards in sidebar */
+    .post-item-card-small {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .post-item-card-small > .d-flex {
+        height: 100%;
+        flex: 1;
+    }
+    
+    .post-item-card-small .flex-grow-1 {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .post-item-card-small:hover {
+        transform: translateX(8px) translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12) !important;
+        border-left: 3px solid #14b8a6;
+    }
+    
+    .post-item-card-small:hover img {
+        transform: scale(1.1);
+        transition: transform 0.4s ease;
+    }
+    
+    .post-item-card-small img {
+        transition: transform 0.4s ease;
+    }
+    
+    /* Ensure sidebar cards have equal height */
+    .col-lg-4 .d-flex.flex-column > .post-item-card-small {
+        flex: 1;
+        min-height: 120px;
+    }
+    
+    /* Hover effects for regular post cards */
+    .card.mb-3 {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card.mb-3 .row {
+        height: 100%;
+    }
+    
+    .card.mb-3 .card-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    
+    /* Ensure cards in list have equal height */
+    .row.g-4 > .col-12 > .card.mb-3 {
+        min-height: 180px;
+    }
+    
+    .card.mb-3:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12) !important;
+        border-color: #14b8a6;
+    }
+    
+    .card.mb-3:hover .card-title a {
+        color: #14b8a6 !important;
+        transition: color 0.3s ease;
+    }
+    
+    .card.mb-3 .card-title a {
+        transition: color 0.3s ease;
+    }
+    
+    .card.mb-3:hover img {
+        transform: scale(1.08);
+        transition: transform 0.5s ease;
+    }
+    
+    .card.mb-3 img {
+        transition: transform 0.5s ease;
+    }
+    
+    .card.mb-3 .col-md-4 {
+        overflow: hidden;
+    }
+    
+    /* Hover effects for announcement items */
+    .list-group-item-action {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .list-group-item-action:hover {
+        transform: translateX(6px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+        border-left: 3px solid #ffc107 !important;
+        background-color: #fffbf0 !important;
+    }
+    
+    .list-group-item-action:hover h6 {
+        color: #ffc107;
+        transition: color 0.3s ease;
+    }
+    
+    /* Hover effects for buttons */
+    .btn-outline-primary:hover,
+    .btn-outline-teal:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(20, 184, 166, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    /* Hover effects for filter buttons */
+    .btn-group .btn {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-group .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Hover effects for badge */
+    .badge {
+        transition: all 0.3s ease;
+    }
+    
+    .card.mb-3:hover .badge {
+        transform: scale(1.05);
+        box-shadow: 0 2px 4px rgba(20, 184, 166, 0.3);
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    a, button, .card, .list-group-item {
+        transition: all 0.3s ease;
+    }
+    
+    /* Content card hover effect */
+    .content-card {
+        transition: all 0.3s ease;
+    }
+    
+    .content-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 </style>
 @endpush

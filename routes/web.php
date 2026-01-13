@@ -199,6 +199,7 @@ Route::delete('/student/posts/{id}', [\App\Http\Controllers\StudentController::c
 // Show and comments with numeric constraint
 Route::get('/student/posts/{id}', [\App\Http\Controllers\StudentController::class, 'showPost'])->whereNumber('id')->name('student.posts.show');
 Route::post('/student/posts/{id}/comments', [\App\Http\Controllers\StudentController::class, 'addPostComment'])->whereNumber('id')->name('student.posts.comment');
+Route::post('/student/posts/{id}/like', [\App\Http\Controllers\StudentController::class, 'toggleLike'])->whereNumber('id')->name('student.posts.like');
 Route::post('/student/posts/mark-announcement-viewed', [\App\Http\Controllers\StudentController::class, 'markAnnouncementViewed'])->name('student.posts.mark-announcement-viewed');
 
 // Student Announcements Routes

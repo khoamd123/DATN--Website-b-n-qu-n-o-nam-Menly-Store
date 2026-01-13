@@ -83,6 +83,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get posts created by the user
+     */
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Get comments created by the user
+     */
+    public function comments()
+    {
+        return $this->hasMany(\App\Models\PostComment::class);
+    }
+
+    /**
      * Get clubs where user is a leader
      */
     public function ledClubs()

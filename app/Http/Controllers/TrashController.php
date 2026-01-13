@@ -22,7 +22,11 @@ class TrashController extends Controller
             return redirect()->route('simple.login')->with('error', 'Vui lòng đăng nhập với tài khoản admin.');
         }
 
-        $type = $request->get('type', 'all');
+        $type = $request->get('type', 'clubs'); // Mặc định chỉ hiển thị CLB
+        $search = $request->get('search', '');
+        $dateFrom = $request->get('date_from', '');
+        $dateTo = $request->get('date_to', '');
+        $sort = $request->get('sort', 'newest'); // newest, oldest
         
         $data = [
             'users' => collect(),
@@ -34,34 +38,190 @@ class TrashController extends Controller
         ];
 
         switch ($type) {
+            case 'all':
+                // Hiển thị tất cả các loại đã xóa
+                $usersQuery = User::onlyTrashed();
+                $clubsQuery = Club::onlyTrashed()->with('owner');
+                $postsQuery = Post::onlyTrashed()->with(['user', 'club']);
+                $clubMembersQuery = ClubMember::onlyTrashed()->with(['user', 'club']);
+                $commentsQuery = PostComment::onlyTrashed()->with(['user', 'post']);
+                $clubResourcesQuery = ClubResource::onlyTrashed()->with(['club', 'user']);
+                
+                // Áp dụng search và date filter
+                if ($search) {
+                    $usersQuery->where(function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('email', 'like', '%' . $search . '%');
+                    });
+                    $clubsQuery->where(function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('description', 'like', '%' . $search . '%');
+                    });
+                    $postsQuery->where(function($q) use ($search) {
+                        $q->where('title', 'like', '%' . $search . '%')
+                          ->orWhere('content', 'like', '%' . $search . '%');
+                    });
+                }
+                
+                if ($dateFrom) {
+                    $usersQuery->whereDate('deleted_at', '>=', $dateFrom);
+                    $clubsQuery->whereDate('deleted_at', '>=', $dateFrom);
+                    $postsQuery->whereDate('deleted_at', '>=', $dateFrom);
+                    $clubMembersQuery->whereDate('deleted_at', '>=', $dateFrom);
+                    $commentsQuery->whereDate('deleted_at', '>=', $dateFrom);
+                    $clubResourcesQuery->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                
+                if ($dateTo) {
+                    $usersQuery->whereDate('deleted_at', '<=', $dateTo);
+                    $clubsQuery->whereDate('deleted_at', '<=', $dateTo);
+                    $postsQuery->whereDate('deleted_at', '<=', $dateTo);
+                    $clubMembersQuery->whereDate('deleted_at', '<=', $dateTo);
+                    $commentsQuery->whereDate('deleted_at', '<=', $dateTo);
+                    $clubResourcesQuery->whereDate('deleted_at', '<=', $dateTo);
+                }
+                
+                // Sắp xếp
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $usersQuery->orderBy('deleted_at', $orderBy);
+                $clubsQuery->orderBy('deleted_at', $orderBy);
+                $postsQuery->orderBy('deleted_at', $orderBy);
+                $clubMembersQuery->orderBy('deleted_at', $orderBy);
+                $commentsQuery->orderBy('deleted_at', $orderBy);
+                $clubResourcesQuery->orderBy('deleted_at', $orderBy);
+                
+                $data['users'] = $usersQuery->limit(5)->get();
+                $data['clubs'] = $clubsQuery->limit(5)->get();
+                $data['posts'] = $postsQuery->limit(5)->get();
+                $data['clubMembers'] = $clubMembersQuery->limit(5)->get();
+                $data['comments'] = $commentsQuery->limit(5)->get();
+                $data['clubResources'] = $clubResourcesQuery->limit(5)->get();
+                break;
             case 'users':
-                $data['users'] = User::onlyTrashed()->paginate(20);
+                $query = User::onlyTrashed();
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('email', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['users'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             case 'clubs':
-                $data['clubs'] = Club::onlyTrashed()->with('owner')->paginate(20);
+                $query = Club::onlyTrashed()->with('owner');
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('description', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['clubs'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             case 'posts':
-                $data['posts'] = Post::onlyTrashed()->with(['user', 'club'])->paginate(20);
+                $query = Post::onlyTrashed()->with(['user', 'club']);
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('title', 'like', '%' . $search . '%')
+                          ->orWhere('content', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['posts'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             case 'club-members':
-                $data['clubMembers'] = ClubMember::onlyTrashed()->with(['user', 'club'])->paginate(20);
+                $query = ClubMember::onlyTrashed()->with(['user', 'club']);
+                if ($search) {
+                    $query->whereHas('user', function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('email', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['clubMembers'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             case 'comments':
-                $data['comments'] = PostComment::onlyTrashed()->with(['user', 'post'])->paginate(20);
+                $query = PostComment::onlyTrashed()->with(['user', 'post']);
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('content', 'like', '%' . $search . '%')
+                          ->orWhereHas('user', function($subQ) use ($search) {
+                              $subQ->where('name', 'like', '%' . $search . '%');
+                          });
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['comments'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             case 'club-resources':
-                $data['clubResources'] = ClubResource::onlyTrashed()->with(['club', 'user'])->paginate(20);
+                $query = ClubResource::onlyTrashed()->with(['club', 'user']);
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('title', 'like', '%' . $search . '%')
+                          ->orWhere('description', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['clubResources'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
             default:
-                // Hiển thị tất cả
-                $data['users'] = User::onlyTrashed()->limit(5)->get();
-                $data['clubs'] = Club::onlyTrashed()->with('owner')->limit(5)->get();
-                $data['posts'] = Post::onlyTrashed()->with(['user', 'club'])->limit(5)->get();
-                $data['clubMembers'] = ClubMember::onlyTrashed()->with(['user', 'club'])->limit(5)->get();
-                $data['comments'] = PostComment::onlyTrashed()->with(['user', 'post'])->limit(5)->get();
-                $data['clubResources'] = ClubResource::onlyTrashed()->with(['club', 'user'])->limit(5)->get();
+                // Mặc định chỉ hiển thị CLB
+                $query = Club::onlyTrashed()->with('owner');
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('description', 'like', '%' . $search . '%');
+                    });
+                }
+                if ($dateFrom) {
+                    $query->whereDate('deleted_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $query->whereDate('deleted_at', '<=', $dateTo);
+                }
+                $orderBy = $sort === 'oldest' ? 'asc' : 'desc';
+                $data['clubs'] = $query->orderBy('deleted_at', $orderBy)->paginate(20)->withQueryString();
                 break;
         }
+
+        return view('admin.trash.index', compact('data', 'type', 'search', 'dateFrom', 'dateTo', 'sort'));
 
         return view('admin.trash.index', compact('data', 'type'));
     }

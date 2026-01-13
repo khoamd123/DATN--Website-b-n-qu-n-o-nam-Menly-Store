@@ -19,7 +19,7 @@
                         <i class="fas fa-edit text-warning"></i>
                         Sửa yêu cầu cấp kinh phí
                     </h3>
-                    <small class="text-muted">CLB: <strong>{{ $club->name }}</strong> | ID: #{{ $fundRequest->id }}</small>
+                    <small class="text-muted">CLB: <strong>{{ $club->name }}</strong></small>
                 </div>
                 <a href="{{ route('student.club-management.fund-requests.show', $fundRequest->id) }}" class="btn btn-secondary btn-sm text-white">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
@@ -194,9 +194,15 @@
                 </div>
 
                 <div class="mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-warning text-white">
-                        <i class="fas fa-save me-1"></i> Lưu thay đổi
-                    </button>
+                    @if($fundRequest->status === 'rejected')
+                        <button type="submit" class="btn btn-primary text-white">
+                            <i class="fas fa-paper-plane me-1"></i> Lưu và gửi lại để duyệt
+                        </button>
+                    @else
+                        <button type="submit" class="btn btn-warning text-white">
+                            <i class="fas fa-save me-1"></i> Lưu thay đổi
+                        </button>
+                    @endif
                     <a href="{{ route('student.club-management.fund-requests.show', $fundRequest->id) }}" class="btn btn-secondary text-white">
                         <i class="fas fa-times me-1"></i> Hủy
                     </a>

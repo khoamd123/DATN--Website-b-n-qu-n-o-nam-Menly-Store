@@ -333,7 +333,12 @@
                                             @endif
                                             <div class="d-flex gap-2">
                                                 <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-teal">
-                                                    <i class="far fa-heart me-1"></i>Thích
+                                                    <i class="fas fa-heart me-1" style="color: #dc3545;"></i>
+                                                    @if(isset($post->likes_count) && $post->likes_count > 0)
+                                                        <span>{{ number_format($post->likes_count) }}</span>
+                                                    @else
+                                                        <span>0</span>
+                                                    @endif
                                                 </a>
                                                 <a href="{{ route('student.posts.show', $post->id) }}" class="btn btn-sm btn-outline-teal">
                                                     <i class="far fa-comment me-1"></i>Bình luận

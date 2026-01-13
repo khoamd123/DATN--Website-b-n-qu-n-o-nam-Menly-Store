@@ -52,4 +52,20 @@ class Post extends Model
     {
         return $this->hasMany(PostAttachment::class);
     }
+
+    /**
+     * Get the likes for the post
+     */
+    public function likes()
+    {
+        return $this->hasMany(PostLike::class);
+    }
+
+    /**
+     * Check if a user has liked this post
+     */
+    public function isLikedBy($userId)
+    {
+        return $this->likes()->where('user_id', $userId)->exists();
+    }
 }

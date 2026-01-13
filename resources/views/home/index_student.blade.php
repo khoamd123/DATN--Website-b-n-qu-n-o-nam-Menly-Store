@@ -380,6 +380,9 @@
                                             @if(isset($latestPost->views) && $latestPost->views > 0)
                                                 <span><i class="far fa-eye me-1"></i>{{ number_format($latestPost->views) }} lượt xem</span>
                                             @endif
+                                            @if(isset($latestPost->likes_count) && $latestPost->likes_count > 0)
+                                                <span><i class="fas fa-heart me-1" style="color: #dc3545;"></i>{{ number_format($latestPost->likes_count) }} lượt thích</span>
+                                            @endif
                                             @if(isset($latestPost->comments_count) && $latestPost->comments_count > 0)
                                                 <span><i class="far fa-comments me-1"></i>{{ $latestPost->comments_count }} bình luận</span>
                                             @endif
@@ -460,12 +463,14 @@
                                                 </div>
                                             </div>
                                             <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.4; flex-grow: 1; letter-spacing: -0.01em;">{{ Str::limit($post->title, 65) }}</h6>
-                                            @if(isset($post->comments_count) && $post->comments_count > 0)
-                                                <div class="text-muted small mt-auto d-flex align-items-center">
-                                                    <i class="far fa-comments me-1"></i>
-                                                    <span>{{ $post->comments_count }} bình luận</span>
-                                                </div>
-                                            @endif
+                                            <div class="text-muted small mt-auto d-flex align-items-center gap-2 flex-wrap">
+                                                @if(isset($post->likes_count) && $post->likes_count > 0)
+                                                    <span><i class="fas fa-heart me-1" style="color: #dc3545;"></i>{{ number_format($post->likes_count) }}</span>
+                                                @endif
+                                                @if(isset($post->comments_count) && $post->comments_count > 0)
+                                                    <span><i class="far fa-comments me-1"></i>{{ $post->comments_count }} bình luận</span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

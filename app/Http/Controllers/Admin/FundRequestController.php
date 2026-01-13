@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\FundRequestController as OldController;
+use App\Models\FundRequest;
 use Illuminate\Http\Request;
 
 class FundRequestController extends Controller
@@ -30,44 +31,41 @@ class FundRequestController extends Controller
         return $this->oldController->store($request);
     }
 
-    public function show($fundRequest)
+    public function show(FundRequest $fundRequest)
     {
         return $this->oldController->show($fundRequest);
     }
 
-    public function edit($fundRequest)
+    public function edit(FundRequest $fundRequest)
     {
         return $this->oldController->edit($fundRequest);
     }
 
-    public function update(Request $request, $fundRequest)
+    public function update(Request $request, FundRequest $fundRequest)
     {
         return $this->oldController->update($request, $fundRequest);
     }
 
-    public function destroy($fundRequest)
+    public function destroy(FundRequest $fundRequest)
     {
-        return $this->oldController->destroy($fundRequest);
+        // Admin không được phép xóa yêu cầu cấp kinh phí
+        return redirect()->back()->with('error', 'Bạn không có quyền xóa yêu cầu cấp kinh phí!');
     }
 
-    public function approve(Request $request, $fundRequest)
+    public function approve(Request $request, FundRequest $fundRequest)
     {
         return $this->oldController->approve($request, $fundRequest);
     }
 
-    public function reject(Request $request, $fundRequest)
+    public function reject(Request $request, FundRequest $fundRequest)
     {
         return $this->oldController->reject($request, $fundRequest);
     }
 
-    public function resetStatus($fundRequest)
+    public function resetStatus(FundRequest $fundRequest)
     {
-        $fundRequestModel = \App\Models\FundRequest::find($fundRequest);
-        if ($fundRequestModel) {
-            $fundRequestModel->update(['status' => 'pending']);
-            return redirect()->route('admin.fund-requests.show', $fundRequest)->with('success', 'Đã reset trạng thái về "Chờ duyệt"');
-        }
-        return redirect()->back()->with('error', 'Không tìm thấy yêu cầu');
+        $fundRequest->update(['status' => 'pending']);
+        return redirect()->route('admin.fund-requests.show', $fundRequest)->with('success', 'Đã reset trạng thái về "Chờ duyệt"');
     }
 
     public function batchApproval()

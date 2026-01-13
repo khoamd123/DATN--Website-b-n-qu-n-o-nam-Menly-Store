@@ -348,22 +348,9 @@
                                 Tạo và quản lý quỹ CLB, theo dõi giao dịch tài chính
                             @endif
                         </p>
-                        @if($fundExists)
-                            <div class="management-stats">
-                                <span class="stat-item">
-                                    <strong>{{ number_format(data_get($clubStats, 'fund.balance', 0), 0, ',', '.') }}</strong>
-                                    <small>VNĐ (Số dư)</small>
-                                </span>
-                                <span class="stat-item">
-                                    <strong>{{ number_format(data_get($clubStats, 'fund.income', 0), 0, ',', '.') }}</strong>
-                                    <small>VNĐ (Thu)</small>
-                                </span>
-                            </div>
-                        @endif
                         <div class="d-flex gap-2 flex-wrap">
                             <a href="{{ route('student.club-management.fund-transactions') }}?club={{ $clubId }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-wallet me-1"></i> 
-                                {{ $fundExists ? 'Giao dịch quỹ' : 'Tạo quỹ CLB' }}
+                                <i class="fas fa-cog me-1"></i> Quản lý
                             </a>
                         </div>
                     </div>

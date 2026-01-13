@@ -156,18 +156,24 @@ class ClubManagementController extends Controller
         return $this->oldController->fundRequestShow($id);
     }
 
-    public function fundRequestEdit($id)
+    public function fundRequestEdit($fundRequest)
     {
+        // Convert FundRequest model to ID if needed
+        $id = $fundRequest instanceof \App\Models\FundRequest ? $fundRequest->id : $fundRequest;
         return $this->oldController->fundRequestEdit($id);
     }
 
-    public function fundRequestUpdate(Request $request, $id)
+    public function fundRequestUpdate(Request $request, $fundRequest)
     {
+        // Convert FundRequest model to ID if needed
+        $id = $fundRequest instanceof \App\Models\FundRequest ? $fundRequest->id : $fundRequest;
         return $this->oldController->fundRequestUpdate($request, $id);
     }
 
-    public function fundRequestResubmit(Request $request, $id)
+    public function fundRequestResubmit(Request $request, $fundRequest)
     {
+        // Convert FundRequest model to ID if needed
+        $id = $fundRequest instanceof \App\Models\FundRequest ? $fundRequest->id : $fundRequest;
         return $this->oldController->fundRequestResubmit($request, $id);
     }
 

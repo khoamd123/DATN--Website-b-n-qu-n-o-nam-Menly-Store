@@ -12,7 +12,6 @@
                         <i class="fas fa-money-bill-wave text-teal"></i>
                         Chi tiết yêu cầu cấp kinh phí
                     </h3>
-                    <small class="text-muted">ID: #{{ $fundRequest->id }}</small>
                 </div>
                 <a href="{{ route('student.club-management.fund-requests') }}" class="btn btn-secondary btn-sm text-white">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
@@ -204,13 +203,6 @@
             </div>
             @endif
         </div>
-        @elseif($fundRequest->settlement_status === 'settlement_pending')
-        <div class="content-card mb-3">
-            <div class="alert alert-info mb-0">
-                <i class="fas fa-clock me-2"></i>
-                <strong>Đang chờ quyết toán:</strong> Yêu cầu này đã được duyệt và đang chờ quản trị viên quyết toán.
-            </div>
-        </div>
         @endif
 
         @if($fundRequest->expense_items && count($fundRequest->expense_items) > 0)
@@ -365,22 +357,26 @@
                 @php
                     $position = $user->getPositionInClub($fundRequest->club_id);
                 @endphp
-                @if($position === 'leader')
+                @if(in_array($position, ['leader', 'treasurer']) && $fundRequest->status === 'pending')
                     <a href="{{ route('student.club-management.fund-requests.edit', $fundRequest->id) }}" 
                        class="btn btn-warning text-white">
                         <i class="fas fa-edit me-1"></i> Sửa yêu cầu
                     </a>
-                    @if($fundRequest->status === 'rejected')
-                        <form action="{{ route('student.club-management.fund-requests.resubmit', $fundRequest->id) }}" 
-                              method="POST" 
-                              class="d-inline"
-                              onsubmit="return confirm('Bạn có chắc chắn muốn gửi lại yêu cầu này để duyệt?');">
-                            @csrf
-                            <button type="submit" class="btn btn-primary text-white">
-                                <i class="fas fa-paper-plane me-1"></i> Gửi lại để duyệt
-                            </button>
-                        </form>
-                    @endif
+                @endif
+                @if($fundRequest->status === 'rejected' && in_array($position, ['leader', 'treasurer']))
+                    <a href="{{ route('student.club-management.fund-requests.edit', $fundRequest->id) }}" 
+                       class="btn btn-warning text-white">
+                        <i class="fas fa-edit me-1"></i> Sửa yêu cầu
+                    </a>
+                    <form action="{{ route('student.club-management.fund-requests.resubmit', $fundRequest->id) }}" 
+                          method="POST" 
+                          class="d-inline"
+                          onsubmit="return confirm('Bạn có chắc chắn muốn gửi lại yêu cầu này để duyệt?');">
+                        @csrf
+                        <button type="submit" class="btn btn-primary text-white">
+                            <i class="fas fa-paper-plane me-1"></i> Gửi lại để duyệt
+                        </button>
+                    </form>
                 @endif
             </div>
         </div>

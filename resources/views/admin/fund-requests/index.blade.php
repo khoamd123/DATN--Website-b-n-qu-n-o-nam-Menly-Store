@@ -151,17 +151,6 @@
                                                    class="btn btn-sm btn-primary text-white w-100">
                                                     <i class="fas fa-eye"></i> Xem chi tiết
                                                 </a>
-                                                @if($request->status === 'pending')
-                                                    <form action="{{ route('admin.fund-requests.destroy', $request->id) }}" 
-                                                          method="POST" class="d-inline" 
-                                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa yêu cầu này?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-white">
-                                                            <i class="fas fa-trash"></i> Xóa
-                                                        </button>
-                                                    </form>
-                                                @endif
                                             </div>
                                         </td>
                                     </tr>

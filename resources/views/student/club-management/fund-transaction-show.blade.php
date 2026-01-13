@@ -106,9 +106,8 @@
                     @if($tx->creator)
                         <i class="fas fa-user me-1 text-primary"></i>
                         {{ $tx->creator->name }}
-                        <small class="text-muted">(ID: {{ $tx->creator->id }})</small>
                     @else
-                        <span class="text-muted">N/A (ID: {{ $tx->created_by }})</span>
+                        <span class="text-muted">N/A</span>
                     @endif
                 </div>
                 <small class="text-muted">Ngày tạo: {{ $tx->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</small>

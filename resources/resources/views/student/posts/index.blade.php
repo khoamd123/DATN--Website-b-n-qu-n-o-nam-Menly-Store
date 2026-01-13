@@ -495,6 +495,127 @@
         border-color: #dee2e6;
         color: #6c757d;
     }
+    
+    /* Hover effects for post cards */
+    .card.mb-3 {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card.mb-3 .row {
+        height: 100%;
+    }
+    
+    .card.mb-3 .card-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    
+    /* Ensure cards in list have equal height */
+    .row.g-4 > .col-12 > .card.mb-3,
+    .col-lg-8 > .card.mb-3 {
+        min-height: 180px;
+    }
+    
+    .card.mb-3:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12) !important;
+        border-color: #14b8a6;
+    }
+    
+    .card.mb-3:hover .card-title a {
+        color: #14b8a6 !important;
+        transition: color 0.3s ease;
+    }
+    
+    .card.mb-3 .card-title a {
+        transition: color 0.3s ease;
+    }
+    
+    .card.mb-3:hover img {
+        transform: scale(1.08);
+        transition: transform 0.5s ease;
+    }
+    
+    .card.mb-3 img {
+        transition: transform 0.5s ease;
+    }
+    
+    .card.mb-3 .col-md-4 {
+        overflow: hidden;
+    }
+    
+    /* Hover effects for announcement items */
+    .list-group-item-action {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .list-group-item-action:hover {
+        transform: translateX(6px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+        border-left: 3px solid #ffc107 !important;
+        background-color: #fffbf0 !important;
+    }
+    
+    .list-group-item-action:hover h6 {
+        color: #ffc107;
+        transition: color 0.3s ease;
+    }
+    
+    /* Hover effects for buttons */
+    .btn-outline-primary:hover,
+    .btn-outline-teal:hover,
+    .btn-teal:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(20, 184, 166, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    /* Hover effects for filter buttons */
+    .btn-group .btn {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-group .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Hover effects for badge */
+    .badge {
+        transition: all 0.3s ease;
+    }
+    
+    .card.mb-3:hover .badge {
+        transform: scale(1.05);
+        box-shadow: 0 2px 4px rgba(20, 184, 166, 0.3);
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    a, button, .card, .list-group-item {
+        transition: all 0.3s ease;
+    }
+    
+    /* Content card hover effect */
+    .content-card {
+        transition: all 0.3s ease;
+    }
+    
+    .content-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Form elements hover */
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #14b8a6;
+        box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+        transition: all 0.3s ease;
+    }
 </style>
 @endpush
 

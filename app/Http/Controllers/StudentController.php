@@ -3347,6 +3347,250 @@ class StudentController extends Controller
     }
 
     /**
+     * Show form to edit fund request
+     */
+    public function fundRequestEdit($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::with(['event', 'club', 'creator', 'approver'])
+            ->where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép chỉnh sửa yêu cầu đang chờ duyệt hoặc đã bị từ chối
+        if (!in_array($fundRequest->status, ['pending', 'rejected'])) {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Chỉ có thể chỉnh sửa yêu cầu đang chờ duyệt hoặc đã bị từ chối!');
+        }
+
+        // Kiểm tra quyền: chỉ leader và treasurer mới được chỉnh sửa
+        $position = $user->getPositionInClub($club->id);
+        if (!in_array($position, ['leader', 'treasurer'])) {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Bạn không có quyền chỉnh sửa yêu cầu này.');
+        }
+
+        // Lấy các sự kiện của CLB
+        $events = Event::where('club_id', $club->id)
+            ->orderBy('start_time', 'desc')
+            ->get();
+
+        return view('student.club-management.fund-request-edit', [
+            'user' => $user,
+            'club' => $club,
+            'fundRequest' => $fundRequest,
+            'events' => $events,
+        ]);
+    }
+
+    /**
+     * Update fund request
+     */
+    public function fundRequestUpdate(Request $request, $id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép chỉnh sửa yêu cầu đang chờ duyệt hoặc đã bị từ chối
+        if (!in_array($fundRequest->status, ['pending', 'rejected'])) {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Chỉ có thể chỉnh sửa yêu cầu đang chờ duyệt hoặc đã bị từ chối!');
+        }
+
+        // Kiểm tra quyền
+        $position = $user->getPositionInClub($club->id);
+        if (!in_array($position, ['leader', 'treasurer'])) {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Bạn không có quyền chỉnh sửa yêu cầu này.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'requested_amount' => 'required|numeric|min:0',
+            'event_id' => 'required|exists:events,id',
+            'expense_items' => 'nullable|array',
+            'expense_items.*.item' => 'required_with:expense_items|string|max:255',
+            'expense_items.*.amount' => 'required_with:expense_items|numeric|min:0',
+        ]);
+
+        // Kiểm tra sự kiện thuộc về CLB của user
+        $event = Event::findOrFail($request->event_id);
+        if ($event->club_id != $club->id) {
+            return redirect()->back()
+                ->with('error', 'Sự kiện không thuộc về CLB của bạn.')
+                ->withInput();
+        }
+
+        $data = [
+            'title' => $request->title,
+            'description' => $request->description,
+            'requested_amount' => $request->requested_amount,
+            'event_id' => $request->event_id,
+            'expense_items' => $request->expense_items ?? null,
+        ];
+
+        // Nếu yêu cầu bị từ chối, reset về pending và xóa lý do từ chối
+        if ($fundRequest->status === 'rejected') {
+            $data['status'] = 'pending';
+            $data['rejection_reason'] = null;
+            $data['approved_by'] = null;
+            $data['approved_at'] = null;
+            $data['approved_amount'] = null;
+        }
+
+        // Xử lý tài liệu hỗ trợ mới (nếu có)
+        if ($request->hasFile('supporting_documents')) {
+            $documents = $fundRequest->supporting_documents ?? [];
+            $uploadPath = public_path('storage/fund-requests');
+            
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+            
+            foreach ($request->file('supporting_documents') as $index => $document) {
+                if (!$document || !$document->isValid() || $document->getSize() == 0) {
+                    continue;
+                }
+                
+                try {
+                    $filename = time() . '_' . $index . '_' . $document->getClientOriginalName();
+                    $document->move($uploadPath, $filename);
+                    $documents[] = 'fund-requests/' . $filename;
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            $data['supporting_documents'] = $documents;
+        }
+
+        try {
+            $wasRejected = $fundRequest->status === 'rejected';
+            $fundRequest->update($data);
+            
+            // Nếu yêu cầu bị từ chối và được sửa lại, tạo thông báo cho admin
+            if ($wasRejected && $fundRequest->status === 'pending') {
+                $admins = \App\Models\User::where('is_admin', true)->get();
+                foreach ($admins as $admin) {
+                    $notification = \App\Models\Notification::create([
+                        'sender_id' => $user->id,
+                        'type' => 'fund_request',
+                        'title' => 'Yêu cầu cấp kinh phí được sửa lại',
+                        'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" từ CLB " . ($club->name ?? '') . " đã được sửa lại và gửi để duyệt.",
+                        'related_id' => $fundRequest->id,
+                        'related_type' => 'FundRequest',
+                    ]);
+                    
+                    \App\Models\NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $admin->id,
+                    ]);
+                }
+            }
+            
+            $message = $wasRejected 
+                ? 'Yêu cầu cấp kinh phí đã được sửa lại và gửi để duyệt!' 
+                : 'Yêu cầu cấp kinh phí đã được cập nhật thành công!';
+            
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Resubmit rejected fund request
+     */
+    public function fundRequestResubmit(Request $request, $id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return $user;
+        }
+
+        if ($user->clubs->isEmpty()) {
+            return redirect()->route('student.club-management.index')
+                ->with('error', 'Bạn chưa tham gia CLB nào.');
+        }
+
+        $club = $user->clubs->first();
+        $fundRequest = FundRequest::where('id', $id)
+            ->where('club_id', $club->id)
+            ->firstOrFail();
+
+        // Chỉ cho phép gửi lại yêu cầu đã bị từ chối
+        if ($fundRequest->status !== 'rejected') {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Chỉ có thể gửi lại yêu cầu đã bị từ chối!');
+        }
+
+        // Kiểm tra quyền
+        $position = $user->getPositionInClub($club->id);
+        if (!in_array($position, ['leader', 'treasurer'])) {
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('error', 'Bạn không có quyền gửi lại yêu cầu này.');
+        }
+
+        try {
+            $fundRequest->update([
+                'status' => 'pending',
+                'rejection_reason' => null,
+            ]);
+            
+            // Tạo thông báo cho admin
+            $admins = \App\Models\User::where('is_admin', true)->get();
+            foreach ($admins as $admin) {
+                $notification = \App\Models\Notification::create([
+                    'sender_id' => $user->id,
+                    'type' => 'fund_request',
+                    'title' => 'Yêu cầu cấp kinh phí được gửi lại',
+                    'message' => "Yêu cầu cấp kinh phí \"{$fundRequest->title}\" từ CLB " . ($club->name ?? '') . " đã được gửi lại để duyệt.",
+                    'related_id' => $fundRequest->id,
+                    'related_type' => 'FundRequest',
+                ]);
+                
+                \App\Models\NotificationTarget::create([
+                    'notification_id' => $notification->id,
+                    'target_type' => 'user',
+                    'target_id' => $admin->id,
+                ]);
+            }
+            
+            return redirect()->route('student.club-management.fund-requests.show', $fundRequest->id)
+                ->with('success', 'Yêu cầu cấp kinh phí đã được gửi lại thành công!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Remove a member from the club
      */
     public function removeMember(Request $request, $clubId, $memberId)
@@ -4874,8 +5118,14 @@ class StudentController extends Controller
         $userClubIds = $user->clubs->pluck('id')->toArray();
         
         // Base query cho bài viết có quyền xem
-        $baseQuery = Post::with(['club', 'user', 'attachments'])
-            ->where(function($q) use ($userClubIds) {
+        $baseQuery = Post::with(['club', 'user', 'attachments']);
+        
+        // Chỉ thêm withCount('likes') nếu bảng post_likes đã tồn tại
+        if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+            $baseQuery->withCount('likes');
+        }
+        
+        $baseQuery->where(function($q) use ($userClubIds) {
                 // Bài viết công khai
                 $q->where('status', 'published')
                   // Hoặc bài viết chỉ thành viên CLB mà user là thành viên
@@ -4954,7 +5204,14 @@ class StudentController extends Controller
             return $user;
         }
 
-        $post = Post::with(['club', 'user', 'comments.user', 'attachments'])->findOrFail($id);
+        $postQuery = Post::with(['club', 'user', 'comments.user', 'attachments']);
+        
+        // Chỉ load likes nếu bảng post_likes đã tồn tại
+        if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+            $postQuery->with('likes');
+        }
+        
+        $post = $postQuery->findOrFail($id);
         
         // Kiểm tra quyền xem bài viết
         $canView = false;
@@ -4999,7 +5256,15 @@ class StudentController extends Controller
             // ignore
         }
 
-        return view('student.posts.show', compact('post', 'user', 'relatedPosts'));
+        // Chỉ kiểm tra like nếu bảng post_likes đã tồn tại
+        $isLiked = false;
+        $likesCount = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+            $isLiked = $post->isLikedBy($user->id);
+            $likesCount = $post->likes()->count();
+        }
+
+        return view('student.posts.show', compact('post', 'user', 'relatedPosts', 'isLiked', 'likesCount'));
     }
 
     /**
@@ -5038,6 +5303,73 @@ class StudentController extends Controller
         ]);
 
         return redirect()->route('student.posts.show', $post->id)->with('success', 'Đã gửi bình luận!');
+    }
+
+    /**
+     * Toggle like on a post
+     */
+    public function toggleLike($id)
+    {
+        $user = $this->checkStudentAuth();
+        if ($user instanceof \Illuminate\Http\RedirectResponse) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Kiểm tra xem bảng post_likes có tồn tại không
+        if (!\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Tính năng lượt thích chưa được kích hoạt. Vui lòng chạy migration để tạo bảng post_likes.'
+            ], 503);
+        }
+
+        $post = Post::findOrFail($id);
+
+        // Kiểm tra quyền like (phải xem được bài viết)
+        $canLike = false;
+        if ($post->status === 'published') {
+            $canLike = true;
+        } elseif ($post->status === 'members_only') {
+            $userClubIds = $user->clubs->pluck('id')->toArray();
+            $canLike = in_array($post->club_id, $userClubIds);
+        }
+
+        if (!$canLike) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thích bài viết này.'], 403);
+        }
+
+        try {
+            $like = \App\Models\PostLike::where('post_id', $post->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($like) {
+                // Unlike
+                $like->delete();
+                $liked = false;
+            } else {
+                // Like
+                \App\Models\PostLike::create([
+                    'post_id' => $post->id,
+                    'user_id' => $user->id,
+                ]);
+                $liked = true;
+            }
+
+            $likesCount = $post->likes()->count();
+
+            return response()->json([
+                'success' => true,
+                'liked' => $liked,
+                'likesCount' => $likesCount
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error toggling like: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi thực hiện thao tác: ' . $e->getMessage()
+            ], 500);
+        }
     }
     
     /**

@@ -557,8 +557,8 @@
                         
                         <div class="feedback-info">
                             <span>Ý kiến đóng góp chung gửi về</span>
-                            <span class="email">ykien.poly@fpt.edu.vn</span>
-                            <span>bằng email @fpt.edu.vn</span>
+                            <span class="email">admin@university.edu.vn</span>
+                            <span>bằng email fpt.edu.vn</span>
                         </div>
                     </div>
                 </div>

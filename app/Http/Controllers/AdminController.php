@@ -200,18 +200,18 @@ class AdminController extends Controller
                 ->get();
         } else {
             // Không có bộ lọc - lấy tất cả
-            $topClubs = Club::withCount([
-                    'posts as posts_count' => function ($query) {
-                        $query->where('type', 'post');
-                    },
-                    'events'
-                ])
-                ->with(['field'])
-                ->having('posts_count', '>', 0)
-                ->orHaving('events_count', '>', 0)
-                ->orderByRaw('(posts_count + events_count) DESC')
-                ->limit(5)
-                ->get();
+        $topClubs = Club::withCount([
+                'posts as posts_count' => function ($query) {
+                    $query->where('type', 'post');
+                },
+                'events'
+            ])
+            ->with(['field'])
+            ->having('posts_count', '>', 0)
+            ->orHaving('events_count', '>', 0)
+            ->orderByRaw('(posts_count + events_count) DESC')
+            ->limit(5)
+            ->get();
         }
             
         // Thống kê theo lĩnh vực
@@ -550,9 +550,63 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Không thể xóa tài khoản admin hiện tại!');
         }
         
-        $user->delete(); // Soft delete
-        
-        return redirect()->back()->with('success', 'Người dùng đã được chuyển vào thùng rác!');
+        try {
+            // Xóa tất cả dữ liệu liên quan trước khi xóa user
+            // 1. Permissions
+            \DB::table('user_permissions_club')->where('user_id', $id)->delete();
+            // 2. Club members
+            \DB::table('club_members')->where('user_id', $id)->delete();
+            // 3. Post comments
+            \DB::table('post_comments')->where('user_id', $id)->delete();
+            // 4. Posts (xóa cả attachments và comments trước)
+            $userPosts = Post::where('user_id', $id)->get();
+            foreach ($userPosts as $post) {
+                \DB::table('post_attachments')->where('post_id', $post->id)->delete();
+                \DB::table('post_comments')->where('post_id', $post->id)->delete();
+            }
+            \DB::table('posts')->where('user_id', $id)->delete();
+            // 5. Event registrations
+            \DB::table('event_registrations')->where('user_id', $id)->delete();
+            // 6. Event comments
+            \DB::table('event_comments')->where('user_id', $id)->delete();
+            // 7. Event member evaluations
+            \DB::table('event_member_evaluations')->where('evaluator_id', $id)->orWhere('member_id', $id)->delete();
+            // 8. Event logs
+            \DB::table('event_logs')->where('user_id', $id)->delete();
+            // 9. Department members
+            \DB::table('department_members')->where('user_id', $id)->delete();
+            // 10. Notification reads
+            \DB::table('notification_reads')->where('user_id', $id)->delete();
+            // 11. Club join requests
+            \DB::table('club_join_requests')->where('user_id', $id)->delete();
+            // 12. Cập nhật clubs nếu user là owner hoặc leader
+            \DB::table('clubs')->where('owner_id', $id)->update(['owner_id' => null]);
+            \DB::table('clubs')->where('leader_id', $id)->update(['leader_id' => null]);
+            // 13. Cập nhật events nếu user là creator
+            \DB::table('events')->where('created_by', $id)->update(['created_by' => null]);
+            // 14. Cập nhật notifications nếu user là sender
+            \DB::table('notifications')->where('sender_id', $id)->update(['sender_id' => null]);
+            // 15. Fund transactions
+            \DB::table('fund_transactions')->where('created_by', $id)->delete();
+            // 16. Fund requests
+            \DB::table('fund_requests')->where('created_by', $id)->delete();
+            // 17. Funds
+            \DB::table('funds')->where('created_by', $id)->delete();
+            // 18. Club resources
+            \DB::table('club_resources')->where('user_id', $id)->delete();
+            // 19. Post likes
+            if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+                \DB::table('post_likes')->where('user_id', $id)->delete();
+            }
+            
+            // Xóa vĩnh viễn user
+            $user->forceDelete();
+            
+            return redirect()->back()->with('success', 'Người dùng đã được xóa vĩnh viễn khỏi database!');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting user: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Lỗi khi xóa người dùng: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -579,7 +633,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Xóa câu lạc bộ (soft delete)
+     * Xóa câu lạc bộ (xóa vĩnh viễn)
      */
     public function deleteClub($id)
     {
@@ -595,51 +649,107 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Chỉ có thể xóa câu lạc bộ đã tạm dừng!');
         }
         
-        // Ẩn tất cả quỹ của CLB này
-        \App\Models\Fund::where('club_id', $club->id)->update(['status' => 'inactive']);
-        
-        $club->delete(); // Soft delete
-        
-        // Gửi thông báo cho người dùng (owner và members)
-        $notificationMessage = 'Câu lạc bộ ' . $club->name . ' của bạn đã được giải tán.';
-        $senderId = auth()->id() ?? 1; // Admin user
-        
-        // Thu thập tất cả user_id cần gửi thông báo
-        $userIds = [];
-        if ($club->owner_id) {
-            $userIds[] = $club->owner_id;
-        }
-        
-        // Lấy các thành viên
-        $members = ClubMember::where('club_id', $club->id)
-            ->whereIn('status', ['active', 'approved'])
-            ->get();
-        
-        foreach ($members as $member) {
-            if ($member->user_id && $member->user_id != $club->owner_id && !in_array($member->user_id, $userIds)) {
-                $userIds[] = $member->user_id;
-            }
-        }
-        
-        // Tạo notification và notification_targets cho từng user
-        if (!empty($userIds)) {
-            $notification = Notification::create([
-                'sender_id' => $senderId,
-                'title' => 'Câu lạc bộ đã được giải tán',
-                'message' => $notificationMessage,
-            ]);
+        try {
+            // Gửi thông báo cho người dùng (owner và members) TRƯỚC KHI xóa
+            $notificationMessage = 'Câu lạc bộ ' . $club->name . ' của bạn đã được giải tán.';
+            $senderId = auth()->id() ?? 1; // Admin user
             
-            // Tạo notification_targets cho từng user
-            foreach ($userIds as $userId) {
-                NotificationTarget::create([
-                    'notification_id' => $notification->id,
-                    'target_type' => 'user',
-                    'target_id' => $userId,
-                ]);
+            // Thu thập tất cả user_id cần gửi thông báo
+            $userIds = [];
+            if ($club->owner_id) {
+                $userIds[] = $club->owner_id;
             }
+            
+            // Lấy các thành viên
+            $members = ClubMember::where('club_id', $club->id)
+                ->whereIn('status', ['active', 'approved'])
+                ->get();
+            
+            foreach ($members as $member) {
+                if ($member->user_id && $member->user_id != $club->owner_id && !in_array($member->user_id, $userIds)) {
+                    $userIds[] = $member->user_id;
+                }
+            }
+            
+            // Tạo notification và notification_targets cho từng user
+            if (!empty($userIds)) {
+                $notification = Notification::create([
+                    'sender_id' => $senderId,
+                    'title' => 'Câu lạc bộ đã được giải tán',
+                    'message' => $notificationMessage,
+                ]);
+                
+                // Tạo notification_targets cho từng user
+                foreach ($userIds as $userId) {
+                    NotificationTarget::create([
+                        'notification_id' => $notification->id,
+                        'target_type' => 'user',
+                        'target_id' => $userId,
+                    ]);
+                }
+            }
+            
+            // Xóa tất cả dữ liệu liên quan trước khi xóa club
+            // 0. Event related
+            $eventIds = \DB::table('events')->where('club_id', $club->id)->pluck('id');
+            if ($eventIds->isNotEmpty()) {
+                \DB::table('event_registrations')->whereIn('event_id', $eventIds)->delete();
+                \DB::table('event_comments')->whereIn('event_id', $eventIds)->delete();
+                \DB::table('event_logs')->whereIn('event_id', $eventIds)->delete();
+                \DB::table('event_member_evaluations')->whereIn('event_id', $eventIds)->delete();
+            }
+            \DB::table('event_member_evaluations')->where('club_id', $club->id)->delete();
+            \DB::table('events')->where('club_id', $club->id)->delete();
+
+            // 1. Department members thuộc các department của CLB
+            $departmentIds = \DB::table('departments')->where('club_id', $club->id)->pluck('id');
+            if ($departmentIds->isNotEmpty()) {
+                \DB::table('department_members')->whereIn('department_id', $departmentIds)->delete();
+            }
+            // 2. Departments thuộc CLB
+            \DB::table('departments')->where('club_id', $club->id)->delete();
+
+            // 3. Funds và giao dịch quỹ
+            $fundIds = \DB::table('funds')->where('club_id', $club->id)->pluck('id');
+            if ($fundIds->isNotEmpty()) {
+                \DB::table('fund_transactions')->whereIn('fund_id', $fundIds)->delete();
+            }
+            \DB::table('fund_requests')->where('club_id', $club->id)->delete();
+            \DB::table('funds')->where('club_id', $club->id)->delete();
+
+            // 4. Tài nguyên CLB
+            $resourceIds = \DB::table('club_resources')->where('club_id', $club->id)->pluck('id');
+            if ($resourceIds->isNotEmpty()) {
+                \DB::table('club_resource_files')->whereIn('club_resource_id', $resourceIds)->delete();
+                \DB::table('club_resource_images')->whereIn('club_resource_id', $resourceIds)->delete();
+            }
+            \DB::table('club_resources')->where('club_id', $club->id)->delete();
+
+            // 5. Bài viết / thông báo
+            $postIds = \DB::table('posts')->where('club_id', $club->id)->pluck('id');
+            if ($postIds->isNotEmpty()) {
+                \DB::table('post_attachments')->whereIn('post_id', $postIds)->delete();
+                \DB::table('post_comments')->whereIn('post_id', $postIds)->delete();
+                // Xóa post likes nếu bảng tồn tại
+                if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+                    \DB::table('post_likes')->whereIn('post_id', $postIds)->delete();
+                }
+            }
+            \DB::table('posts')->where('club_id', $club->id)->delete();
+
+            // 6. Xóa tất cả club_members của club
+            \DB::table('club_members')->where('club_id', $club->id)->delete();
+            // 7. Xóa tất cả permissions của club
+            \DB::table('user_permissions_club')->where('club_id', $club->id)->delete();
+            
+            // Xóa vĩnh viễn club
+            $club->forceDelete();
+            
+            return redirect()->route('admin.clubs')->with('success', 'Câu lạc bộ đã được xóa vĩnh viễn khỏi database!');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting club: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Lỗi khi xóa câu lạc bộ: ' . $e->getMessage());
         }
-        
-        return redirect()->route('admin.clubs')->with('success', 'Câu lạc bộ đã được chuyển vào thùng rác!');
     }
 
     /**
@@ -3276,10 +3386,41 @@ class AdminController extends Controller
             'status' => 'required|in:published,hidden,deleted,members_only'
         ]);
         
-        // Nếu status là "deleted", thực hiện soft delete thay vì update status
+        // Nếu status là "deleted", thực hiện xóa vĩnh viễn
         if ($request->status === 'deleted') {
-            $post->delete(); // Soft delete - chuyển vào thùng rác
-            return redirect()->back()->with('success', 'Đã chuyển bài viết vào thùng rác!');
+            try {
+                // Xóa tất cả dữ liệu liên quan trước khi xóa bài viết
+                // 1. Xóa attachments
+                if (method_exists($post, 'attachments')) {
+                    foreach ($post->attachments as $attachment) {
+                        if (file_exists(public_path($attachment->file_url))) {
+                            @unlink(public_path($attachment->file_url));
+                        }
+                    }
+                    $post->attachments()->forceDelete();
+                }
+                
+                // 2. Xóa comments
+                $post->comments()->forceDelete();
+                
+                // 3. Xóa post likes nếu bảng tồn tại
+                if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+                    \DB::table('post_likes')->where('post_id', $post->id)->delete();
+                }
+                
+                // 4. Xóa file ảnh nếu có
+                if ($post->image && file_exists(public_path($post->image))) {
+                    @unlink(public_path($post->image));
+                }
+                
+                // Xóa vĩnh viễn bài viết
+                $post->forceDelete();
+                
+                return redirect()->back()->with('success', 'Đã xóa bài viết vĩnh viễn khỏi database!');
+            } catch (\Exception $e) {
+                \Log::error('Error deleting post: ' . $e->getMessage());
+                return redirect()->back()->with('error', 'Lỗi khi xóa bài viết: ' . $e->getMessage());
+            }
         }
         
         $post->update([

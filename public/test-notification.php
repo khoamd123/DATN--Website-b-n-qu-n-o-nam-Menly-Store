@@ -6,6 +6,8 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
+use Illuminate\Support\Facades\DB;
+
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
@@ -33,9 +35,9 @@ try {
     foreach ($notifications as $notif) {
         echo "<tr>";
         echo "<td>{$notif->id}</td>";
-        echo "<td>{$notif->type ?? 'N/A'}</td>";
-        echo "<td>" . substr($notif->title ?? 'N/A', 0, 50) . "</td>";
-        echo "<td>" . ($notif->read_at ?? 'Chưa đọc') . "</td>";
+        echo "<td>" . (isset($notif->type) ? $notif->type : 'N/A') . "</td>";
+        echo "<td>" . substr(isset($notif->title) ? $notif->title : 'N/A', 0, 50) . "</td>";
+        echo "<td>" . (isset($notif->read_at) ? $notif->read_at : 'Chưa đọc') . "</td>";
         echo "<td>{$notif->created_at}</td>";
         echo "</tr>";
     }

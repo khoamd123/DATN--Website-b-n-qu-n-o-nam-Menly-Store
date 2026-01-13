@@ -72,7 +72,6 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 5%;">#</th>
                                 <th style="width: 25%;">Tiêu đề</th>
                                 <th style="width: 15%;">Sự kiện</th>
                                 <th style="width: 12%;">Số tiền yêu cầu</th>
@@ -85,7 +84,6 @@
                         <tbody>
                             @foreach($requests as $request)
                             <tr>
-                                <td>{{ $request->id }}</td>
                                 <td>
                                     <strong>{{ $request->title }}</strong>
                                 </td>
@@ -130,15 +128,15 @@
                                 <td class="text-end">
                                     <div class="d-flex flex-column gap-1">
                                         <a href="{{ route('student.club-management.fund-requests.show', $request->id) }}" 
-                                           class="btn btn-sm btn-primary text-white w-100">
+                                           class="btn btn-sm btn-primary text-white w-100" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                             <i class="fas fa-eye"></i> Xem chi tiết
                                         </a>
                                         @php
                                             $position = $user->getPositionInClub($club->id);
                                         @endphp
-                                        @if($request->status === 'rejected' && $position === 'leader')
+                                        @if($request->status === 'rejected' && in_array($position, ['leader', 'treasurer']))
                                             <a href="{{ route('student.club-management.fund-requests.edit', $request->id) }}" 
-                                               class="btn btn-sm btn-warning text-white w-100">
+                                               class="btn btn-sm btn-warning text-white w-100" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                                 <i class="fas fa-edit"></i> Sửa
                                             </a>
                                         @endif

@@ -199,18 +199,18 @@ class AdminController extends Controller
                 ->get();
         } else {
             // Không có bộ lọc - lấy tất cả
-            $topClubs = Club::withCount([
-                    'posts as posts_count' => function ($query) {
-                        $query->where('type', 'post');
-                    },
-                    'events'
-                ])
-                ->with(['field'])
-                ->having('posts_count', '>', 0)
-                ->orHaving('events_count', '>', 0)
-                ->orderByRaw('(posts_count + events_count) DESC')
-                ->limit(5)
-                ->get();
+        $topClubs = Club::withCount([
+                'posts as posts_count' => function ($query) {
+                    $query->where('type', 'post');
+                },
+                'events'
+            ])
+            ->with(['field'])
+            ->having('posts_count', '>', 0)
+            ->orHaving('events_count', '>', 0)
+            ->orderByRaw('(posts_count + events_count) DESC')
+            ->limit(5)
+            ->get();
         }
             
         // Thống kê theo lĩnh vực

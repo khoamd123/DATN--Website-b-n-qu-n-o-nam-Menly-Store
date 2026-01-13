@@ -138,18 +138,18 @@
                     <p class="feedback-text">
                         <i class="fas fa-info-circle me-2"></i>
                         Ý kiến đóng góp chung gửi về 
-                        <strong class="feedback-email">ykien.poly@fpt.edu.vn</strong>
-                        bằng email @fpt.edu.vn
+                        <strong class="feedback-email">admin@university.edu.vn</strong>
+                        bằng email @university.edu.vn
                     </p>
                     <div class="feedback-note">
                         <small class="text-muted">
                             <i class="fas fa-lightbulb me-1"></i>
-                            Vui lòng sử dụng email @fpt.edu.vn để gửi ý kiến đóng góp
+                            Vui lòng sử dụng email @university.edu.vn để gửi ý kiến đóng góp
                         </small>
                     </div>
                 </div>
                 <div class="feedback-action">
-                    <a href="mailto:ykien.poly@fpt.edu.vn" class="btn btn-primary">
+                    <a href="mailto:admin@university.edu.vn" class="btn btn-primary">
                         <i class="fas fa-envelope me-2"></i> Gửi ý kiến
                     </a>
                 </div>

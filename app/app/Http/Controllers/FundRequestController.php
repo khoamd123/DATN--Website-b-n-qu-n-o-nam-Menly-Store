@@ -75,15 +75,16 @@ class FundRequestController extends Controller
 
         $data = $request->all();
         
-        // Ensure we have a valid user ID - use session first, then Auth, then fallback
-        $userId = session('user_id');
+        // Lấy user ID từ Auth (admin đăng nhập)
+        $userId = Auth::id();
         if (!$userId) {
-            $userId = Auth::id();
+            // Nếu không có user đăng nhập, lấy từ session
+            $userId = session('user_id');
         }
         if (!$userId) {
-            // If no authenticated user, get the first admin user
-            $adminUser = \App\Models\User::where('is_admin', 1)->first();
-            $userId = $adminUser ? $adminUser->id : 1;
+            return redirect()->back()
+                ->with('error', 'Không thể xác định người tạo yêu cầu. Vui lòng đăng nhập lại.')
+                ->withInput();
         }
         $data['created_by'] = $userId;
         $data['status'] = 'pending';
@@ -243,13 +244,13 @@ class FundRequestController extends Controller
                             'event_id' => $fundRequest->event_id,
                             'type' => 'income',
                             'title' => 'Cấp kinh phí từ nhà trường: ' . $fundRequest->title,
-                            'description' => 'Kinh phí được duyệt từ yêu cầu #' . $fundRequest->id,
+                            'description' => 'Yêu cầu cấp kinh phí thành công',
                             'amount' => $request->approved_amount,
                             'transaction_date' => now(),
                             'source' => 'Nhà trường',
                             'status' => 'approved',
-                            'created_by' => session('user_id', 1),
-                            'approved_by' => $userId,
+                            'created_by' => $fundRequest->created_by, // Người tạo yêu cầu ban đầu
+                            'approved_by' => $userId, // Người duyệt yêu cầu
                             'approved_at' => now()
                         ]);
                         
@@ -291,24 +292,8 @@ class FundRequestController extends Controller
 
     public function destroy(FundRequest $fundRequest)
     {
-        if ($fundRequest->status !== 'pending') {
-            return redirect()->back()->with('error', 'Chỉ có thể xóa yêu cầu đang chờ duyệt!');
-        }
-
-        // Xóa tài liệu hỗ trợ
-        if ($fundRequest->supporting_documents) {
-            foreach ($fundRequest->supporting_documents as $document) {
-                $filePath = public_path('storage/' . $document);
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-            }
-        }
-
-        $fundRequest->delete();
-
-        return redirect()->route('admin.fund-requests')
-            ->with('success', 'Yêu cầu cấp kinh phí đã được xóa thành công!');
+        // Admin không được phép xóa yêu cầu cấp kinh phí
+        return redirect()->back()->with('error', 'Bạn không có quyền xóa yêu cầu cấp kinh phí!');
     }
 
     public function batchApproval()
@@ -397,18 +382,19 @@ class FundRequestController extends Controller
                             
                             if ($fund) {
                                 // Tạo giao dịch thu tiền
+                                // created_by là người tạo yêu cầu ban đầu, không phải người duyệt
                                 \App\Models\FundTransaction::create([
                                     'fund_id' => $fund->id,
                                     'event_id' => $fundRequest->event_id,
                                     'type' => 'income',
                                     'title' => 'Cấp kinh phí từ nhà trường: ' . $fundRequest->title,
-                                    'description' => 'Kinh phí được duyệt từ yêu cầu #' . $fundRequest->id,
+                                    'description' => 'Yêu cầu cấp kinh phí thành công',
                                     'amount' => $approvedAmount,
                                     'transaction_date' => now(),
                                     'source' => 'Nhà trường',
                                     'status' => 'approved',
-                                    'created_by' => session('user_id', 1),
-                                    'approved_by' => $userId,
+                                    'created_by' => $fundRequest->created_by, // Người tạo yêu cầu ban đầu
+                                    'approved_by' => $userId, // Người duyệt yêu cầu
                                     'approved_at' => now()
                                 ]);
                                 

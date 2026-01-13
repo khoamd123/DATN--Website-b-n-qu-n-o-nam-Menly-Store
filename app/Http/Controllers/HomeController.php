@@ -60,9 +60,16 @@ class HomeController extends Controller
             ->get();
 
         // Latest public posts (chỉ lấy bài viết, không lấy thông báo) - sắp xếp theo lượt xem
-        $recentPosts = Post::with(['club', 'user', 'attachments'])
+        $recentPostsQuery = Post::with(['club', 'user', 'attachments'])
             ->where('status', 'published')
-            ->where('type', 'post') // Chỉ lấy bài viết, không lấy thông báo
+            ->where('type', 'post'); // Chỉ lấy bài viết, không lấy thông báo
+        
+        // Chỉ thêm withCount('likes') nếu bảng post_likes đã tồn tại
+        if (\Illuminate\Support\Facades\Schema::hasTable('post_likes')) {
+            $recentPostsQuery->withCount('likes');
+        }
+        
+        $recentPosts = $recentPostsQuery
             ->orderByDesc('views') // Sắp xếp theo lượt xem giảm dần
             ->orderByDesc('created_at') // Nếu lượt xem bằng nhau thì sắp xếp theo ngày tạo
             ->limit(5)

@@ -18,8 +18,14 @@
                         <td>
                             <div>
                                 <strong>{{ $post->title }}</strong>
-                                <br><small class="text-muted">{{ $post->slug }}</small>
-                                <br><small class="text-muted">{{ substr($post->content, 0, 50) }}{{ strlen($post->content) > 50 ? '...' : '' }}</small>
+                                @if($post->content)
+                                    @php
+                                        $cleanContent = strip_tags($post->content);
+                                        $cleanContent = html_entity_decode($cleanContent, ENT_QUOTES, 'UTF-8');
+                                        $cleanContent = trim($cleanContent);
+                                    @endphp
+                                    <br><small class="text-muted">{{ Str::limit($cleanContent, 50) }}</small>
+                                @endif
                             </div>
                         </td>
                         <td>

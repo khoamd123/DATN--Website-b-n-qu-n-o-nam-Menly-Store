@@ -24,15 +24,30 @@
                                 <div>
                                     <strong>{{ $resource->title }}</strong>
                                     @if($resource->description)
-                                        <br><small class="text-muted">{{ Str::limit($resource->description, 50) }}</small>
+                                        @php
+                                            $cleanDescription = strip_tags($resource->description);
+                                            $cleanDescription = html_entity_decode($cleanDescription, ENT_QUOTES, 'UTF-8');
+                                            $cleanDescription = trim($cleanDescription);
+                                        @endphp
+                                        <br><small class="text-muted">{{ Str::limit($cleanDescription, 50) }}</small>
                                     @endif
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-info">{{ $resource->club->name }}</span>
+                            @if($resource->club)
+                                <span class="badge bg-info">{{ $resource->club->name }}</span>
+                            @else
+                                <span class="badge bg-secondary">CLB đã bị xóa</span>
+                            @endif
                         </td>
-                        <td>{{ $resource->user->name }}</td>
+                        <td>
+                            @if($resource->user)
+                                {{ $resource->user->name }}
+                            @else
+                                <span class="text-muted">Người dùng đã bị xóa</span>
+                            @endif
+                        </td>
                         <td>{{ $resource->deleted_at->format('d/m/Y H:i') }}</td>
                         <td>
                             <div class="d-flex gap-2">

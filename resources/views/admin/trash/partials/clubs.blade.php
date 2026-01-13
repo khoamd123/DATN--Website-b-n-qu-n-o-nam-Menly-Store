@@ -17,8 +17,14 @@
                         <td>
                             <div>
                                 <strong>{{ $club->name }}</strong>
-                                <br><small class="text-muted">{{ $club->slug }}</small>
-                                <br><small class="text-muted">{{ substr($club->description, 0, 50) }}{{ strlen($club->description) > 50 ? '...' : '' }}</small>
+                                @if($club->description)
+                                    @php
+                                        $cleanDescription = strip_tags($club->description);
+                                        $cleanDescription = html_entity_decode($cleanDescription, ENT_QUOTES, 'UTF-8');
+                                        $cleanDescription = trim($cleanDescription);
+                                    @endphp
+                                    <br><small class="text-muted">{{ Str::limit($cleanDescription, 50) }}</small>
+                                @endif
                             </div>
                         </td>
                         <td>
